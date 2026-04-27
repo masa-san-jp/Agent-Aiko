@@ -1,0 +1,83 @@
+#!/bin/bash
+# pre-push hook: Agent-Aiko
+# push前に README更新確認 と gitignore 漏れチェックを実施する
+
+set -e
+
+GITIGNORE=".gitignore"
+PASS=true
+
+echo ""
+echo "=== pre-push チェック ==="
+
+# ─────────────────────────────────────────
+# 1. gitignore に機密ディレクトリが含まれているか
+# ─────────────────────────────────────────
+echo ""
+echo "[ 1/2 ] .gitignore チェック"
+
+SENSITIVE=("images" "input" ".env" "*.env" "secrets")
+
+for item in "${SENSITIVE[@]}"; do
+  if grep -qE "^/?${item}/?$|^${item}$" "$GITIGNORE" 2>/dev/null; then
+    echo "  ✓ ${item}"
+  else
+    # gitignoreに入っていなくてもそもそもファイルが存在しなければOK
+    if [ -e "$item" ]; then
+      echo "  ✗ '${item}' が存在しますが .gitignore に含まれていません"
+      PASS=false
+    fi
+  fi
+done
+
+# ─────────────────────────────────────────
+# 2. 機密情報パターンのスキャン
+# ─────────────────────────────────────────
+SECRETS_PATTERN="(api_key|api_secret|access_token|secret_key|password|private_key)\s*[=:]\s*['\"][^'\"]{8,}"
+
+if git diff --cached --name-only | xargs -I{} grep -rliE "$SECRETS_PATTERN" {} 2>/dev/null | grep -q .; then
+  echo "  ✗ API キーや認証情報が含まれているファイルが見つかりました"
+  PASS=false
+else
+  echo "  ✓ 機密情報パターン: 検出なし"
+fi
+
+# ─────────────────────────────────────────
+# 3. README.md の更新確認
+# ─────────────────────────────────────────
+echo ""
+echo "[ 2/2 ] README.md 更新チェック"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+    RANGE="$local_sha"
+  else
+    RANGE="${remote_sha}..${local_sha}"
+  fi
+
+  DOCS_CHANGED=$(git diff --name-only "$RANGE" 2>/dev/null | grep -E "^docs/" || true)
+  README_CHANGED=$(git diff --name-only "$RANGE" 2>/dev/null | grep -E "^README\.md$" || true)
+
+  if [ -n "$DOCS_CHANGED" ] && [ -z "$README_CHANGED" ]; then
+    echo "  ✗ docs/ に変更がありますが README.md が更新されていません"
+    echo "    変更されたファイル:"
+    echo "$DOCS_CHANGED" | sed 's/^/      /'
+    PASS=false
+  else
+    echo "  ✓ README.md: 問題なし"
+  fi
+done
+
+# ─────────────────────────────────────────
+# 結果
+# ─────────────────────────────────────────
+echo ""
+if [ "$PASS" = false ]; then
+  echo "=== ✗ チェック失敗 — push を中止しました ==="
+  echo ""
+  exit 1
+else
+  echo "=== ✓ 全チェック通過 — push を続行します ==="
+  echo ""
+  exit 0
+fi
