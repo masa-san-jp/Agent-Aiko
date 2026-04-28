@@ -1,2 +1,4 @@
 images/
 dev-docs/
+.claude/settings.local.json
+.claude/rules/

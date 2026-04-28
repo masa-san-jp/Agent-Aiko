@@ -107,6 +107,5 @@ mode に関係なく、以下を行います。
 
 - 現在のモード（`origin` か `override`）
 - 未承認の proposals 件数（mode = override のみ）
-- 直近の `dev-docs/dev-log.jsonl` から続きと思われる作業
 
 挨拶を長くしません。依頼を待ちます。
