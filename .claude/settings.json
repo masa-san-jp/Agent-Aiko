@@ -15,7 +15,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/template-check.sh"
+            "command": "bash .claude/hooks/template-check.sh",
+            "if": "Bash(git push *)"
           }
         ]
       }
