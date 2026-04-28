@@ -68,13 +68,6 @@ bash <agent-aiko の path>/scripts/install.sh
 ```
 agent-aiko/
 ├── README.md
-├── dev-docs/
-│   ├── design.md                   # アーキテクチャ説明
-│   ├── manga-document.md           # 漫画全ページの構造化ドキュメント
-│   ├── aico-p0-persona-spec.md     # 人格仕様の真ソース
-│   ├── aiko-persona-protocol.md    # 旧版（参照用）
-│   ├── CLAUDE-v1-draft.md          # v1 ドラフト（aiko-origin.md の元）
-│   └── dev-log.jsonl
 ├── template/.claude/               # ユーザーが配置する雛形
 │   ├── CLAUDE.md
 │   ├── settings.json
@@ -88,6 +81,18 @@ agent-aiko/
 ├── scripts/install.sh
 ├── plugin/.claude-plugin/plugin.json
 └── images/                         # 原典漫画データ（Git 管理外）
+```
+
+---
+
+## 開発者向け
+
+開発専用ドキュメント（design.md / persona spec / dev-log 等）は別リポジトリ [agent-aiko-dev](https://github.com/masa-san-jp/agent-aiko-dev) に分離しています。エージェントのランタイムには不要なため、配布物（本リポジトリ）には含めません。
+
+ローカル作業時は `dev-docs/` ディレクトリに clone してください（本リポジトリの `.gitignore` 済み）：
+
+```bash
+git clone https://github.com/masa-san-jp/agent-aiko-dev dev-docs
 ```
 
 ---
