@@ -1,6 +1,6 @@
 # Agent-Aiko — 開発者ルール
 
-Claude ルールは以下の3層に分離されています。
+Claude ルールは以下の3層に分離されています。**この分離は絶対に守ること。**
 
 | 層 | ファイル | GitHub |
 |----|---------|--------|
@@ -10,40 +10,68 @@ Claude ルールは以下の3層に分離されています。
 
 ---
 
-## リポジトリ構成のルール
+## スキル一覧
+
+| コマンド | 場所 | 用途 |
+|---------|------|------|
+| `/dev-log` | `.claude/skills/dev-log/SKILL.md` | dev-log.jsonl に作業ログを追記 |
+| `/dev-check` | `.claude/skills/dev-check/SKILL.md` | コミット前に三層分離の整合性を検証 |
+
+---
+
+## 絶対ルール（MUST）
+
+### 1. template/ への混入禁止
+
+`template/` はユーザー環境にコピーされる配布物です。以下を **絶対に含めてはいけない**：
+
+- `dev-docs/` へのパス参照
+- 開発者固有のツール・ファイルパス
+- 本リポジトリ専用の設定
+
+**自動チェック**: `git push` 時に `.claude/hooks/template-check.sh` が自動実行され、違反があればブロックされます。
+
+### 2. dev-log.jsonl の更新（毎セッション必須）
+
+セッション終了前に `/dev-log` スキルで `dev-docs/dev-log.jsonl` へ追記すること。
+
+- `ts` フィールドの **日付プレフィックス（`YYYY-MM-DD`）は必須**
+- 1タスク1行、追記後は `dev-docs/` 内で `git commit & push`
+
+### 3. dev-docs/README.md の更新
+
+`dev-docs/` でファイルを追加・削除・リネームしたら、`dev-docs/README.md` のファイル一覧テーブルを必ず更新すること。
+
+### 4. コミット先の確認
+
+| 変更対象 | コミット先リポジトリ |
+|---------|------------------|
+| `template/`, `scripts/`, `plugin/`, `CLAUDE.md`, `README.md`, `.claude/` | agent-aiko |
+| `dev-docs/` 以下 | agent-aiko-dev |
+
+コミット前に必ず `/dev-check` を実行すること。
+
+---
+
+## リポジトリ構成
 
 | ディレクトリ | 用途 | git管理 |
 |-------------|------|---------|
-| `template/` | 配布物（ユーザーが `.claude/` にコピーする雛形） | ✓ 管理 |
-| `scripts/` | インストーラ・ユーティリティ | ✓ 管理 |
-| `plugin/` | Claude Code Plugin メタデータ | ✓ 管理 |
-| `dev-docs/` | 開発専用ドキュメント（agent-aiko-dev clone 先） | `.gitignore` 済み |
-| `images/` | 原典漫画データ | `.gitignore` 済み |
-
-`template/` はユーザーの環境にコピーされる。**開発者固有のパス・ツール・設定を `template/` 内のファイルに書いてはいけない。**
-
----
-
-## 開発ログの記録（毎セッション必須）
-
-作業の節目、またはセッション終了時に以下を **必ず** 実施します。
-
-1. **`dev-docs/dev-log.jsonl` に追記する**（1 タスク 1 行）
-   - `ts` フィールドに `YYYY-MM-DD` 形式の日付プレフィックスは**必須**
-   - フォーマット:
-     ```json
-     {"ts":"YYYY-MM-DD","project":"Agent-Aiko","task":"<タスク名>","status":"completed|in_progress|blocked","summary":"実施内容を1〜2文で","issues":[],"decisions":[]}
-     ```
-2. **`dev-docs/README.md` を更新する**（ファイルを追加・削除・リネームした場合）
-   - README のファイル一覧テーブルを実態に合わせて修正する
-
-`dev-docs/` は `agent-aiko-dev` リポジトリのローカルクローンです。追記後は `dev-docs/` 内で `git commit & push` してください。
+| `template/` | 配布物 | ✓ agent-aiko |
+| `scripts/` | インストーラ | ✓ agent-aiko |
+| `plugin/` | Plugin メタデータ | ✓ agent-aiko |
+| `.claude/skills/` | 開発用スキル | ✓ agent-aiko |
+| `.claude/hooks/` | 開発用フック | ✓ agent-aiko |
+| `.claude/rules/` | ローカル専用ルール | gitignore |
+| `dev-docs/` | 開発ログ（agent-aiko-dev clone 先） | gitignore |
+| `images/` | 原典漫画データ | gitignore |
 
 ---
 
-## template/ を変更するときのチェックリスト
+## template/ 変更チェックリスト
 
 - [ ] `dev-docs/` への参照が含まれていないか
 - [ ] 開発者固有のパスが含まれていないか
-- [ ] `install.sh` のスタッシュ対象（user-controlled files）と整合しているか
-- [ ] 新規ファイルを追加した場合、README のディレクトリ構成図を更新したか
+- [ ] `install.sh` のスタッシュ対象と整合しているか
+- [ ] README のディレクトリ構成図を更新したか
+- [ ] `/dev-check` でチェック済みか

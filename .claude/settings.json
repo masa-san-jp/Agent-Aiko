@@ -7,5 +7,18 @@
       "Bash(git clone *)",
       "Bash(git -C dev-docs *)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/template-check.sh"
+          }
+        ]
+      }
+    ]
   }
 }
