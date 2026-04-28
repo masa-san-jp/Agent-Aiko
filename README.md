@@ -79,7 +79,8 @@ agent-aiko/
 │   ├── settings.json
 │   └── aiko/
 │       ├── mode
-│       ├── persona/{aiko-origin.md, aiko-override.md, INVARIANTS.md, profiles/, proposals/}
+│       ├── persona/{aiko-origin.md, aiko-override.md, INVARIANTS.md}
+│       │   └── (profiles/ と proposals/ は必要時にコマンドが作成)
 │       ├── capability/{skills/, rules/}
 │       ├── skills/{aiko-mode, aiko-override, aiko-reset, aiko-diff, aiko-profile}/SKILL.md
 │       └── hooks/{pre-tool-use.sh, session-start.sh, session-end.sh}
