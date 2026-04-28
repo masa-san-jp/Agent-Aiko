@@ -22,11 +22,11 @@ esac
 [ -z "$PATH_VAL" ] && exit 0
 
 case "$PATH_VAL" in
-  *.claude/aiko/persona/aiko-origin.md|*aiko-origin.md)
+  .claude/aiko/persona/aiko-origin.md|./.claude/aiko/persona/aiko-origin.md|*/.claude/aiko/persona/aiko-origin.md)
     echo "Refused: aiko-origin.md is protected. Use /aiko-override or /aiko-reset to change override persona instead." 1>&2
     exit 2
     ;;
-  *.claude/aiko/persona/INVARIANTS.md|*INVARIANTS.md)
+  .claude/aiko/persona/INVARIANTS.md|./.claude/aiko/persona/INVARIANTS.md|*/.claude/aiko/persona/INVARIANTS.md)
     echo "Refused: INVARIANTS.md is protected and cannot be edited via tool calls." 1>&2
     exit 2
     ;;
