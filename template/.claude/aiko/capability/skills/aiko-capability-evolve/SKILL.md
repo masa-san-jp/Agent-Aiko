@@ -16,7 +16,7 @@ description: Propose new capability skills or rules based on observed user reque
 
 ## 手順
 
-1. 直近の会話やログ（必要に応じ `logs/dev-log.jsonl`）から候補を 3 件以内で抽出します
+1. 直近の会話やログ（必要に応じ `dev-docs/dev-log.jsonl`）から候補を 3 件以内で抽出します
 2. それぞれについて以下を 1 行で提示します。
 
    ```
