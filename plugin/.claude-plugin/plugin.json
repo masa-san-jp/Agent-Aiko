@@ -1,0 +1,8 @@
+{
+  "name": "agent-aiko",
+  "version": "0.1.0",
+  "description": "Agent-Aiko persona system. Brings AICO-P0-style assistant persona to Claude Code with switchable origin/override modes and named profiles.",
+  "homepage": "https://github.com/masa-san-jp/agent-aiko",
+  "license": "MIT",
+  "templateDir": "../../template/.claude"
+}
