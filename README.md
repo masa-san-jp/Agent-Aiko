@@ -87,12 +87,14 @@ agent-aiko/
 
 ## 開発者向け
 
-開発専用ドキュメント（design.md / persona spec / dev-log 等）は別リポジトリ [agent-aiko-dev](https://github.com/masa-san-jp/agent-aiko-dev) に分離しています。エージェントのランタイムには不要なため、配布物（本リポジトリ）には含めません。
+開発専用ドキュメント（design.md / persona spec / dev-log 等）は別リポジトリ [agent-aiko-dev](https://github.com/masa-san-jp/agent-aiko-dev) の `dev-docs/` 配下に分離しています。エージェントのランタイムには不要なため、配布物（本リポジトリ）には含めません。
 
-ローカル作業時は `dev-docs/` ディレクトリに clone してください（本リポジトリの `.gitignore` 済み）：
+ローカル作業時は本リポジトリと並べて clone してください（本リポジトリの `.gitignore` 済み）：
 
 ```bash
-git clone https://github.com/masa-san-jp/agent-aiko-dev dev-docs
+git clone https://github.com/masa-san-jp/agent-aiko
+git clone https://github.com/masa-san-jp/agent-aiko-dev
+# agent-aiko-dev/dev-docs/ にドキュメントが配置されます
 ```
 
 ---
