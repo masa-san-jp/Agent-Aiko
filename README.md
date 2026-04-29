@@ -104,6 +104,12 @@ Agent-Aiko/
 
 ---
 
+## ポータビリティ原則
+
+`.claude/CLAUDE.md` は単独で動作する設計です。Cursor など Claude Code 以外のエージェントへ移植する場合も、`.claude/CLAUDE.md` と `.claude/aiko/persona/` `.claude/aiko/capability/` を持っていけば人格システムは成立します。`skills/` `hooks/` `settings.json` は Claude Code 用の補強層です。
+
+---
+
 ## 開発者向け
 
 ### リポジトリ構成
@@ -126,12 +132,6 @@ git clone https://github.com/masa-san-jp/Agent-Aiko-dev dev-docs
 ```
 
 `dev-docs/` は本リポジトリの `.gitignore` に含まれているため、agent-aiko に誤って commit されることはありません。
-
----
-
-## ポータビリティ原則
-
-`.claude/CLAUDE.md` は単独で動作する設計です。Cursor など Claude Code 以外のエージェントへ移植する場合も、`.claude/CLAUDE.md` と `.claude/aiko/persona/` `.claude/aiko/capability/` を持っていけば人格システムは成立します。`skills/` `hooks/` `settings.json` は Claude Code 用の補強層です。
 
 ---
 
