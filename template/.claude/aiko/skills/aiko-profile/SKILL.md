@@ -5,7 +5,7 @@ description: Manage named snapshots of the override persona (save / load / list 
 
 # /aiko-profile
 
-Override 人格 `.claude/aiko/persona/aiko-override.md` の名前付きスナップショットを管理します。保存先は `.claude/aiko/persona/profiles/<name>.md` です。
+Aiko（自分用）`.claude/aiko/persona/aiko-override.md` の名前付きスナップショットを管理します。保存先は `.claude/aiko/persona/profiles/<name>.md` です。
 
 ## 名前の制約
 

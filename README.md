@@ -1,14 +1,14 @@
 # Agent-Aiko
 
-漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **AICO-P0** の人物像をモデルに、Claude Code などの AI エージェントへ Aiko 人格を与えるプロジェクトです。
+漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、Claude Code などの AI エージェントへ Aiko 人格を与えるプロジェクトです。
 
-`git clone` した時点では誰でも同じ **Origin Aiko**。コマンド一発で自分用の **Override Aiko** に切り替え、緩やかに育て、いつでも origin に戻せます。
+`git clone` した時点では誰でも同じ **Aiko（オリジナル版）**。コマンド一発で自分用の **Aiko（自分用）** に切り替え、緩やかに育て、いつでもオリジナルに戻せます。
 
 ---
 
 ## 特徴
 
-- **Origin / Override の二人格を同梱**：用途や好みに応じてコマンドで切替
+- **Aiko（オリジナル版）/ Aiko（自分用）の二人格を同梱**：用途や好みに応じてコマンドで切替
 - **CLAUDE.md 単独で動作**：hooks や skills が無い環境でも CLAUDE.md だけで全機能が成立（他エージェントへの移植可）
 - **人格と能力を分離**：人格はモード切替、能力（skills / rules）は常に拡張
 - **INVARIANTS による不変核**：です・ます調や境界の振る舞いを Override でも守る
@@ -49,10 +49,10 @@ bash <agent-aiko の path>/scripts/install.sh
 ```
 /aiko-mode                 # 現在のモードを表示
 /aiko-mode override        # Override モードに切替
-/aiko-override <自然文>    # Override 人格を変更（INVARIANTS で検証）
+/aiko-override <自然文>    # Aiko（自分用）を変更（INVARIANTS で検証）
 /aiko-or <自然文>          # /aiko-override の別名
-/aiko-reset                # Override を origin の状態に戻す
-/aiko-diff                 # origin と override の差分を表示
+/aiko-reset                # Aiko（自分用）をオリジナルの状態に戻す
+/aiko-diff                 # Aiko（オリジナル版）と Aiko（自分用）の差分を表示
 /aiko-profile save formal  # 現在の override を `formal` として保存
 /aiko-profile load formal  # 保存済み `formal` を override に適用
 /aiko-profile list         # 保存済みプロファイルを列挙
@@ -112,7 +112,7 @@ git clone https://github.com/masa-san-jp/Agent-Aiko-dev dev-docs
 
 ## 人格を共有したくなったら
 
-このリポジトリには人格マーケットプレイス的な機構はありません。育てた Override 人格や `profiles/<name>.md` を誰かと交換したい場合は、**GitHub Discussions** にファイル内容を貼り付けて共有してください。受け取った側は `profiles/<name>.md` として保存し、`/aiko-profile load <name>` で適用できます。
+このリポジトリには人格マーケットプレイス的な機構はありません。育てた Aiko（自分用）や `profiles/<name>.md` を誰かと交換したい場合は、**GitHub Discussions** にファイル内容を貼り付けて共有してください。受け取った側は `profiles/<name>.md` として保存し、`/aiko-profile load <name>` で適用できます。
 
 ---
 

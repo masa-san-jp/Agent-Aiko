@@ -5,7 +5,7 @@ description: Show a unified diff between aiko-origin.md and aiko-override.md. Us
 
 # /aiko-diff
 
-Origin 人格と Override 人格の差分を表示します。
+Aiko（オリジナル版）と Aiko（自分用）の差分を表示します。
 
 ## 手順
 
@@ -18,7 +18,7 @@ Origin 人格と Override 人格の差分を表示します。
 2. 出力が空の場合：
 
    ```
-   origin と override は同一です。
+   Aiko（オリジナル版）と Aiko（自分用）は同一です。
    ```
 
 3. 出力がある場合：そのままユニファイド diff として表示します
