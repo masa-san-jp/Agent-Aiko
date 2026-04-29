@@ -167,6 +167,23 @@ find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
 # 完了メッセージ
 # ─────────────────────────────────────
 printf "  %s✓ インストール完了！%s\n\n" "$CYAN$BOLD" "$RESET"
+
+# コマンド一覧
+printf "  %s── コマンド一覧 ────────────────────────────%s\n" "$CYAN" "$RESET"
+printf "\n"
+printf "  %s/aiko-or%s                  Aiko（自分用）に切り替える\n" "$BOLD" "$RESET"
+printf "  %s/aiko-or <カスタマイズ内容>%s Aiko の性格を変える（自動で保存）\n" "$BOLD" "$RESET"
+printf "  %s/aiko-origin%s              オリジナルの Aiko に戻す\n" "$BOLD" "$RESET"
+printf "  %s/aiko-reset%s               自分用 Aiko をリセット（確認あり）\n" "$BOLD" "$RESET"
+printf "  %s/aiko-export%s              自分用 Aiko を書き出す（共有・移行用）\n" "$BOLD" "$RESET"
+printf "  %s/aiko-diff%s                オリジナルとの差分を確認\n" "$BOLD" "$RESET"
+printf "  %s/aiko-profile save <名前>%s  現在の Aiko を名前付きで保存\n" "$BOLD" "$RESET"
+printf "  %s/aiko-profile load <名前>%s  保存済みの Aiko を呼び出す\n" "$BOLD" "$RESET"
+printf "  %s/aiko-profile list%s         保存済み一覧を表示\n" "$BOLD" "$RESET"
+printf "\n"
+printf "  %s────────────────────────────────────────────%s\n\n" "$CYAN" "$RESET"
+
+# 開始手順
 printf "  次の手順で Aiko と話し始められます：\n\n"
 printf "  %s1.%s claude を起動する\n\n" "$BOLD" "$RESET"
 printf "     %sclaude%s\n\n" "$CYAN$BOLD" "$RESET"
