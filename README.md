@@ -33,9 +33,14 @@ clone 不要。確認プロンプトが出るので `Y` を押すとインスト
 ### B. リポジトリを clone して使う
 
 ```bash
-git clone https://github.com/masa-san-jp/Agent-Aiko.git
+# 1. Agent-Aiko をホームディレクトリに clone
+git clone https://github.com/masa-san-jp/Agent-Aiko.git ~/Agent-Aiko
+
+# 2. インストールしたいプロジェクトに移動
 cd <あなたのプロジェクト>
-bash <agent-aiko の path>/scripts/install.sh
+
+# 3. インストール実行
+bash ~/Agent-Aiko/scripts/install.sh
 ```
 
 ### C. Claude Code Plugin として
