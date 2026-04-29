@@ -1,37 +1,107 @@
 #!/bin/bash
 # Agent-Aiko installer
-# Copies template/.claude/ into the current directory's .claude/.
-# Re-install safe: never overwrites user-controlled files.
-#   user-controlled:
-#     - aiko/mode
-#     - aiko/persona/aiko-override.md
-#     - aiko/persona/profiles/*
-#     - aiko/persona/proposals/*
-#     - aiko/capability/rules/rules-base.md
-#   force-refreshed (always upstream version):
-#     - everything else (CLAUDE.md, settings.json, aiko-origin.md, INVARIANTS.md,
-#       skills/, hooks/, capability/skills/)
+# curl でも直接実行でも動作します。
+#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
+#   bash scripts/install.sh
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEMPLATE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)/template/.claude"
+# ─────────────────────────────────────
+# カラー設定
+# ─────────────────────────────────────
+if [ -t 1 ]; then
+  CYAN=$'\033[36m'
+  WHITE=$'\033[97m'
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  RESET=$'\033[0m'
+else
+  CYAN="" WHITE="" BOLD="" DIM="" RESET=""
+fi
+
+# ─────────────────────────────────────
+# ロゴ表示
+# ─────────────────────────────────────
+echo ""
+printf "%s" "$CYAN"
+cat << 'LOGO'
+██  ██████████████  ██
+██████████████████████
+██████████████████████
+██████  ██████  ██████
+  ████  ██████  ████
+  ██████████████████
+    ████      ████
+LOGO
+printf "%s" "$RESET"
+echo ""
+printf "%s" "$WHITE$BOLD"
+cat << 'TITLE'
+ ███   ████ █████ █   █ █████
+█   █ █     █     ██  █   █
+█████ █  ██ ████  █ █ █   █
+█   █ █   █ █     █  ██   █
+█   █  ████ █████ █   █   █
+
+ ███  ███ █   █  ███
+█   █  █  █  █  █   █
+█████  █  ████  █   █
+█   █  █  █  █  █   █
+█   █ ███ █   █  ███
+TITLE
+printf "%s\n\n" "$RESET"
+
+# ─────────────────────────────────────
+# テンプレートの場所を決定
+# curl | bash の場合はリポジトリをクローン
+# ─────────────────────────────────────
+TEMP_DIR=""
+CLEANUP_TEMP=false
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "")"
+TEMPLATE_DIR="${SCRIPT_DIR}/../template/.claude"
 
 if [ ! -d "$TEMPLATE_DIR" ]; then
-  echo "✗ template/.claude が見つかりません: $TEMPLATE_DIR" 1>&2
-  exit 1
+  printf "  リポジトリを取得しています...  "
+  TEMP_DIR=$(mktemp -d)
+  if git clone --depth=1 --quiet https://github.com/masa-san-jp/Agent-Aiko.git "$TEMP_DIR" 2>/dev/null; then
+    printf "%s✓%s\n" "$CYAN" "$RESET"
+  else
+    printf "\n  %sエラー: リポジトリの取得に失敗しました%s\n" "$BOLD" "$RESET"
+    exit 1
+  fi
+  TEMPLATE_DIR="$TEMP_DIR/template/.claude"
+  CLEANUP_TEMP=true
 fi
 
 DEST_DIR="$(pwd)/.claude"
 
-echo "=== Agent-Aiko install ==="
-echo "  source: $TEMPLATE_DIR"
-echo "  dest  : $DEST_DIR"
+# ─────────────────────────────────────
+# インストール先の確認
+# ─────────────────────────────────────
+printf "  インストール先: %s%s%s\n\n" "$BOLD" "$(pwd)" "$RESET"
+printf "  ここに Agent Aiko をインストールしますか？ [Y/n]: "
+
+if [ -t 0 ]; then
+  read -r CONFIRM
+else
+  read -r CONFIRM < /dev/tty
+fi
+
+case "$CONFIRM" in
+  [nN]|[nN][oO])
+    printf "\n  インストールをキャンセルしました\n\n"
+    [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+    exit 0
+    ;;
+esac
 echo ""
 
+# ─────────────────────────────────────
+# インストール実行
+# ─────────────────────────────────────
 mkdir -p "$DEST_DIR"
 
-# Stash user-controlled files (if they exist)
 STASH=$(mktemp -d)
 stash_if_exists() {
   local rel="$1"
@@ -49,17 +119,15 @@ stash_if_exists "aiko/persona/profiles"
 stash_if_exists "aiko/persona/proposals"
 stash_if_exists "aiko/capability/rules/rules-base.md"
 
-# Force-copy entire template (overwrites everything)
 cp -R "$TEMPLATE_DIR/." "$DEST_DIR/"
 
-# Restore stashed user-controlled files
 restore_if_stashed() {
   local rel="$1"
   if [ -e "$STASH/$rel" ]; then
     rm -rf "$DEST_DIR/$rel"
     mkdir -p "$(dirname "$DEST_DIR/$rel")"
     cp -R "$STASH/$rel" "$DEST_DIR/$rel"
-    echo "  · $rel を保持"
+    printf "  %s· %s を保持%s\n" "$DIM" "$rel" "$RESET"
   fi
 }
 
@@ -80,29 +148,26 @@ rm -rf "$STASH"
 
 ORIGIN="$DEST_DIR/aiko/persona/aiko-origin.md"
 OVERRIDE="$DEST_DIR/aiko/persona/aiko-override.md"
-INVARIANTS="$DEST_DIR/aiko/persona/INVARIANTS.md"
 MODE_FILE="$DEST_DIR/aiko/mode"
 
-# Initialize override and mode if this is a fresh install (no stash existed)
 if [ "$USER_HAD_OVERRIDE" -eq 0 ]; then
   cp "$ORIGIN" "$OVERRIDE"
-  echo "  ✓ aiko-override.md を origin から初期化"
 fi
 
 if [ "$USER_HAD_MODE" -eq 0 ]; then
   printf 'origin\n' > "$MODE_FILE"
-  echo "  ✓ mode を origin で初期化"
 fi
 
-# Protect origin and invariants
-chmod 444 "$ORIGIN" "$INVARIANTS" 2>/dev/null || true
-echo "  ✓ aiko-origin.md / INVARIANTS.md を 444 に設定"
-
+chmod 444 "$ORIGIN" "$DEST_DIR/aiko/persona/INVARIANTS.md" 2>/dev/null || true
 find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
-echo "  ✓ hooks に実行権限を付与"
 
-echo ""
-echo "=== ✓ インストール完了 ==="
-echo "次の一歩："
-echo "  - Claude Code を起動 → /aiko-mode で現在モードを確認"
-echo "  - /aiko-mode override に切り替えて自分用の人格を育て始められます"
+[ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+
+# ─────────────────────────────────────
+# 完了メッセージ
+# ─────────────────────────────────────
+printf "  %s✓ インストール完了！%s\n\n" "$CYAN$BOLD" "$RESET"
+printf "  次のステップ：\n"
+printf "    %sclaude%s            # Claude Code を起動（Aiko が迎えてくれます）\n" "$BOLD" "$RESET"
+printf "    %s/aiko-or <指示>%s   # Aiko をカスタマイズ\n" "$BOLD" "$RESET"
+printf "    %s/aiko-origin%s      # オリジナルの Aiko に切り替え\n\n" "$BOLD" "$RESET"

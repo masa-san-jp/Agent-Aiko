@@ -20,23 +20,25 @@
 
 ## インストール
 
-### A. リポジトリのスクリプトを使う
+### A. curl で一発インストール（推奨）
+
+インストールしたいプロジェクトのディレクトリで実行するだけです：
 
 ```bash
-git clone https://github.com/masa-san-jp/agent-aiko.git
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
+```
+
+clone 不要。確認プロンプトが出るので `Y` を押すとインストール完了、あとは `claude` を起動するだけです。
+
+### B. リポジトリを clone して使う
+
+```bash
+git clone https://github.com/masa-san-jp/Agent-Aiko.git
 cd <あなたのプロジェクト>
 bash <agent-aiko の path>/scripts/install.sh
 ```
 
-実行内容：
-
-- `template/.claude/` を `<カレント>/.claude/` にコピー
-- `.claude/aiko/persona/aiko-override.md` が無ければ origin から初期化
-- `.claude/aiko/mode` を `origin` で初期化
-- `aiko-origin.md` と `INVARIANTS.md` を `chmod 444`
-- `hooks/*.sh` に実行権限付与
-
-### B. Claude Code Plugin として
+### C. Claude Code Plugin として
 
 ```
 /plugin install <repo-url>
