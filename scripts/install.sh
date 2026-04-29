@@ -167,7 +167,7 @@ find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
 # 完了メッセージ
 # ─────────────────────────────────────
 printf "  %s✓ インストール完了！%s\n\n" "$CYAN$BOLD" "$RESET"
-printf "  次のステップ：\n"
-printf "    %sclaude%s            # Claude Code を起動（Aiko が迎えてくれます）\n" "$BOLD" "$RESET"
-printf "    %s/aiko-or <指示>%s   # Aiko をカスタマイズ\n" "$BOLD" "$RESET"
-printf "    %s/aiko-origin%s      # オリジナルの Aiko に切り替え\n\n" "$BOLD" "$RESET"
+printf "  まずは Claude Code を起動してください：\n\n"
+printf "    %sclaude%s\n\n" "$CYAN$BOLD" "$RESET"
+printf "  起動すると Aiko があなたの名前を聞きます。\n"
+printf "  名前を入力すれば、すぐに使い始められます。\n\n"
