@@ -169,7 +169,7 @@ printf "  %s✓ インストール完了！%s\n\n" "$CYAN$BOLD" "$RESET"
 # コマンド一覧
 printf "  %s── コマンド一覧 ────────────────────────────%s\n" "$CYAN" "$RESET"
 printf "\n"
-printf "  %s/aiko-or%s                  Aiko（自分用）に切り替える\n" "$BOLD" "$RESET"
+printf "  %s/aiko-or%s                  アイコ（カスタマイズ）に切り替える\n" "$BOLD" "$RESET"
 printf "  %s/aiko-or <カスタマイズ内容>%s Aiko の性格を変える（自動で保存）\n" "$BOLD" "$RESET"
 printf "  %s/aiko-origin%s (%s/aiko-org%s)  オリジナルの Aiko に戻す\n" "$BOLD" "$RESET" "$BOLD" "$RESET"
 printf "  %s/aiko-reset%s               自分用 Aiko をリセット（確認あり）\n" "$BOLD" "$RESET"

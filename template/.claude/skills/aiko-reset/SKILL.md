@@ -5,7 +5,7 @@ description: Reset the override persona to origin after confirmation. Use when t
 
 # /aiko-reset
 
-Aiko（自分用）の内容をオリジナルに戻します。
+アイコ（カスタマイズ）の内容をオリジナルに戻します。
 
 ## 手順
 
@@ -30,7 +30,7 @@ Aiko（自分用）の内容をオリジナルに戻します。
 6. 完了を報告します
 
    ```
-   Aiko（自分用）をリセットしました。
+   アイコ（カスタマイズ）をリセットしました。
    これまでの変更履歴は .claude/aiko/override-history.jsonl に残っています。
    ```
 
