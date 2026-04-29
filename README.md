@@ -97,7 +97,6 @@ Agent-Aiko/
 │           ├── session-start.sh
 │           ├── session-end.sh
 │           └── pre-tool-use.sh
-└── images/                         # 原典漫画データ（Git 管理外）
 ```
 
 ---
