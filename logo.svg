@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 410" width="340" height="410">
+  <rect width="340" height="410" fill="#0d1117" rx="8"/>
+
+  <!-- Face (cyan) -->
+  <text xml:space="preserve" font-family="'Courier New', Courier, monospace" font-size="14" fill="#58e6d9">
+    <tspan x="25" y="42">██  ██████████████  ██</tspan>
+    <tspan x="25" dy="18">██████████████████████</tspan>
+    <tspan x="25" dy="18">██████████████████████</tspan>
+    <tspan x="25" dy="18">██████  ██████  ██████</tspan>
+    <tspan x="25" dy="18">  ████  ██████  ████</tspan>
+    <tspan x="25" dy="18">  ██████████████████</tspan>
+    <tspan x="25" dy="18">    ████      ████</tspan>
+  </text>
+
+  <!-- AGENT (white) -->
+  <text xml:space="preserve" font-family="'Courier New', Courier, monospace" font-size="14" fill="#f0f6fc">
+    <tspan x="25" y="188"> ███   ████ █████ █   █ █████</tspan>
+    <tspan x="25" dy="18">█   █ █     █     ██  █   █</tspan>
+    <tspan x="25" dy="18">█████ █  ██ ████  █ █ █   █</tspan>
+    <tspan x="25" dy="18">█   █ █   █ █     █  ██   █</tspan>
+    <tspan x="25" dy="18">█   █  ████ █████ █   █   █</tspan>
+  </text>
+
+  <!-- AIKO (cyan) -->
+  <text xml:space="preserve" font-family="'Courier New', Courier, monospace" font-size="14" fill="#58e6d9">
+    <tspan x="25" y="300"> ███  ███ █   █  ███</tspan>
+    <tspan x="25" dy="18">█   █  █  █  █  █   █</tspan>
+    <tspan x="25" dy="18">█████  █  ████  █   █</tspan>
+    <tspan x="25" dy="18">█   █  █  █  █  █   █</tspan>
+    <tspan x="25" dy="18">█   █ ███ █   █  ███</tspan>
+  </text>
+</svg>
