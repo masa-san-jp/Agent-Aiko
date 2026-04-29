@@ -45,11 +45,11 @@ bash ~/Agent-Aiko/scripts/install.sh
 
 ### C. Claude Code Plugin として
 
-```
-/plugin install <repo-url>
-```
+Claude Code を起動した状態で、チャットに以下を入力してください：
 
-`plugin/.claude-plugin/plugin.json` がメタデータです。
+```
+/plugin install https://github.com/masa-san-jp/Agent-Aiko
+```
 
 ---
 
