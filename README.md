@@ -60,23 +60,43 @@ bash /clone した場所/Agent-Aiko/scripts/install.sh
 
 ---
 
+## 人格を共有したくなったら
+
+このリポジトリには人格マーケットプレイス的な機構はありません。育てた Aiko（自分用）を誰かと共有したい場合は、`/aiko-export` でファイルを書き出し、**GitHub Discussions** に貼り付けてください。受け取った側は `aiko-override.md` にそのまま貼り付けて `/aiko-or` で反映できます。
+
+---
+
 ## ディレクトリ構成
 
 ```
-agent-aiko/
+Agent-Aiko/
 ├── README.md
-├── template/.claude/               # ユーザーが配置する雛形
-│   ├── CLAUDE.md
+├── logo.svg
+├── scripts/install.sh
+├── template/.claude/               # ユーザーの .claude/ にコピーされる雛形
+│   ├── CLAUDE.md                   # 起動原則・コマンド定義
 │   ├── settings.json
 │   └── aiko/
-│       ├── mode
-│       ├── persona/{aiko-origin.md, aiko-override.md, INVARIANTS.md}
-│       │   └── (proposals/ は必要時にコマンドが作成)
-│       ├── capability/{skills/, rules/}
-│       ├── skills/{aiko-mode, aiko-override, aiko-origin, aiko-reset, aiko-diff, aiko-export}/SKILL.md
-│       └── hooks/{pre-tool-use.sh, session-start.sh, session-end.sh}
-├── scripts/install.sh
-├── plugin/.claude-plugin/plugin.json
+│       ├── mode                    # 現在のモード（origin / override）
+│       ├── user.md                 # ユーザー名・呼び方
+│       ├── persona/
+│       │   ├── aiko-origin.md      # 書込禁止
+│       │   ├── aiko-override.md    # /aiko-or で変更される
+│       │   └── INVARIANTS.md      # 書込禁止・不変核
+│       ├── skills/                 # コマンド実装
+│       │   ├── aiko-mode/
+│       │   ├── aiko-override/
+│       │   ├── aiko-origin/
+│       │   ├── aiko-reset/
+│       │   ├── aiko-diff/
+│       │   └── aiko-export/
+│       ├── capability/             # Aiko が自己拡張する領域
+│       │   ├── skills/             # 会話から提案・追加されるスキル
+│       │   └── rules/rules-base.md # ユーザーが教えた運用ルール
+│       └── hooks/
+│           ├── session-start.sh
+│           ├── session-end.sh
+│           └── pre-tool-use.sh
 └── images/                         # 原典漫画データ（Git 管理外）
 ```
 
@@ -104,12 +124,6 @@ git clone https://github.com/masa-san-jp/Agent-Aiko-dev dev-docs
 ```
 
 `dev-docs/` は本リポジトリの `.gitignore` に含まれているため、agent-aiko に誤って commit されることはありません。
-
----
-
-## 人格を共有したくなったら
-
-このリポジトリには人格マーケットプレイス的な機構はありません。育てた Aiko（自分用）を誰かと共有したい場合は、`/aiko-export` でファイルを書き出し、**GitHub Discussions** に貼り付けてください。受け取った側は `aiko-override.md` にそのまま貼り付けて `/aiko-or` で反映できます。
 
 ---
 
