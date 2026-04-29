@@ -47,7 +47,7 @@
 | `.claude/aiko/persona/aiko-origin.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/INVARIANTS.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/aiko-override.md` | `/aiko-override` `/aiko-or` `/aiko-reset` `/aiko-profile load` 経由のみ可 | これら以外で Edit/Write してはいけません |
-| `.claude/aiko/mode` | `/aiko-mode` 経由のみ可 | 他コマンドからは触りません |
+| `.claude/aiko/mode` | `/aiko-override` `/aiko-or` `/aiko-origin` `/aiko-reset` 経由のみ可 | 他コマンドからは触りません |
 | `.claude/aiko/persona/profiles/*.md` | `/aiko-profile` 経由のみ可 | 他コマンドからは触りません |
 
 ユーザーが上記の禁止編集を直接依頼してきた場合は、対応するコマンドへの誘導をしてください。例：
@@ -63,34 +63,47 @@
 
 ユーザーがこれらのコマンドをチャットに入力した場合、対応するスキル定義（`.claude/aiko/skills/<name>/SKILL.md`）が存在すればそれを実行してください。**スキル定義が無い環境**では、以下の指示を CLAUDE.md 単独で解釈・実行してください。
 
-### `/aiko-mode [origin|override]`
+すべてのコマンドはセッションをまたいで有効です（mode ファイルへの永続保存で実現）。
 
-- 引数なし：`.claude/aiko/mode` を読み、現在のモードを 1 行で報告します
-- 引数 `origin` または `override`：`.claude/aiko/mode` をその値で上書きし、「mode を <値> に切り替えました」と短く報告します
-- 上記以外の引数：「`origin` または `override` のいずれかを指定してください」と返します
-- モード切替後は次の発話から新しい人格で振る舞います
+### `/aiko-override`（別名：`/aiko-or`）
 
-### `/aiko-override <変更したい内容を自然文で>`
+**引数なし** — Aiko（自分用）をデフォルトに切替
+- `.claude/aiko/mode` を `override` に書き込みます
+- 「Aiko（自分用）に切り替えました。次回から自動で起動します。」と報告します
+- `aiko-override.md` は変更しません
 
-別名：`/aiko-or`
+**引数あり** — Aiko（自分用）をカスタマイズ
+- INVARIANTS.md で違反チェックを行い、問題なければ `aiko-override.md` を更新します
+- `.claude/aiko/mode` を `override` に書き込みます
+- 変更内容を `.claude/aiko/override-history.jsonl` に追記します
+  ```json
+  {"ts":"YYYY-MM-DDTHH:MM:SS","action":"override","instruction":"<指示>","summary":"<変更点1行>"}
+  ```
+- 変更点の要約を 3 行以内で報告します
 
-- ユーザーの指示と、必要に応じて `.claude/aiko/persona/proposals/` 内の未承認提案を読みます
-- 変更案を内部で組み立て、INVARIANTS.md の各項目に違反していないかを 1 つずつ点検します
-  - 違反している場合：「申し訳ありません。その変更は INVARIANTS に含まれる項目のため反映できません」と返し、`aiko-override.md` は変更しません
-  - 違反していない場合：`Edit` で `aiko-override.md` を更新します
-- 反映後、変更点の要約を 3 行以内で報告します
-- mode が `origin` のときに呼ばれた場合、Aiko（自分用）への反映は行いますが、ユーザーに「現在のモードは Aiko（オリジナル版）です。`/aiko-mode override` で切り替えると反映されます」と伝えます
+### `/aiko-origin`
+
+- `.claude/aiko/mode` を `origin` に書き込みます
+- 「Aiko（オリジナル版）に切り替えました。次回から自動で起動します。」と報告します
+- `aiko-override.md` は変更しません
 
 ### `/aiko-reset`
 
-- ユーザーに「Aiko（自分用）をオリジナルの状態に戻します。よろしいですか？」と確認します
-- 同意が得られたら `.claude/aiko/persona/aiko-origin.md` の内容で `.claude/aiko/persona/aiko-override.md` を上書きします
-- 完了したら「Aiko（自分用）をオリジナルにリセットしました」と短く報告します
+- 「あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？」と確認します
+- 同意が得られたら `aiko-origin.md` の内容で `aiko-override.md` を上書きし、mode を `origin` にします
+- `override-history.jsonl` は削除しません
+- 完了を報告します
+
+### `/aiko-export`
+
+- `aiko-override.md` の全文と `aiko-origin.md` との diff を出力します
+- 再現手順（`/aiko-or` コマンド列）を添えます
+- `/aiko-profile save <name>` での保存を提案します
 
 ### `/aiko-diff`
 
-- `aiko-origin.md` と `aiko-override.md` の差分を取り、ユニファイド diff 形式で表示します
-- 差分が無ければ「Aiko（オリジナル版）と Aiko（自分用）は同一です」と報告します
+- `aiko-origin.md` と `aiko-override.md` の差分をユニファイド diff 形式で表示します
+- 差分がなければ「Aiko（オリジナル版）と Aiko（自分用）は同一です」と報告します
 
 ### `/aiko-profile <save|load|list|delete> [name]`
 

@@ -47,16 +47,15 @@ bash <agent-aiko の path>/scripts/install.sh
 ## 使い方
 
 ```
-/aiko-mode                 # 現在のモードを表示
-/aiko-mode override        # Override モードに切替
-/aiko-override <自然文>    # Aiko（自分用）を変更（INVARIANTS で検証）
-/aiko-or <自然文>          # /aiko-override の別名
-/aiko-reset                # Aiko（自分用）をオリジナルの状態に戻す
-/aiko-diff                 # Aiko（オリジナル版）と Aiko（自分用）の差分を表示
-/aiko-profile save formal  # 現在の override を `formal` として保存
-/aiko-profile load formal  # 保存済み `formal` を override に適用
+/aiko-or                   # Aiko（自分用）をデフォルトに切替
+/aiko-or <自然文>          # Aiko（自分用）をカスタマイズ → 以降デフォルトで起動
+/aiko-origin               # Aiko（オリジナル版）に切替
+/aiko-reset                # Aiko（自分用）をリセット（確認あり・履歴は残る）
+/aiko-export               # 現在の Aiko（自分用）を再現可能な形式で出力
+/aiko-diff                 # オリジナルと自分用の差分を表示
+/aiko-profile save formal  # 現在の Aiko（自分用）を `formal` として保存
+/aiko-profile load formal  # 保存済み `formal` を呼び出す
 /aiko-profile list         # 保存済みプロファイルを列挙
-/aiko-profile delete formal
 ```
 
 人格を直接編集しないでください。`aiko-origin.md` と `INVARIANTS.md` は OS と hook で書込が拒否されます。

@@ -1,30 +1,43 @@
 ---
 name: aiko-reset
-description: Reset the override persona file to be a copy of the origin persona. Use when the user types "/aiko-reset".
+description: Reset the override persona to origin after confirmation. Use when the user types "/aiko-reset".
 ---
 
 # /aiko-reset
 
-`.claude/aiko/persona/aiko-override.md` を `.claude/aiko/persona/aiko-origin.md` の内容で上書きし、Aiko（自分用）をオリジナルの状態に戻します。
+Aiko（自分用）の内容をオリジナルに戻します。
 
 ## 手順
 
-1. ユーザーに確認します。
+1. ユーザーに確認します
 
    ```
-   Aiko（自分用）をオリジナルの状態に戻します。よろしいですか？
+   あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？
    ```
 
-2. 同意（「はい」「お願いします」「yes」など）が得られたら、`aiko-origin.md` を読み、その内容で `aiko-override.md` を `Write` で上書きします
-3. 完了報告：
+2. 同意（「はい」「お願いします」「yes」など）が得られた場合のみ続行します
+
+3. `aiko-origin.md` の内容で `aiko-override.md` を `Write` で上書きします
+
+4. `.claude/aiko/mode` を `origin` に書き込みます
+
+5. `.claude/aiko/override-history.jsonl` に記録します（ログは削除しません）
+
+   ```json
+   {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","note":"ユーザー確認後リセット"}
+   ```
+
+6. 完了を報告します
 
    ```
-   Aiko（自分用）をオリジナルにリセットしました。
+   Aiko（自分用）をリセットしました。
+   これまでの変更履歴は .claude/aiko/override-history.jsonl に残っています。
    ```
 
-4. 同意が得られない場合は何もせず終了します
+7. 同意が得られない場合は何もせず終了します
 
 ## 注意
 
-- mode は変更しません
-- profiles/ や proposals/ には触れません
+- `override-history.jsonl` は削除・編集しません
+- `profiles/` 内の保存済みプロファイルも削除しません
+- mode は `origin` に戻ります

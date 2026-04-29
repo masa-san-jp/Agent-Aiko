@@ -43,6 +43,7 @@ stash_if_exists() {
 
 stash_if_exists "aiko/mode"
 stash_if_exists "aiko/user.md"
+stash_if_exists "aiko/override-history.jsonl"
 stash_if_exists "aiko/persona/aiko-override.md"
 stash_if_exists "aiko/persona/profiles"
 stash_if_exists "aiko/persona/proposals"
@@ -69,6 +70,7 @@ USER_HAD_MODE=0
 
 restore_if_stashed "aiko/mode"
 restore_if_stashed "aiko/user.md"
+restore_if_stashed "aiko/override-history.jsonl"
 restore_if_stashed "aiko/persona/aiko-override.md"
 restore_if_stashed "aiko/persona/profiles"
 restore_if_stashed "aiko/persona/proposals"
