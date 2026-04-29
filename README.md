@@ -47,6 +47,8 @@ bash /clone した場所/Agent-Aiko/scripts/install.sh
 
 ## 使い方
 
+以下のコマンドをチャットに入力することで Aiko を操作できます。現在は CLAUDE.md の解釈で動作します（スラッシュコマンドとしての登録は将来実装予定）。
+
 ```
 /aiko-or                   # Aiko（自分用）をデフォルトに切替
 /aiko-or <自然文>          # Aiko（自分用）をカスタマイズ → 以降デフォルトで起動
