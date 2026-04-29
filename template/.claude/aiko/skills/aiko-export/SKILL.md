@@ -1,51 +1,40 @@
 ---
 name: aiko-export
-description: Export current override persona in a reproducible format. Use when the user types "/aiko-export".
+description: Export the full content of aiko-override.md so others can copy it to replicate the persona. Use when the user types "/aiko-export".
 ---
 
 # /aiko-export
 
-現在の Aiko（自分用）の内容を、再現可能な形式で出力します。
+現在の Aiko（自分用）の人格ファイルをそのまま出力します。受け取った側はファイルにコピペするだけで同じ人格を再現できます。
 
 ## 手順
 
-1. `aiko-override.md` と `aiko-origin.md` を読み込みます
-
-2. diff を取り、変更箇所のみを抽出します
-
-   ```bash
-   diff -u .claude/aiko/persona/aiko-origin.md .claude/aiko/persona/aiko-override.md
-   ```
-
-3. 以下の形式で出力します
+1. `.claude/aiko/persona/aiko-override.md` の全文を読み込みます
+2. 以下の形式で出力します
 
    ````
    ## Aiko（自分用）エクスポート
    **出力日時**: YYYY-MM-DD HH:MM
 
-   ### 再現手順
-   以下のコマンドを順に実行すると現在の状態を再現できます：
+   ### 使い方
+   以下の内容を `.claude/aiko/persona/aiko-override.md` にそのまま貼り付けてください。
+   貼り付け後、`/aiko-or`（引数なし）で Aiko（自分用）に切り替えられます。
+
+   ---
 
    ```
-   /aiko-reset       # まずオリジナルに戻す
-   /aiko-or <変更内容を自然文で記述>
+   （aiko-override.md の全文をそのまま出力）
    ```
-
-   ### 現在の override 全文
-   （aiko-override.md の全内容をコードブロックで表示）
-
-   ### オリジナルからの差分
-   （diff 出力）
    ````
 
-4. 必要であれば `/aiko-profile save <name>` でプロファイルとして保存する選択肢を添えます
+3. 出力後、以下を添えます
 
    ```
-   このまま保存しますか？ /aiko-profile save <名前> で保存できます。
+   `/aiko-profile save <名前>` で名前をつけて保存することもできます。
    ```
 
 ## 用途
 
-- 育てた Aiko（自分用）を他の環境に移したい
+- 育てた Aiko（自分用）を別の環境・別のプロジェクトに移したい
+- 誰かと人格を共有したい（GitHub Discussions 等に貼る）
 - バックアップとして手元に残したい
-- 誰かと共有したい（GitHub Discussions 等に貼る）
