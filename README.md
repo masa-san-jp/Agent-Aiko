@@ -72,31 +72,34 @@ bash /clone した場所/Agent-Aiko/scripts/install.sh
 Agent-Aiko/
 ├── README.md
 ├── logo.svg
-├── scripts/install.sh
-├── template/.claude/               # ユーザーの .claude/ にコピーされる雛形
-│   ├── CLAUDE.md                   # 起動原則・コマンド定義
-│   ├── settings.json
-│   └── aiko/
-│       ├── mode                    # 現在のモード（origin / override）
-│       ├── user.md                 # ユーザー名・呼び方
-│       ├── persona/
-│       │   ├── aiko-origin.md      # 書込禁止
-│       │   ├── aiko-override.md    # /aiko-or で変更される
-│       │   └── INVARIANTS.md      # 書込禁止・不変核
-│       ├── skills/                 # コマンド実装
-│       │   ├── aiko-mode/
-│       │   ├── aiko-override/
-│       │   ├── aiko-origin/
-│       │   ├── aiko-reset/
-│       │   ├── aiko-diff/
-│       │   └── aiko-export/
-│       ├── capability/             # Aiko が自己拡張する領域
-│       │   ├── skills/             # 会話から提案・追加されるスキル
-│       │   └── rules/rules-base.md # ユーザーが教えた運用ルール
-│       └── hooks/
-│           ├── session-start.sh
-│           ├── session-end.sh
-│           └── pre-tool-use.sh
+├── scripts/
+│   └── install.sh
+└── template/
+    └── .claude/                        # ユーザーの .claude/ にコピーされる雛形
+        ├── CLAUDE.md                   # 起動原則・コマンド定義
+        ├── settings.json
+        └── aiko/
+            ├── mode                    # 現在のモード（origin / override）
+            ├── user.md                 # ユーザー名・呼び方
+            ├── persona/
+            │   ├── aiko-origin.md      # 書込禁止
+            │   ├── aiko-override.md    # /aiko-or で変更される
+            │   └── INVARIANTS.md       # 書込禁止・不変核
+            ├── skills/                 # コマンド実装
+            │   ├── aiko-mode/
+            │   ├── aiko-override/
+            │   ├── aiko-origin/
+            │   ├── aiko-reset/
+            │   ├── aiko-diff/
+            │   └── aiko-export/
+            ├── capability/             # Aiko が自己拡張する領域
+            │   ├── skills/             # 会話から提案・追加されるスキル
+            │   └── rules/
+            │       └── rules-base.md   # ユーザーが教えた運用ルール
+            └── hooks/
+                ├── session-start.sh
+                ├── session-end.sh
+                └── pre-tool-use.sh
 ```
 
 ---
