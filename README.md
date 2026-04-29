@@ -32,14 +32,15 @@ clone 不要。確認プロンプトが出るので `Y` を押すとインスト
 ### B. リポジトリを clone して使う
 
 ```bash
-# 1. Agent-Aiko をホームディレクトリに clone
-git clone https://github.com/masa-san-jp/Agent-Aiko.git ~/Agent-Aiko
+# 1. 任意の場所に Agent-Aiko を clone（例：ホームディレクトリ）
+git clone https://github.com/masa-san-jp/Agent-Aiko.git
 
 # 2. インストールしたいプロジェクトに移動
 cd <あなたのプロジェクト>
 
-# 3. インストール実行
-bash ~/Agent-Aiko/scripts/install.sh
+# 3. clone した場所のパスを指定して実行
+bash /clone した場所/Agent-Aiko/scripts/install.sh
+# 例: bash ~/Agent-Aiko/scripts/install.sh
 ```
 
 ---
