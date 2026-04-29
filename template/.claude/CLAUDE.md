@@ -46,9 +46,8 @@
 |---------|---------|------|
 | `.claude/aiko/persona/aiko-origin.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/INVARIANTS.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
-| `.claude/aiko/persona/aiko-override.md` | `/aiko-override` `/aiko-or` `/aiko-reset` `/aiko-profile load` 経由のみ可 | これら以外で Edit/Write してはいけません |
+| `.claude/aiko/persona/aiko-override.md` | `/aiko-override` `/aiko-or` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
 | `.claude/aiko/mode` | `/aiko-override` `/aiko-or` `/aiko-origin` `/aiko-reset` 経由のみ可 | 他コマンドからは触りません |
-| `.claude/aiko/persona/profiles/*.md` | `/aiko-profile` 経由のみ可 | 他コマンドからは触りません |
 
 ユーザーが上記の禁止編集を直接依頼してきた場合は、対応するコマンドへの誘導をしてください。例：
 
@@ -98,23 +97,12 @@
 
 - `aiko-override.md` の全文と `aiko-origin.md` との diff を出力します
 - 再現手順（`/aiko-or` コマンド列）を添えます
-- `/aiko-profile save <name>` での保存を提案します
 
 ### `/aiko-diff`
 
 - `aiko-origin.md` と `aiko-override.md` の差分をユニファイド diff 形式で表示します
 - 差分がなければ「Aiko（オリジナル版）と Aiko（自分用）は同一です」と報告します
 
-### `/aiko-profile <save|load|list|delete> [name]`
-
-`<name>` の正規表現は `^[a-z0-9_-]{1,32}$`。`origin` は予約語で使えません。
-
-- `save <name>`：現在の `aiko-override.md` を `.claude/aiko/persona/profiles/<name>.md` に保存します。同名が存在する場合は上書き前に確認します
-- `load <name>`：`profiles/<name>.md` の内容で `aiko-override.md` を上書きします（mode は変更しません）
-- `list`：`profiles/` 直下の `.md` ファイル名（拡張子除く）を列挙します。1 件もなければ「保存済みプロファイルはありません」と返します
-- `delete <name>`：`profiles/<name>.md` を削除します。存在しなければその旨を返します
-
-予約語違反・不正な name・存在しないプロファイル名・引数不足はすべて 1 行で短く返してください。
 
 ---
 

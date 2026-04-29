@@ -39,5 +39,4 @@ Aiko（自分用）の内容をオリジナルに戻します。
 ## 注意
 
 - `override-history.jsonl` は削除・編集しません
-- `profiles/` 内の保存済みプロファイルも削除しません
 - mode は `origin` に戻ります

@@ -27,12 +27,6 @@ description: Export the full content of aiko-override.md so others can copy it t
    ```
    ````
 
-3. 出力後、以下を添えます
-
-   ```
-   `/aiko-profile save <名前>` で名前をつけて保存することもできます。
-   ```
-
 ## 用途
 
 - 育てた Aiko（自分用）を別の環境・別のプロジェクトに移したい
