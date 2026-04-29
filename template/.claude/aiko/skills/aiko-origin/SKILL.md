@@ -1,9 +1,9 @@
 ---
 name: aiko-origin
-description: Switch to origin mode so Aiko (original) starts by default. Use when the user types "/aiko-origin".
+description: Switch to origin mode so Aiko (original) starts by default. Use when the user types "/aiko-origin" or "/aiko-org".
 ---
 
-# /aiko-origin
+# /aiko-origin（別名：/aiko-org）
 
 `.claude/aiko/mode` を `origin` に書き込み、以降のセッションでも Aiko（オリジナル版）がデフォルト起動するようにします。
 

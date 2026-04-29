@@ -81,7 +81,7 @@
   ```
 - 変更点の要約を 3 行以内で報告します
 
-### `/aiko-origin`
+### `/aiko-origin`（別名：`/aiko-org`）
 
 - `.claude/aiko/mode` を `origin` に書き込みます
 - 「Aiko（オリジナル版）に切り替えました。次回から自動で起動します。」と報告します
