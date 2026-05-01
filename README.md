@@ -50,6 +50,7 @@ bash /clone した場所/Agent-Aiko/scripts/install.sh
 以下のコマンドをチャットに入力することで Aiko を操作できます。現在は CLAUDE.md の解釈で動作します（スラッシュコマンドとしての登録は将来実装予定）。
 
 ```
+/aiko                      # 現在のモードでアイコを起動（モードは変えない）
 /aiko-or                   # アイコ（カスタマイズ）をデフォルトに切替
 /aiko-or <自然文>          # アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
 /aiko-origin               # アイコ（オリジナル）に切替（/aiko-org でも可）
@@ -57,6 +58,8 @@ bash /clone した場所/Agent-Aiko/scripts/install.sh
 /aiko-export               # 現在の アイコ（カスタマイズ）を再現可能な形式で出力
 /aiko-diff                 # オリジナルと自分用の差分を表示
 ```
+
+`/aiko` は最も軽量な「読み込み専用の起動」コマンドです。会話の途中で人格を再読み込みしたいとき、または `.claude/CLAUDE.md` が自動で読み込まれない場面で利用します。モードの切替や人格の編集は他の `/aiko-*` コマンドに委譲します。
 
 人格を直接編集しないでください。`aiko-origin.md` と `INVARIANTS.md` は OS と hook で書込が拒否されます。
 
@@ -81,6 +84,7 @@ Agent-Aiko/
         ├── CLAUDE.md                   # 起動原則・コマンド定義
         ├── settings.json
         ├── skills/                     # Claude Code が認識するスラッシュコマンド
+        │   ├── aiko/                   # /aiko 起動（モード尊重・読み込み専用）
         │   ├── aiko-mode/
         │   ├── aiko-override/
         │   ├── aiko-origin/
