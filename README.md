@@ -54,7 +54,7 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 ```
 /aiko-mode                       現在のモードを表示
 /aiko-mode [origin|override]     モードを切替
-/aiko-or                         アイコ（カスタマイズ）に切替（/aiko-override でも可）
+/aiko-override                  アイコ（カスタマイズ）に切替（/aiko-or でも可）
 /aiko-or <自然文>                アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
 /aiko-origin                     アイコ（オリジナル）に切替（/aiko-org でも可）
 /aiko-reset                      アイコ（カスタマイズ）をリセット（確認あり・履歴は残る）
