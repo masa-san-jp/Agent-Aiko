@@ -8,7 +8,7 @@ export const PACKAGE = "@agent-aiko/codex" as const;
 /** 単一情報源：codex-client.ts の CLIENT_VERSION を再エクスポート。
  *  package.json と initialize で送る clientInfo.version の同期は CLIENT_VERSION で取る。 */
 export const VERSION = CLIENT_VERSION;
-export const PHASE = "phase-2-codex-client" as const;
+export const PHASE = "phase-3-persona-loader" as const;
 
 export { CodexClient } from "./codex-client/index.js";
 export type {
@@ -18,3 +18,8 @@ export type {
   CodexClientOptions,
   StartThreadOptions,
 } from "./codex-client/index.js";
+
+export { loadPersona } from "./aiko-persona-loader.js";
+export type { AikoPersonaSnapshot, LoadPersonaOptions } from "./aiko-persona-loader.js";
+
+export { buildBaseInstructions } from "./aiko-prompt-builder.js";
