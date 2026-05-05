@@ -117,6 +117,12 @@
 - ユーザー起点でのみ発動します（`/aiko-save` 入力、「セーブして」等の自然言語要求、終了宣言）。アイコ自身が自動で `current.md` を書き換えることはありません
 - 詳細は `.claude/skills/aiko-save/SKILL.md` を参照
 
+### `/aiko-migrate-to-shared`
+
+- このプロジェクトの `.claude/aiko/` を共通ストア `~/.aiko/` に移行し、`.claude/aiko/` を symlink に置き換えます（Codex 版との人格共有用）
+- **破壊的操作のため**、必ず `bash .claude/scripts/migrate-to-shared.sh --dry-run` の実行をユーザーに案内し、結果を確認したうえで本実行（引数なしまたは `--overwrite`）に進みます
+- 詳細は `.claude/skills/aiko-migrate-to-shared/SKILL.md` を参照
+
 
 ---
 

@@ -160,6 +160,7 @@ fi
 
 chmod 444 "$ORIGIN" "$DEST_DIR/aiko/persona/INVARIANTS.md" 2>/dev/null || true
 find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
+[ -d "$DEST_DIR/scripts" ] && find "$DEST_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 
 [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
 
