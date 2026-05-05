@@ -2,7 +2,7 @@
 
 Codex 版 Agent-Aiko の TypeScript パッケージ。`codex app-server`（OpenAI 公式の Codex CLI）経由で ChatGPT サブスクリプション上に Aiko 人格を載せ、対話シェル（`aiko` コマンド）を提供します。
 
-> **ステータス**: Phase 2 完了。`CodexClient` クラス（JSON-RPC over stdio）を実装。Phase 3 以降で残りを順次追加します。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
+> **ステータス**: Phase 3 完了。`CodexClient`（Phase 2）に加えて `~/.aiko/` から人格を読み込む `loadPersona` と `baseInstructions` を合成する `buildBaseInstructions` を実装。Phase 4 以降で残りを順次追加します。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
 
 ---
 
@@ -15,8 +15,10 @@ codex/
 ├── tsconfig.typecheck.json         # test/examples を含めた型検査用
 ├── README.md
 ├── src/
-│   ├── index.ts                    # 公開エントリ（CodexClient を re-export）
+│   ├── index.ts                    # 公開エントリ
 │   ├── aiko-shell.ts               # CLI エントリ（Phase 4 で REPL 実装に置換）
+│   ├── aiko-persona-loader.ts      # ★ Phase 3：~/.aiko/ から AikoPersonaSnapshot を組み立て
+│   ├── aiko-prompt-builder.ts      # ★ Phase 3：snapshot から baseInstructions を合成
 │   └── codex-client/               # ★ Phase 2 で実装
 │       ├── index.ts                # 公開 API
 │       ├── types.ts                # CodexClientOptions / AskOptions / AskResult 等
@@ -26,7 +28,9 @@ codex/
 │       └── codex-client.ts         # CodexClient 本体（start/stop/startThread/ask/interrupt）
 ├── test/
 │   ├── jsonrpc.test.ts             # JSON-RPC framing の単体テスト
-│   └── codex-client.test.ts        # MockTransport を使った CodexClient.ask() 等のテスト
+│   ├── codex-client.test.ts        # MockTransport を使った CodexClient.ask() 等のテスト
+│   ├── aiko-persona-loader.test.ts # 一時 ~/.aiko/ フィクスチャによる loadPersona テスト
+│   └── aiko-prompt-builder.test.ts # buildBaseInstructions のテンプレ展開テスト
 └── examples/
     └── basic-turn.ts               # Phase 2 完了条件のデモ
 ```
@@ -34,9 +38,7 @@ codex/
 予定（未実装、後続 Phase で追加）：
 
 - `scripts/install.sh` — macOS / Linux 用 installer（Phase 6）
-- `src/aiko-runtime.ts` — 起動シーケンス（Phase 3）
-- `src/aiko-persona-loader.ts` — ~/.aiko/ から人格読み込み（Phase 3）
-- `src/aiko-prompt-builder.ts` — baseInstructions を合成（Phase 3）
+- `src/aiko-runtime.ts` — 起動シーケンス（Phase 4 の一部、persona-loader と prompt-builder と CodexClient を束ねる）
 - `src/aiko-command-router.ts` — /aiko-* スラッシュコマンド処理（Phase 5）
 - `src/aiko-shell.ts` — REPL 本実装（Phase 4。現在は Phase 1 スタブ）
 
