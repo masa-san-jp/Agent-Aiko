@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 自動生成スキーマ（必要時に schema:generate で再生成）
+src/codex-schema/
+
+# 一時ログ
+*.log
