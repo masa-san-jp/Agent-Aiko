@@ -35,7 +35,7 @@ scripts/aiko-sns/
 └── check_user_timeline.py        # ユーザータイムラインポーリング（state管理）
 ```
 
-**三層分離ルール**: `template/` には一切手を加えない。SNS コードは `scripts/` と `.github/` のみ。
+**三層分離ルール**: `claude-code/template/` には一切手を加えない。SNS コードは `scripts/aiko-sns/` と `.github/` のみ。
 
 ---
 
@@ -125,7 +125,7 @@ def generate_tweet(trigger: str, context: str = "") -> str:
 5. **`--dry-run` でローカル検証** — `python scripts/aiko-sns/post_tweet.py --trigger agent-aiko-update --context "test" --dry-run`
 6. **`check_user_timeline.py` 作成** → `aiko-sns-poll-user.yml`（Trigger 1）
 7. **`aiko-sns-dispatch.yml` 作成**（Trigger 2）+ logs-with-LLM 側の dispatch 設定
-8. **`/dev-check` 実行** — template/ 汚染がないか確認
+8. **`/dev-check` 実行** — claude-code/template/ 汚染がないか確認
 9. **`README.md` 更新** — `scripts/aiko-sns/` をディレクトリ構成に追記
 
 ---
@@ -163,4 +163,4 @@ def generate_tweet(trigger: str, context: str = "") -> str:
 - `README.md`（ディレクトリ構成図に `scripts/aiko-sns/` を追記）
 
 **変更なし:**
-- `template/` 以下すべて（三層分離ルール厳守）
+- `claude-code/template/` 以下すべて（三層分離ルール厳守）

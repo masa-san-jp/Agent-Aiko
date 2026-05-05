@@ -4,10 +4,10 @@
 
 ## チェック項目
 
-### 1. template/ スキャン（配布用の汚染チェック）
+### 1. claude-code/template/ スキャン（配布用の汚染チェック）
 
 ```bash
-grep -r "dev-docs" template/ --include="*.md" --include="*.sh" --include="*.json" -l
+grep -r "dev-docs" claude-code/template/ --include="*.md" --include="*.sh" --include="*.json" -l
 ```
 
 - `dev-docs/` への参照が含まれていれば **NG**（push ブロック対象）
@@ -32,7 +32,7 @@ grep -r "dev-docs" template/ --include="*.md" --include="*.sh" --include="*.json
 
 ```
 === /dev-check ===
-[OK]  template/ に dev-docs 参照なし
+[OK]  claude-code/template/ に dev-docs 参照なし
 [OK]  dev-log.jsonl: 今日（YYYY-MM-DD）更新済み
 [WARN] dev-docs/README.md: 未反映ファイルあり → <ファイル名>
 ```

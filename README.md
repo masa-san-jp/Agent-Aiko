@@ -38,8 +38,9 @@ git clone https://github.com/masa-san-jp/Agent-Aiko.git
 # 2. インストールしたいプロジェクトに移動
 cd <あなたのプロジェクト>
 
-# 3. clone した場所のパスを指定して実行
-bash /clone した場所/Agent-Aiko/scripts/install.sh
+# 3. clone した場所のパスを指定して実行（どちらの経路でも動きます）
+bash /clone した場所/Agent-Aiko/scripts/install.sh                  # 互換ラッパー経由
+bash /clone した場所/Agent-Aiko/claude-code/scripts/install.sh      # 直接実行
 # 例: bash ~/Agent-Aiko/scripts/install.sh
 ```
 
@@ -78,35 +79,42 @@ Agent-Aiko/
 ├── README.md
 ├── logo.svg
 ├── scripts/
-│   └── install.sh
-└── template/
-    └── .claude/                        # ユーザーの .claude/ にコピーされる雛形
-        ├── CLAUDE.md                   # 起動原則・コマンド定義
-        ├── settings.json
-        ├── skills/                     # Claude Code が認識するスラッシュコマンド
-        │   ├── aiko/                   # /aiko 起動（モード尊重・読み込み専用）
-        │   ├── aiko-mode/
-        │   ├── aiko-override/
-        │   ├── aiko-origin/
-        │   ├── aiko-reset/
-        │   ├── aiko-diff/
-        │   └── aiko-export/
-        └── aiko/
-            ├── mode                    # 現在のモード（origin / override）
-            ├── user.md                 # ユーザー名・呼び方
-            ├── persona/
-            │   ├── aiko-origin.md      # 書込禁止
-            │   ├── aiko-override.md    # /aiko-or で変更される
-            │   └── INVARIANTS.md       # 書込禁止・不変核
-            ├── capability/             # Aiko が自己拡張する領域
-            │   ├── skills/             # 会話から提案・追加されるスキル
-            │   └── rules/
-            │       └── rules-base.md   # ユーザーが教えた運用ルール
-            └── hooks/
-                ├── session-start.sh
-                ├── session-end.sh
-                └── pre-tool-use.sh
+│   └── install.sh                      # 互換ラッパー（旧 URL 維持用）
+├── claude-code/                        # Claude Code 版の配布物すべて
+│   ├── scripts/
+│   │   └── install.sh                  # Claude Code 版 installer の実体
+│   ├── plugin/                         # Claude Code Plugin マニフェスト
+│   └── template/
+│       └── .claude/                    # ユーザーの .claude/ にコピーされる雛形
+│           ├── CLAUDE.md               # 起動原則・コマンド定義
+│           ├── settings.json
+│           ├── skills/                 # Claude Code が認識するスラッシュコマンド
+│           │   ├── aiko/               # /aiko 起動（モード尊重・読み込み専用）
+│           │   ├── aiko-mode/
+│           │   ├── aiko-override/
+│           │   ├── aiko-origin/
+│           │   ├── aiko-reset/
+│           │   ├── aiko-diff/
+│           │   └── aiko-export/
+│           └── aiko/
+│               ├── mode                # 現在のモード（origin / override）
+│               ├── user.md             # ユーザー名・呼び方
+│               ├── persona/
+│               │   ├── aiko-origin.md  # 書込禁止
+│               │   ├── aiko-override.md # /aiko-or で変更される
+│               │   └── INVARIANTS.md   # 書込禁止・不変核
+│               ├── capability/         # Aiko が自己拡張する領域
+│               │   ├── skills/         # 会話から提案・追加されるスキル
+│               │   └── rules/
+│               │       └── rules-base.md  # ユーザーが教えた運用ルール
+│               └── hooks/
+│                   ├── session-start.sh
+│                   ├── session-end.sh
+│                   └── pre-tool-use.sh
+# 注: Codex 版（codex/）は Phase 1 以降で本リポジトリに追加予定。
 ```
+
+**`scripts/install.sh` は互換ラッパー**です。旧 URL `https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh` をそのまま生かし、内部で `claude-code/scripts/install.sh` に dispatch します。直接実体を呼ぶ場合は `bash claude-code/scripts/install.sh` でも動きます。
 
 ---
 
