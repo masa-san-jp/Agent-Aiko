@@ -12,9 +12,10 @@ export function buildBaseInstructions(snapshot: AikoPersonaSnapshot): string {
   const userName = snapshot.user.name ?? "(未設定)";
   // address が空なら name にフォールバック、それも無ければ汎用呼称
   const userAddress = snapshot.user.address ?? snapshot.user.name ?? "ユーザー";
+  const trimmedRules = snapshot.rulesBase.trim();
   const rulesBlock =
-    snapshot.rulesBase.trim().length > 0
-      ? snapshot.rulesBase.trim()
+    trimmedRules.length > 0
+      ? trimmedRules
       : "（ユーザーから追加の運用ルールは指示されていません。）";
 
   return [

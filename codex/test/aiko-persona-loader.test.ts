@@ -131,4 +131,24 @@ describe("loadPersona", () => {
     await rm(join(fixture.root, "persona", "INVARIANTS.md"));
     await assert.rejects(loadPersona({ aikoHome: fixture.root }), /ENOENT/);
   });
+
+  it("propagates non-ENOENT errors from optional reads (e.g. EACCES)", async () => {
+    // Make user.md unreadable (chmod 000) so readFile returns EACCES.
+    // root user は permission を bypass してしまうので、その場合は test を skip。
+    const userPath = join(fixture.root, "user.md");
+    await writeFile(userPath, "name: x\n");
+    const { chmod } = await import("node:fs/promises");
+    await chmod(userPath, 0o000);
+    try {
+      // root では read 可能なため EACCES が出ない。process.getuid===0 ならスキップ。
+      const uid = typeof process.getuid === "function" ? process.getuid() : 1000;
+      if (uid === 0) {
+        return; // root はチェック対象外
+      }
+      await assert.rejects(loadPersona({ aikoHome: fixture.root }), /EACCES|EPERM/);
+    } finally {
+      // 後始末で元の mode に戻さないと afterEach の rm が失敗する OS がある
+      await chmod(userPath, 0o644);
+    }
+  });
 });

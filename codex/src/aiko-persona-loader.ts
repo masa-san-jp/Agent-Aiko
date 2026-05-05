@@ -55,12 +55,24 @@ export async function loadPersona(opts: LoadPersonaOptions = {}): Promise<AikoPe
   return { mode, persona, invariants, user, rulesBase, capabilitySkills };
 }
 
+/** ENOENT（ファイル／ディレクトリ不在）のときだけ true を返す型ガード。
+ *  これ以外（EACCES / EPERM 等）は呼び出し側で rethrow して可視化する。 */
+function isNotFound(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "ENOENT"
+  );
+}
+
 async function readMode(aikoHome: string): Promise<"origin" | "override"> {
   try {
     const content = (await readFile(join(aikoHome, "mode"), "utf8")).trim();
     return content === "override" ? "override" : "origin";
-  } catch {
-    return "origin";
+  } catch (err) {
+    if (isNotFound(err)) return "origin";
+    throw err;
   }
 }
 
@@ -68,8 +80,9 @@ async function readUser(aikoHome: string): Promise<{ name?: string; address?: st
   let content: string;
   try {
     content = await readFile(join(aikoHome, "user.md"), "utf8");
-  } catch {
-    return {};
+  } catch (err) {
+    if (isNotFound(err)) return {};
+    throw err;
   }
   const result: { name?: string; address?: string } = {};
   const nameMatch = content.match(/^name:\s*(.+)$/m);
@@ -86,8 +99,9 @@ async function readUser(aikoHome: string): Promise<{ name?: string; address?: st
 async function readOptionalFile(path: string): Promise<string> {
   try {
     return await readFile(path, "utf8");
-  } catch {
-    return "";
+  } catch (err) {
+    if (isNotFound(err)) return "";
+    throw err;
   }
 }
 
@@ -98,7 +112,8 @@ async function readSkillNames(skillsDir: string): Promise<string[]> {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
-  } catch {
-    return [];
+  } catch (err) {
+    if (isNotFound(err)) return [];
+    throw err;
   }
 }
