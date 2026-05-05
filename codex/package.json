@@ -1,6 +1,6 @@
 {
   "name": "@agent-aiko/codex",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Codex 版 Agent-Aiko — codex app-server 経由で ChatGPT サブスク上に Aiko 人格を載せる対話シェル",
   "private": true,
   "type": "module",
@@ -20,9 +20,10 @@
     "build": "tsc && chmod +x dist/aiko-shell.js",
     "build:watch": "tsc --watch",
     "dev": "tsx src/aiko-shell.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "lint": "echo 'lint: TBD（Phase 7 で eslint 等を導入予定）' && exit 0",
-    "test": "echo 'test: TBD（Phase 2 以降で vitest/node:test を導入予定）' && exit 0",
+    "test": "node --import tsx --test $(find test -name '*.test.ts')",
+    "example:basic-turn": "tsx examples/basic-turn.ts",
     "schema:generate": "codex app-server generate-ts --out src/codex-schema",
     "clean": "rm -rf dist"
   },

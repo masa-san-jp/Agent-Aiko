@@ -2,28 +2,43 @@
 
 Codex 版 Agent-Aiko の TypeScript パッケージ。`codex app-server`（OpenAI 公式の Codex CLI）経由で ChatGPT サブスクリプション上に Aiko 人格を載せ、対話シェル（`aiko` コマンド）を提供します。
 
-> **ステータス**: Phase 1（スケルトン）。実装は Phase 2 以降で順次追加します。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
+> **ステータス**: Phase 2 完了。`CodexClient` クラス（JSON-RPC over stdio）を実装。Phase 3 以降で残りを順次追加します。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
 
 ---
 
-## 構成（予定）
+## 構成
 
 ```
 codex/
-├── package.json          # @agent-aiko/codex
+├── package.json                    # @agent-aiko/codex
 ├── tsconfig.json
+├── tsconfig.typecheck.json         # test/examples を含めた型検査用
 ├── README.md
-├── scripts/
-│   └── install.sh        # macOS / Linux 用（Phase 6 で実装）
-└── src/
-    ├── codex-client.ts        # codex app-server との JSON-RPC 通信（Phase 2）
-    ├── aiko-runtime.ts        # 起動シーケンス（Phase 3）
-    ├── aiko-persona-loader.ts # ~/.aiko/ から人格を読み込む（Phase 3）
-    ├── aiko-prompt-builder.ts # baseInstructions を合成（Phase 3）
-    ├── aiko-command-router.ts # /aiko-* スラッシュコマンド処理（Phase 5）
-    ├── aiko-shell.ts          # REPL エントリ（Phase 4）
-    └── codex-schema/          # 自動生成（schema:generate で更新）
+├── src/
+│   ├── index.ts                    # 公開エントリ（CodexClient を re-export）
+│   ├── aiko-shell.ts               # CLI エントリ（Phase 4 で REPL 実装に置換）
+│   └── codex-client/               # ★ Phase 2 で実装
+│       ├── index.ts                # 公開 API
+│       ├── types.ts                # CodexClientOptions / AskOptions / AskResult 等
+│       ├── jsonrpc.ts              # JSON-RPC 2.0 framing（LineBuffer / parseIncoming / encode）
+│       ├── transport.ts            # Transport インターフェース（テスト差替用）
+│       ├── process-manager.ts      # 実機 Transport：codex app-server 子プロセス管理
+│       └── codex-client.ts         # CodexClient 本体（start/stop/startThread/ask/interrupt）
+├── test/
+│   ├── jsonrpc.test.ts             # JSON-RPC framing の単体テスト
+│   └── codex-client.test.ts        # MockTransport を使った CodexClient.ask() 等のテスト
+└── examples/
+    └── basic-turn.ts               # Phase 2 完了条件のデモ
 ```
+
+予定（未実装、後続 Phase で追加）：
+
+- `scripts/install.sh` — macOS / Linux 用 installer（Phase 6）
+- `src/aiko-runtime.ts` — 起動シーケンス（Phase 3）
+- `src/aiko-persona-loader.ts` — ~/.aiko/ から人格読み込み（Phase 3）
+- `src/aiko-prompt-builder.ts` — baseInstructions を合成（Phase 3）
+- `src/aiko-command-router.ts` — /aiko-* スラッシュコマンド処理（Phase 5）
+- `src/aiko-shell.ts` — REPL 本実装（Phase 4。現在は Phase 1 スタブ）
 
 ---
 
@@ -40,9 +55,11 @@ codex/
 ```bash
 cd codex
 npm install
-npm run typecheck      # TypeScript の型チェックのみ
+npm run typecheck      # 型チェック（src/ + test/ + examples/）
+npm test               # node:test で単体テスト実行
 npm run build          # dist/ にコンパイル
-npm run dev            # tsx で aiko-shell.ts を直接起動（実装後）
+npm run dev            # Phase 1 スタブを tsx 経由で実行
+npm run example:basic-turn   # 1 ターン実行のデモ（要 codex login）
 ```
 
 `codex app-server` の TypeScript スキーマを取得して `src/codex-schema/` に置く場合：
