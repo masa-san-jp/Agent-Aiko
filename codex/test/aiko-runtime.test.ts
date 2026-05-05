@@ -111,6 +111,25 @@ describe("AikoRuntime.start", () => {
     assert.equal(runtime.isReady, false);
   });
 
+  it("rejects restartThread() before start()", async () => {
+    const t = new MockTransport();
+    const client = await bootClient(t);
+    const runtime = new AikoRuntime({ aikoHome: fixture.aikoHome, codexClient: client });
+    await assert.rejects(runtime.restartThread(), /not started/);
+    await client.stop();
+  });
+
+  it("rejects runInvariantsCheck() before start()", async () => {
+    const t = new MockTransport();
+    const client = await bootClient(t);
+    const runtime = new AikoRuntime({ aikoHome: fixture.aikoHome, codexClient: client });
+    await assert.rejects(
+      runtime.runInvariantsCheck("# IV\nbe polite\n", "test instruction"),
+      /not started/
+    );
+    await client.stop();
+  });
+
   it("rolls back snapshot/threadId when thread/start fails after CodexClient.start succeeds", async () => {
     const t = new MockTransport();
     const client = await bootClient(t);

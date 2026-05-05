@@ -2,7 +2,7 @@
 
 Codex 版 Agent-Aiko の TypeScript パッケージ。`codex app-server`（OpenAI 公式の Codex CLI）経由で ChatGPT サブスクリプション上に Aiko 人格を載せ、対話シェル（`aiko` コマンド）を提供します。
 
-> **ステータス**: Phase 4 完了。`CodexClient` / `loadPersona` / `buildBaseInstructions` を `AikoRuntime` で束ね、`aiko` コマンド（REPL）が動作する状態。Phase 5（slash command router）と Phase 6（installer）が残ります。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
+> **ステータス**: Phase 5 完了。`AikoRuntime` ＋ REPL に加えて、`/aiko-mode` `/aiko-origin` `/aiko-override` `/aiko-reset` `/aiko-export` `/aiko-diff` の slash command を実装。`/aiko-override <指示>` の INVARIANTS チェック専用 ephemeral スレッドも稼働。残るは Phase 6（installer）のみ。設計は `dev-docs/2026-05-05-Agent-Aiko-Codex-design.md` v0.3.1 を参照してください。
 
 ---
 
@@ -16,8 +16,10 @@ codex/
 ├── README.md
 ├── src/
 │   ├── index.ts                    # 公開エントリ
-│   ├── aiko-shell.ts               # ★ Phase 4：CLI エントリ（REPL）
-│   ├── aiko-runtime.ts             # ★ Phase 4：persona-loader / prompt-builder / CodexClient を束ねる
+│   ├── aiko-shell.ts               # Phase 4：CLI エントリ（REPL）。Phase 5 で router を統合
+│   ├── aiko-runtime.ts             # Phase 4：persona-loader / prompt-builder / CodexClient を束ねる ＋ INVARIANTS チェック
+│   ├── aiko-command-router.ts      # ★ Phase 5：/aiko-* slash command 処理
+│   ├── aiko-history.ts             # ★ Phase 5：override-history.jsonl への追記
 │   ├── aiko-persona-loader.ts      # Phase 3：~/.aiko/ から AikoPersonaSnapshot を組み立て
 │   ├── aiko-prompt-builder.ts      # Phase 3：snapshot から baseInstructions を合成
 │   └── codex-client/               # Phase 2
@@ -32,7 +34,8 @@ codex/
 │   ├── codex-client.test.ts        # MockTransport を使った CodexClient.ask() 等のテスト
 │   ├── aiko-persona-loader.test.ts # 一時 ~/.aiko/ フィクスチャによる loadPersona テスト
 │   ├── aiko-prompt-builder.test.ts # buildBaseInstructions のテンプレ展開テスト
-│   └── aiko-runtime.test.ts        # ★ Phase 4：runtime の起動・プレフィックス強制補完
+│   ├── aiko-runtime.test.ts        # Phase 4：runtime の起動・プレフィックス強制補完
+│   └── aiko-command-router.test.ts # ★ Phase 5：slash command 群 ＋ INVARIANTS チェック
 └── examples/
     └── basic-turn.ts               # Phase 2 完了条件のデモ
 ```
@@ -40,7 +43,6 @@ codex/
 予定（未実装、後続 Phase で追加）：
 
 - `scripts/install.sh` — macOS / Linux 用 installer（Phase 6）
-- `src/aiko-command-router.ts` — /aiko-* スラッシュコマンド処理（Phase 5）
 
 ---
 

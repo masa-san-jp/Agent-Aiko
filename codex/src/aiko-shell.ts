@@ -6,6 +6,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+import { AikoCommandRouter, parseSlashCommand } from "./aiko-command-router.js";
 import { AikoRuntime } from "./aiko-runtime.js";
 import { CLIENT_VERSION } from "./codex-client/codex-client.js";
 
@@ -38,12 +39,22 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const mode = runtime.mode;
-  process.stdout.write(`mode: ${mode} | thread: ${runtime.threadId}\n`);
-  process.stdout.write("「/exit」で終了。Ctrl+C は 1 度で応答中断、2 度で即時終了。\n\n");
+  process.stdout.write(`mode: ${runtime.mode} | thread: ${runtime.threadId}\n`);
+  process.stdout.write(
+    "「/exit」で終了。Ctrl+C は 1 度で応答中断、2 度で即時終了。\n" +
+      "スラッシュコマンド: /aiko-mode /aiko-origin /aiko-override /aiko-reset /aiko-export /aiko-diff\n\n"
+  );
 
   const rl = createInterface({ input, output, terminal: true });
   rl.setPrompt("> ");
+
+  const router = new AikoCommandRouter({
+    runtime,
+    confirm: async (message: string) => {
+      const ans = await rl.question(`${message} `);
+      return /^y(es)?$/i.test(ans.trim());
+    },
+  });
 
   let activeAbort: AbortController | null = null;
   let lastInterruptAt = 0;
@@ -91,6 +102,30 @@ async function main(): Promise<number> {
       break;
     }
 
+    // スラッシュコマンドのディスパッチ
+    const parsed = parseSlashCommand(line);
+    if (parsed !== null && router.isKnown(parsed.name)) {
+      try {
+        const result = await router.execute(parsed.name, parsed.args);
+        process.stdout.write(`${result.output}\n`);
+        if (result.needsRestart === true) {
+          await runtime.restartThread();
+          process.stdout.write(`mode: ${runtime.mode} | thread: ${runtime.threadId}\n`);
+        }
+      } catch (err) {
+        process.stderr.write(`\nERROR: ${(err as Error).message}\n`);
+      }
+      rl.prompt();
+      continue;
+    }
+    if (parsed !== null && !router.isKnown(parsed.name)) {
+      process.stderr.write(
+        `unknown command: /${parsed.name}（/aiko-mode /aiko-origin /aiko-override /aiko-reset /aiko-export /aiko-diff /exit のいずれかをご利用ください）\n`
+      );
+      rl.prompt();
+      continue;
+    }
+
     activeAbort = new AbortController();
     try {
       await runtime.ask({
@@ -102,7 +137,7 @@ async function main(): Promise<number> {
       process.stdout.write("\n");
     } catch (err) {
       if (activeAbort.signal.aborted) {
-        process.stdout.write(`\nAiko-${mode}: 承知しました。中断しました。\n`);
+        process.stdout.write(`\nAiko-${runtime.mode}: 承知しました。中断しました。\n`);
       } else {
         process.stderr.write(`\nERROR: ${(err as Error).message}\n`);
       }
