@@ -1,8 +1,10 @@
-# Agent-Aiko for Codex
+# Agent-Aiko — Codex 版
 
 Codex 版 Agent-Aiko の TypeScript パッケージ。`codex app-server`（OpenAI 公式の Codex CLI）経由で ChatGPT サブスクリプション上に Aiko 人格を載せ、対話シェル（`aiko` コマンド）を提供します。
 
-> **ステータス**: Phase 6 完了 — **MVP 達成**。`bash codex/scripts/install.sh` で Node.js / codex CLI 確認 → ビルド → `~/.aiko/` 初期化 → `aiko` shim 設置までを 1 コマンドで実行できる状態。設計は [`Agent-Aiko-dev/2026-05-05-Agent-Aiko-Codex-design.md`](https://github.com/masa-san-jp/Agent-Aiko-dev/blob/main/2026-05-05-Agent-Aiko-Codex-design.md) v0.3.1 を参照してください。
+トップレベル: [Agent-Aiko README](../README.md) ／ Claude Code 版: [`claude-code/README.md`](../claude-code/README.md)
+
+> **ステータス**: MVP 達成（Phase 0〜6 完了）。`bash codex/scripts/install.sh` で Node.js / codex CLI 確認 → ビルド → `~/.aiko/` 初期化 → `aiko` shim 設置までを 1 コマンドで実行できる状態。設計は [`Agent-Aiko-dev/2026-05-05-Agent-Aiko-Codex-design.md`](https://github.com/masa-san-jp/Agent-Aiko-dev/blob/main/2026-05-05-Agent-Aiko-Codex-design.md) v0.3.1 を参照してください。
 
 ## クイックスタート
 

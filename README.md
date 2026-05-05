@@ -2,67 +2,72 @@
 
 ![Agent Aiko](logo.svg)
 
-漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、Claude Code などの AI エージェントへ Aiko 人格を与えるプロジェクトです。
+漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、AI エージェントへ Aiko 人格を与えるプロジェクトです。
 
 `git clone` した時点では誰でも同じ **アイコ（オリジナル）**。コマンド一発で自分用の **アイコ（カスタマイズ）** に切り替え、緩やかに育て、いつでもオリジナルに戻せます。
 
 ---
 
-## 特徴
+## どの版を選ぶか
 
-- **アイコ（オリジナル）/ アイコ（カスタマイズ）の二人格を同梱**：用途や好みに応じてコマンドで切替
-- **CLAUDE.md 単独で動作**：hooks や skills が無い環境でも CLAUDE.md だけで全機能が成立（他エージェントへの移植可）
-- **人格と能力を分離**：人格はモード切替、能力（skills / rules）は常に拡張
-- **INVARIANTS による不変核**：です・ます調や境界の振る舞いを Override でも守る
+Aiko は 2 つの実行環境で動きます。**ご自身が使っているエージェント／サブスクリプションに合わせて選んでください。**
+
+| 版 | 対象ユーザー | 認証 | インストール先 | 起動方法 |
+|----|------------|------|--------------|---------|
+| **[Claude Code 版](claude-code/)** | Anthropic Claude Code を使っている方 | Anthropic API（Claude Code 標準） | プロジェクトの `.claude/` | `claude` コマンドの中で会話 |
+| **[Codex 版](codex/)** | ChatGPT サブスク（Plus / Pro / Business 等）を使う方 | `codex login`（ChatGPT OAuth） | `~/.aiko/` ＋ `~/.local/bin/aiko` | `aiko` コマンドで対話シェル |
+
+両版とも：
+- 同じ人格定義（`aiko-origin.md` / `INVARIANTS.md`）と同じ操作感（`/aiko-or` `/aiko-mode` `/aiko-diff` 等の slash command）
+- **人格データの単一情報源**（`~/.aiko/`）を共有でき、片方で育てた人格をもう片方でも使える設計（Codex 版から自動、Claude Code 版は v1→v2 migration コマンドで対応予定）
 
 ---
 
-## インストール
+## クイックスタート
 
-### A. curl で一発インストール（推奨）
-
-インストールしたいプロジェクトのディレクトリで実行するだけです：
+### Claude Code 版
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
 ```
 
-clone 不要。確認プロンプトが出るので `Y` を押すとインストール完了、あとは `claude` を起動するだけです。
+インストールしたいプロジェクトのディレクトリで実行するだけです。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
-### B. リポジトリを clone して使う
+### Codex 版
 
 ```bash
-# 1. 任意の場所に Agent-Aiko を clone（例：ホームディレクトリ）
+# 前提：Node.js 20+ ／ codex CLI ／ codex login 済
 git clone https://github.com/masa-san-jp/Agent-Aiko.git
-
-# 2. インストールしたいプロジェクトに移動
-cd <あなたのプロジェクト>
-
-# 3. clone した場所のパスを指定して実行（どちらの経路でも動きます）
-bash /clone した場所/Agent-Aiko/scripts/install.sh                  # 互換ラッパー経由
-bash /clone した場所/Agent-Aiko/claude-code/scripts/install.sh      # 直接実行
-# 例: bash ~/Agent-Aiko/scripts/install.sh
+cd Agent-Aiko
+bash codex/scripts/install.sh
+aiko    # ~/.local/bin/aiko を PATH に通してから
 ```
+
+詳細は [`codex/README.md`](codex/README.md) を参照。
 
 ---
 
-## 使い方
+## 共通の使い方
 
-以下のコマンドをチャットに入力することで Aiko を操作できます。現在は CLAUDE.md の解釈で動作します（スラッシュコマンドとしての登録は将来実装予定）。
+人格コマンドはどちらの版でも同じです：
 
 ```
-/aiko                      # 現在のモードでアイコを起動（モードは変えない）
-/aiko-or                   # アイコ（カスタマイズ）をデフォルトに切替
-/aiko-or <自然文>          # アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
-/aiko-origin               # アイコ（オリジナル）に切替（/aiko-org でも可）
-/aiko-reset                # アイコ（カスタマイズ）をリセット（確認あり・履歴は残る）
-/aiko-export               # 現在の アイコ（カスタマイズ）を再現可能な形式で出力
-/aiko-diff                 # オリジナルと自分用の差分を表示
+/aiko-mode                       現在のモードを表示
+/aiko-mode [origin|override]     モードを切替
+/aiko-or                         アイコ（カスタマイズ）に切替（/aiko-override でも可）
+/aiko-or <自然文>                アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
+/aiko-origin                     アイコ（オリジナル）に切替（/aiko-org でも可）
+/aiko-reset                      アイコ（カスタマイズ）をリセット（確認あり・履歴は残る）
+/aiko-export                     現在のアイコ（カスタマイズ）を再現可能な形式で出力
+/aiko-diff                       オリジナルと自分用の差分を表示
 ```
 
-`/aiko` は最も軽量な「読み込み専用の起動」コマンドです。会話の途中で人格を再読み込みしたいとき、または `.claude/CLAUDE.md` が自動で読み込まれない場面で利用します。モードの切替や人格の編集は他の `/aiko-*` コマンドに委譲します。
+> **注記**：`/aiko`（読み込み専用の起動）は Claude Code 版固有のコマンドです。Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため不要です。
 
-人格を直接編集しないでください。`aiko-origin.md` と `INVARIANTS.md` は OS と hook で書込が拒否されます。
+人格を直接編集しないでください。両版とも `aiko-origin.md` と `INVARIANTS.md` は **OS パーミッション（chmod 444）** で書込から保護されています。これに加えて：
+
+- **Claude Code 版**：`pre-tool-use` hook が直接編集をブロック
+- **Codex 版**：`/aiko-override <指示>` 時に INVARIANTS チェック専用 ephemeral スレッドで違反判定
 
 ---
 
@@ -76,45 +81,22 @@ bash /clone した場所/Agent-Aiko/claude-code/scripts/install.sh      # 直接
 
 ```
 Agent-Aiko/
-├── README.md
+├── README.md                 # 本ファイル — 両版のハブ
 ├── logo.svg
 ├── scripts/
-│   └── install.sh                      # 互換ラッパー（旧 URL 維持用）
-├── claude-code/                        # Claude Code 版の配布物すべて
-│   ├── scripts/
-│   │   └── install.sh                  # Claude Code 版 installer の実体
-│   ├── plugin/                         # Claude Code Plugin マニフェスト
-│   └── template/
-│       └── .claude/                    # ユーザーの .claude/ にコピーされる雛形
-│           ├── CLAUDE.md               # 起動原則・コマンド定義
-│           ├── settings.json
-│           ├── skills/                 # Claude Code が認識するスラッシュコマンド
-│           │   ├── aiko/               # /aiko 起動（モード尊重・読み込み専用）
-│           │   ├── aiko-mode/
-│           │   ├── aiko-override/
-│           │   ├── aiko-origin/
-│           │   ├── aiko-reset/
-│           │   ├── aiko-diff/
-│           │   └── aiko-export/
-│           └── aiko/
-│               ├── mode                # 現在のモード（origin / override）
-│               ├── user.md             # ユーザー名・呼び方
-│               ├── persona/
-│               │   ├── aiko-origin.md  # 書込禁止
-│               │   ├── aiko-override.md # /aiko-or で変更される
-│               │   └── INVARIANTS.md   # 書込禁止・不変核
-│               ├── capability/         # Aiko が自己拡張する領域
-│               │   ├── skills/         # 会話から提案・追加されるスキル
-│               │   └── rules/
-│               │       └── rules-base.md  # ユーザーが教えた運用ルール
-│               └── hooks/
-│                   ├── session-start.sh
-│                   ├── session-end.sh
-│                   └── pre-tool-use.sh
-# 注: Codex 版（codex/）は Phase 1 以降で本リポジトリに追加予定。
+│   └── install.sh            # 互換ラッパー（旧 URL 維持用、内部で claude-code/scripts/install.sh に dispatch）
+├── claude-code/              # Claude Code 版すべて
+│   ├── README.md             # Claude Code 版の詳細
+│   ├── scripts/install.sh    # Claude Code 版 installer の実体
+│   ├── plugin/               # Claude Code Plugin マニフェスト
+│   └── template/.claude/     # ユーザーの .claude/ にコピーされる雛形
+└── codex/                    # Codex 版（@agent-aiko/codex）
+    ├── README.md             # Codex 版の詳細
+    ├── package.json          # TypeScript パッケージ
+    ├── scripts/install.sh    # Codex 版 installer
+    ├── src/                  # CodexClient / AikoRuntime / aiko-shell 等
+    └── test/                 # 単体・統合テスト
 ```
-
-**`scripts/install.sh` は互換ラッパー**です。旧 URL `https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh` をそのまま生かし、内部で `claude-code/scripts/install.sh` に dispatch します。直接実体を呼ぶ場合は `bash claude-code/scripts/install.sh` でも動きます。
 
 ---
 
@@ -136,6 +118,8 @@ Agent-Aiko/
 | **agent-aiko-dev** | [masa-san-jp/Agent-Aiko-dev](https://github.com/masa-san-jp/Agent-Aiko-dev) | 開発専用ドキュメント。設計仕様・dev-log・議事録 |
 
 **agent-aiko-dev はエージェントのランタイムに不要**なため、配布物（本リポジトリ）には含めません。
+
+設計仕様書（最新版 v0.3.1）：[`Agent-Aiko-dev/2026-05-05-Agent-Aiko-Codex-design.md`](https://github.com/masa-san-jp/Agent-Aiko-dev/blob/main/2026-05-05-Agent-Aiko-Codex-design.md)
 
 ### ローカル開発環境のセットアップ
 
