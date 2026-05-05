@@ -22,6 +22,7 @@
     "dev": "tsx src/aiko-shell.ts",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "lint": "echo 'lint: TBD（Phase 7 で eslint 等を導入予定）' && exit 0",
+    "pretest": "npm run build",
     "test": "node --import tsx --test $(find test -name '*.test.ts')",
     "example:basic-turn": "tsx examples/basic-turn.ts",
     "schema:generate": "codex app-server generate-ts --out src/codex-schema",

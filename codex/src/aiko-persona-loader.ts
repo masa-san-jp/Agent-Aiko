@@ -1,6 +1,6 @@
 // Aiko persona loader — ~/.aiko/ から人格・INVARIANTS・ユーザー情報・ルール・スキルを集約する。
 //
-// 設計の正本: dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.2
+// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1 §6.2
 
 import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";

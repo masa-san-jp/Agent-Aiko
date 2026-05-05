@@ -1,6 +1,6 @@
 // Agent-Aiko for Codex — public package entry.
 //
-// 設計の正本: dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1
+// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1
 
 import { CLIENT_VERSION } from "./codex-client/codex-client.js";
 
@@ -8,7 +8,7 @@ export const PACKAGE = "@agent-aiko/codex" as const;
 /** 単一情報源：codex-client.ts の CLIENT_VERSION を再エクスポート。
  *  package.json と initialize で送る clientInfo.version の同期は CLIENT_VERSION で取る。 */
 export const VERSION = CLIENT_VERSION;
-export const PHASE = "phase-5-command-router" as const;
+export const PHASE = "phase-6-installer" as const;
 
 export { CodexClient } from "./codex-client/index.js";
 export type {
