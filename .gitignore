@@ -2,3 +2,6 @@ images/
 dev-docs/
 .claude/settings.local.json
 .claude/rules/
+
+# Prevent same-name nested clone from re-appearing
+/Agent-Aiko/
