@@ -27,7 +27,7 @@ description: Reset the override persona to origin after confirmation. Use when t
    {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","note":"ユーザー確認後リセット"}
    ```
 
-6. 完了を報告します
+6. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示してから完了を報告します
 
    ```
    アイコ（カスタマイズ）をリセットしました。

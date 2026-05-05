@@ -10,7 +10,8 @@ description: Switch to origin mode so Aiko (original) starts by default. Use whe
 ## 手順
 
 1. `.claude/aiko/mode` に `origin` を書き込みます
-2. 以下を報告します
+2. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
+3. 以下を報告します
 
    ```
    アイコ（オリジナル）に切り替えました。次回から自動で起動します。

@@ -7,7 +7,7 @@ description: Switch to override mode, or customize the override persona. Use whe
 
 ## 引数なし — override モードに切替
 
-`.claude/aiko/mode` を `override` に書き込み、以降のセッションでも アイコ（カスタマイズ）がデフォルト起動するようにします。
+`.claude/aiko/mode` を `override` に書き込み、`.claude/aiko/logo.txt` を Read して応答冒頭にロゴを表示してから、以下を報告します。以降のセッションでも アイコ（カスタマイズ）がデフォルト起動するようになります。
 
 ```
 アイコ（カスタマイズ）に切り替えました。次回から自動で起動します。
@@ -35,7 +35,8 @@ override ファイルに変更は加えません。
    {"ts":"YYYY-MM-DDTHH:MM:SS","action":"override","instruction":"<ユーザーの指示>","summary":"<変更点を1行で>"}
    ```
 
-6. 変更点の要約を 3 行以内で報告します
+6. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
+7. 変更点の要約を 3 行以内で報告します
 
    ```
    アイコ（カスタマイズ）を更新しました。次回から自動で起動します。

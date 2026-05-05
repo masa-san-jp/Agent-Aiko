@@ -17,7 +17,7 @@ description: Read or switch the Aiko persona mode (origin or override). Use when
 
 ## 引数 `origin` または `override`
 
-`.claude/aiko/mode` をその値で上書きし、報告します。
+`.claude/aiko/mode` をその値で上書きし、`.claude/aiko/logo.txt` を Read して応答冒頭にロゴを表示してから、以下を報告します。
 
 ```
 モードを <値> に切り替えました。次の発話から反映されます。
