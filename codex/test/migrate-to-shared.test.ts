@@ -130,6 +130,33 @@ describe("migrate-to-shared.sh — usage", () => {
       await rm(sb.root, { recursive: true, force: true });
     }
   });
+
+  test("--source without value exits 2 with clear error", async () => {
+    const err = (await execFileP("bash", [SCRIPT_PATH, "--source"]).catch((e) => e)) as {
+      stderr?: string;
+      code?: number;
+    };
+    assert.equal(err.code, 2);
+    assert.match(err.stderr ?? "", /--source requires a value/);
+  });
+
+  test("--target with another flag as next token treats it as missing value", async () => {
+    const err = (await execFileP("bash", [SCRIPT_PATH, "--target", "--dry-run"]).catch((e) => e)) as {
+      stderr?: string;
+      code?: number;
+    };
+    assert.equal(err.code, 2);
+    assert.match(err.stderr ?? "", /--target requires a value/);
+  });
+
+  test("usage Step 4 mentions actual backup naming pattern", async () => {
+    const { stdout } = await execFileP("bash", [SCRIPT_PATH, "--help"]);
+    // 実装は `${SOURCE_DIR}.backup-${TS}` という命名（例：.claude/aiko.backup-...）。
+    // usage に古い `.aiko-backup-` 表記が残っていると利用者が混乱するので、
+    // 現在の表記が掲載されていることを保証する。
+    assert.match(stdout, /\.backup-<timestamp>/);
+    assert.doesNotMatch(stdout, /\.aiko-backup-<timestamp>/);
+  });
 });
 
 describe("migrate-to-shared.sh — preconditions", () => {

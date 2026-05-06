@@ -34,7 +34,7 @@ Options:
   1. <source>（${PWD}/.claude/aiko/）の存在を確認
   2. <target>（${HOME}/.aiko/）が存在する場合は abort（--overwrite で backup 経由の上書き可）
   3. <source> を <target> に rsync
-  4. <source> を <source>.aiko-backup-<timestamp> にリネーム
+  4. <source> を <source>.backup-<timestamp> にリネーム（例：${PWD}/.claude/aiko.backup-20260506-090000）
   5. <source> を <target> への symlink に置き換え
   6. 検証：mode / persona / user.md が <target> 経由で読めることを確認
 
@@ -44,13 +44,26 @@ Options:
 EOF
 }
 
+require_value() {
+  # オプションに値が渡されているか確認するヘルパー。
+  # set -e 下で `shift 2` が「shift count out of range」で死ぬのを防ぐため、
+  # 値欠落を明示的に拾って usage を出してから exit 2 する。
+  local opt="$1"
+  local val="${2-__MISSING__}"
+  if [[ "$val" == "__MISSING__" || "$val" == --* ]]; then
+    echo "ERROR: $opt requires a value" >&2
+    usage >&2
+    exit 2
+  fi
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)            DRY_RUN=1; shift ;;
     --overwrite)          ON_CONFLICT="overwrite"; shift ;;
     --abort-on-conflict)  ON_CONFLICT="abort"; shift ;;
-    --source)             SOURCE_DIR="${2:-}"; shift 2 ;;
-    --target)             TARGET_DIR="${2:-}"; shift 2 ;;
+    --source)             require_value "$1" "${2-__MISSING__}"; SOURCE_DIR="$2"; shift 2 ;;
+    --target)             require_value "$1" "${2-__MISSING__}"; TARGET_DIR="$2"; shift 2 ;;
     -h|--help)            usage; exit 0 ;;
     *)                    echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
