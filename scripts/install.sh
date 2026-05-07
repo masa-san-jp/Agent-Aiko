@@ -12,7 +12,7 @@
 #   $0 が実ファイル（-f テストが真）→ ローカル実行。同階層から相対パスで dispatch
 #   それ以外（stdin / プロセス置換）→ curl | bash 実行。raw URL を fetch して dispatch
 #
-# 詳細は dev-docs/2026-05-05-Agent-Aiko-Codex-design.md §3.3 を参照。
+# 詳細は ../Agent-Aiko-dev/2026-05-05-Agent-Aiko-Codex-design.md §3.3 を参照。
 
 set -euo pipefail
 

@@ -5,7 +5,7 @@
       "Bash(git stash *)",
       "Bash(git pull *)",
       "Bash(git clone *)",
-      "Bash(git -C dev-docs *)"
+      "Bash(git -C ../Agent-Aiko-dev *)"
     ]
   },
   "hooks": {

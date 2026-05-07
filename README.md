@@ -132,12 +132,12 @@ Agent-Aiko/
 ### ローカル開発環境のセットアップ
 
 ```bash
+# 兄弟ディレクトリとして並置クローンする
 git clone https://github.com/masa-san-jp/Agent-Aiko
-cd Agent-Aiko
-git clone https://github.com/masa-san-jp/Agent-Aiko-dev dev-docs
+git clone https://github.com/masa-san-jp/Agent-Aiko-dev
 ```
 
-`dev-docs/` は本リポジトリの `.gitignore` に含まれているため、agent-aiko に誤って commit されることはありません。
+`Agent-Aiko-dev` は完全に独立した兄弟リポジトリです。`Agent-Aiko/` の中にネストさせず、同階層に並べることで、agent-aiko に誤って commit される可能性を構造的に排除しています。
 
 ---
 

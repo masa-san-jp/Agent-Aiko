@@ -1,11 +1,25 @@
-images/
-dev-docs/
-.claude/settings.local.json
+# ============================================================
+# Agent-Aiko .gitignore
+#
+# 公開／非公開の境界仕様は VISIBILITY.md を参照。
+# ここに新しい除外を足す場合は VISIBILITY.md の対応セクションも更新すること。
+# ============================================================
+
+# === 開発者ローカル専用 ===
 .claude/rules/
+.claude/settings.local.json
 
-# Prevent same-name nested clone from re-appearing
-/Agent-Aiko/
+# === コンテンツ素材 ===
+images/
 
-# Aiko session-state: 実データはコミットしない（雛形 .example のみコミット）
+# === Aiko ランタイム実データ（雛形 .example のみコミット） ===
 **/session-state/auto.jsonl
 **/session-state/current.md
+
+# === ネスト clone の予防 ===
+# 本リポを誤って自身配下に clone した場合
+/Agent-Aiko/
+# 兄弟リポ Agent-Aiko-dev を誤って本リポ配下に clone した場合（正しい配置は ../Agent-Aiko-dev/）
+/Agent-Aiko-dev/
+# 旧 dev-docs/ ネスト構造の再混入予防（dev-docs は ../Agent-Aiko-dev/ へ分離済み）
+/dev-docs/
