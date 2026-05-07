@@ -175,17 +175,33 @@ run ln -s "$TARGET_DIR" "$SOURCE_DIR"
 
 log ""
 log "Verification:"
-verify_paths=("mode" "persona/aiko-origin.md" "persona/INVARIANTS.md" "user.md")
+# 事前検証で必須扱いしたファイルが、移行後に SOURCE_DIR (symlink 経由) で
+# 読めることを確認する。欠けている場合は rsync / symlink の失敗が考えられるため
+# エラー終了して人格データが壊れないようにする。
+required_after=("mode" "persona/aiko-origin.md" "persona/INVARIANTS.md")
+optional_after=("user.md")
 if [[ $DRY_RUN -eq 0 ]]; then
-  for p in "${verify_paths[@]}"; do
+  missing_required=()
+  for p in "${required_after[@]}"; do
     if [[ -e "$SOURCE_DIR/$p" ]]; then
-      log "  ok  $p"
+      log "  ok       $p"
     else
-      log "  --  $p (optional / not present)"
+      log "  MISSING  $p (required)"
+      missing_required+=("$p")
     fi
   done
+  for p in "${optional_after[@]}"; do
+    if [[ -e "$SOURCE_DIR/$p" ]]; then
+      log "  ok       $p"
+    else
+      log "  --       $p (optional / not present)"
+    fi
+  done
+  if [[ ${#missing_required[@]} -gt 0 ]]; then
+    die "verification failed: required files unreadable through ${SOURCE_DIR} -> ${TARGET_DIR} symlink: ${missing_required[*]}"
+  fi
 else
-  for p in "${verify_paths[@]}"; do
+  for p in "${required_after[@]}" "${optional_after[@]}"; do
     log "  (would verify) $p"
   done
 fi
