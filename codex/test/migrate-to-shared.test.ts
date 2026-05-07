@@ -1,5 +1,6 @@
-// claude-code/scripts/migrate-to-shared.sh の挙動を検証する integration test。
-// codex パッケージ配下で動かすが、対象は claude-code 版の bash script。
+// claude-code/template/.claude/scripts/migrate-to-shared.sh の挙動を検証する integration test。
+// codex パッケージ配下で動かすが、対象は claude-code 版の bash script
+// （配布される .claude/scripts/migrate-to-shared.sh の実体）。
 // node:test runner から execFile で sandbox 環境を作って呼び出す。
 
 import { test, describe } from "node:test";
