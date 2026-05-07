@@ -91,6 +91,8 @@ claude-code/
         │   └── aiko-migrate-to-shared/  # /aiko-migrate-to-shared（共通ストア移行・任意）
         ├── scripts/
         │   └── migrate-to-shared.sh   # /aiko-migrate-to-shared の実体（dry-run 推奨）
+        ├── session-state/             # /aiko-save の保存先（実データ auto.jsonl/current.md は .gitignore）
+        │   └── current.md.example     # current.md の雛形
         └── aiko/
             ├── mode                   # 現在のモード（origin / override）
             ├── user.md                # ユーザー名・呼び方
