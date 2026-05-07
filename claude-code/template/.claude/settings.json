@@ -11,6 +11,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/aiko/hooks/post-tool-use.sh"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

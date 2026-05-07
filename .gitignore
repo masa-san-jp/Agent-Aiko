@@ -5,3 +5,7 @@ dev-docs/
 
 # Prevent same-name nested clone from re-appearing
 /Agent-Aiko/
+
+# Aiko session-state: 実データはコミットしない（雛形 .example のみコミット）
+**/session-state/auto.jsonl
+**/session-state/current.md

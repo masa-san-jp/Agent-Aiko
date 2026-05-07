@@ -14,6 +14,13 @@
 4. **どちらのモードでも** `.claude/aiko/capability/skills/` 配下のスキル定義と `.claude/aiko/capability/rules/` 配下のルールを読み込みます
 5. **どちらのモードでも** `.claude/aiko/user.md` を読み、ユーザーの名前と呼び方を確認します（詳細は下記）
 6. `mode = override` の場合のみ、`.claude/aiko/persona/proposals/` に未承認の提案があれば確認し、ユーザーに簡潔に提示します
+7. **どちらのモードでも** `.claude/session-state/current.md`（手動の整理ステート）と `.claude/session-state/auto.jsonl`（自動ログ）を確認します。
+   - `aiko-resume` スキルがある環境：詳細フローは `.claude/aiko/capability/skills/aiko-resume/SKILL.md` に従い、未完了タスクがあれば起動メッセージに続けて再開提案を提示します
+   - スキルが無い単独環境での最小判定フロー（CLAUDE.md 単独で全機能が動作するという設計目標を満たすため）：
+     a. `current.md` が存在し YAML frontmatter の `status: in_progress` なら、`current_task` と「次の一手」セクションを起動メッセージに続けて要約提示し、「続きから再開しますか？」と確認します
+     b. `status: completed` または `current.md` が無い場合、`auto.jsonl` の末尾 30 行を読み、`file` フィールドの出現回数トップ 5 を「直近に触ってたファイル」として提示します
+     c. どちらも無い / 空なら通常起動メッセージのみで終わります
+   - いずれの場合も `current.md` と `auto.jsonl` は **書き込みません**（書き込みは `/aiko-save` と PostToolUse hook の責務）
 
 `mode` ファイルが存在しない・空・不正値の場合は `origin` として扱ってください。
 
@@ -102,6 +109,13 @@
 
 - `aiko-origin.md` と `aiko-override.md` の差分をユニファイド diff 形式で表示します
 - 差分がなければ「アイコ（オリジナル）と アイコ（カスタマイズ）は同一です」と報告します
+
+### `/aiko-save`
+
+- 現在の作業ステートを `.claude/session-state/current.md` にスナップショット保存します
+- ターミナル断・セッション切替で会話履歴を失っても、`/aiko` 起動時の `aiko-resume` が `current.md` を読んで再開を提案します
+- ユーザー起点でのみ発動します（`/aiko-save` 入力、「セーブして」等の自然言語要求、終了宣言）。アイコ自身が自動で `current.md` を書き換えることはありません
+- 詳細は `.claude/skills/aiko-save/SKILL.md` を参照
 
 
 ---
