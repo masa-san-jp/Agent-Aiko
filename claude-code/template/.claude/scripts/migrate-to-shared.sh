@@ -5,7 +5,11 @@
 # 元の場所を `~/.aiko/` への symlink に置き換える。
 #
 # Codex 版と人格を共有したいユーザー向けの任意操作。
-# デフォルトでは何も破壊せず、競合時は abort する。
+# デフォルト挙動：
+#   - target (~/.aiko/) が既に存在する場合は何もせず abort（--overwrite で
+#     backup 経由の上書き可）
+#   - source は <source>.backup-<timestamp> にリネームしてから symlink に
+#     置き換える（データ消失なし、ロールバックは backup ディレクトリ参照）
 
 set -euo pipefail
 
