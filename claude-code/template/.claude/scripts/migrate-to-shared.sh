@@ -156,8 +156,11 @@ run mkdir -p "$TARGET_DIR"
 if command -v rsync >/dev/null 2>&1; then
   run rsync -a "$SOURCE_DIR/" "$TARGET_DIR/"
 else
-  # rsync が無い環境向けフォールバック
-  run cp -R "$SOURCE_DIR/." "$TARGET_DIR/"
+  # rsync が無い環境向けフォールバック。
+  # `-p` で permission/owner/timestamps を保持する（aiko-origin.md /
+  # INVARIANTS.md の 444 chmod を移行後も維持するため）。
+  # `cp -pR` は POSIX 準拠で BSD/GNU 両方で動作する。
+  run cp -pR "$SOURCE_DIR/." "$TARGET_DIR/"
 fi
 
 # Step 3: source をリネームして backup として保持

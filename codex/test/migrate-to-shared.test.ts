@@ -14,6 +14,7 @@ import {
   readFile,
   readlink,
   lstat,
+  chmod,
   rm,
   access,
   readdir,
@@ -304,6 +305,77 @@ describe("migrate-to-shared.sh — conflict handling", () => {
       // source は symlink
       assert.equal(await isSymlink(sb.source), true);
     } finally {
+      await rm(sb.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("migrate-to-shared.sh — cp fallback (rsync absent)", () => {
+  test("preserves 444 file modes via cp -pR when rsync is not on PATH", async () => {
+    const sb = await createSandbox();
+    const fakeBinDir = await mkdtemp(join(tmpdir(), "aiko-nopath-"));
+    try {
+      await populateSource(sb.source);
+      // 保護対象ファイルを 444 にして、移行後も chmod 444 が維持されることを確認する
+      await chmod(join(sb.source, "persona", "aiko-origin.md"), 0o444);
+      await chmod(join(sb.source, "persona", "INVARIANTS.md"), 0o444);
+
+      // PATH から rsync を除外して cp フォールバック経路を強制
+      const cleanPath = `${fakeBinDir}:/usr/bin:/bin:/usr/sbin:/sbin`;
+
+      let result: { stdout: string; stderr: string; code: number };
+      try {
+        const { stdout, stderr } = await execFileP(
+          "bash",
+          [SCRIPT_PATH, "--source", sb.source, "--target", sb.target],
+          { env: { ...process.env, PATH: cleanPath } },
+        );
+        result = { stdout, stderr, code: 0 };
+      } catch (err) {
+        const e = err as NodeJS.ErrnoException & {
+          stdout?: string;
+          stderr?: string;
+          code?: number;
+        };
+        result = {
+          stdout: e.stdout ?? "",
+          stderr: e.stderr ?? "",
+          code: typeof e.code === "number" ? e.code : 1,
+        };
+      }
+      assert.equal(result.code, 0, `script failed: ${result.stderr}`);
+
+      // 移行成功（target に内容がある）
+      const mode = await readFile(join(sb.target, "mode"), "utf8");
+      assert.equal(mode, "override\n");
+      const origin = await readFile(join(sb.target, "persona", "aiko-origin.md"), "utf8");
+      assert.equal(origin, "# origin\n");
+
+      // 444 のパーミッションが保持されている
+      const originStat = await lstat(join(sb.target, "persona", "aiko-origin.md"));
+      assert.equal(
+        (originStat.mode & 0o777).toString(8),
+        "444",
+        `aiko-origin.md mode should be 444 after cp fallback, got ${(originStat.mode & 0o777).toString(8)}`,
+      );
+      const invStat = await lstat(join(sb.target, "persona", "INVARIANTS.md"));
+      assert.equal(
+        (invStat.mode & 0o777).toString(8),
+        "444",
+        `INVARIANTS.md mode should be 444 after cp fallback, got ${(invStat.mode & 0o777).toString(8)}`,
+      );
+
+      // source は target への symlink
+      assert.equal(await isSymlink(sb.source), true);
+    } finally {
+      await rm(fakeBinDir, { recursive: true, force: true });
+      // chmod を元に戻してから cleanup（444 のままだと一部の rm が permission denied する）
+      try {
+        await chmod(join(sb.source, "persona", "aiko-origin.md"), 0o644);
+      } catch {}
+      try {
+        await chmod(join(sb.source, "persona", "INVARIANTS.md"), 0o644);
+      } catch {}
       await rm(sb.root, { recursive: true, force: true });
     }
   });
