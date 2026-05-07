@@ -40,7 +40,8 @@ Options:
   3. <source> を <target> に rsync
   4. <source> を <source>.backup-<timestamp> にリネーム（例：${PWD}/.claude/aiko.backup-20260506-090000）
   5. <source> を <target> への symlink に置き換え
-  6. 検証：mode / persona / user.md が <target> 経由で読めることを確認
+  6. 検証：必須ファイル（mode / persona/aiko-origin.md / persona/INVARIANTS.md）が
+     <target> 経由で読めることを確認。user.md などの任意ファイルは存在すれば併せて確認
 
 例:
   bash migrate-to-shared.sh --dry-run
