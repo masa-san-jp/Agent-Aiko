@@ -86,7 +86,11 @@ log() {
 
 run() {
   if [[ $DRY_RUN -eq 1 ]]; then
-    printf '[dry-run] $ %s\n' "$*"
+    # 引数にスペース等が含まれていても、ユーザーがログをそのままコピペして
+    # 再現できるよう shell-escape (%q) で表示する。
+    printf '[dry-run] $'
+    printf ' %q' "$@"
+    printf '\n'
   else
     "$@"
   fi
@@ -179,25 +183,27 @@ run ln -s "$TARGET_DIR" "$SOURCE_DIR"
 log ""
 log "Verification:"
 # 事前検証で必須扱いしたファイルが、移行後に SOURCE_DIR (symlink 経由) で
-# 読めることを確認する。欠けている場合は rsync / symlink の失敗が考えられるため
-# エラー終了して人格データが壊れないようにする。
+# 読めることを確認する。`-r` で existence + readability をチェックする
+# （存在しても権限/ACL で読めないケースは migrate 失敗扱いにする）。
+# 欠けている / 読めない場合は rsync / symlink / 権限の失敗が考えられるため
+# エラー終了して人格データが壊れたまま完了報告されないようにする。
 required_after=("mode" "persona/aiko-origin.md" "persona/INVARIANTS.md")
 optional_after=("user.md")
 if [[ $DRY_RUN -eq 0 ]]; then
   missing_required=()
   for p in "${required_after[@]}"; do
-    if [[ -e "$SOURCE_DIR/$p" ]]; then
+    if [[ -r "$SOURCE_DIR/$p" ]]; then
       log "  ok       $p"
     else
-      log "  MISSING  $p (required)"
+      log "  MISSING  $p (required, unreadable)"
       missing_required+=("$p")
     fi
   done
   for p in "${optional_after[@]}"; do
-    if [[ -e "$SOURCE_DIR/$p" ]]; then
+    if [[ -r "$SOURCE_DIR/$p" ]]; then
       log "  ok       $p"
     else
-      log "  --       $p (optional / not present)"
+      log "  --       $p (optional / not readable)"
     fi
   done
   if [[ ${#missing_required[@]} -gt 0 ]]; then
@@ -205,7 +211,7 @@ if [[ $DRY_RUN -eq 0 ]]; then
   fi
 else
   for p in "${required_after[@]}" "${optional_after[@]}"; do
-    log "  (would verify) $p"
+    log "  (would verify readable) $p"
   done
 fi
 
