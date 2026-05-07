@@ -62,7 +62,15 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 /aiko-diff                       オリジナルと自分用の差分を表示
 ```
 
-> **注記**：`/aiko`（読み込み専用の起動）は Claude Code 版固有のコマンドです。Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため不要です。
+Claude Code 版にはさらに以下のコマンドがあります：
+
+```
+/aiko                            現在のモードでアイコを起動（モードは変えない）
+/aiko-save                       現在の作業ステートを .claude/session-state/current.md に保存（再開支援）
+/aiko-migrate-to-shared          .claude/aiko/ を共通ストア ~/.aiko/ に移行（任意・破壊的）
+```
+
+> **注記**：上記 3 つは Claude Code 版固有のコマンドです。Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
 
 人格を直接編集しないでください。両版とも `aiko-origin.md` と `INVARIANTS.md` は **OS パーミッション（chmod 444）** で書込から保護されています。これに加えて：
 
