@@ -25,6 +25,23 @@ aiko
 
 ---
 
+## 設計方針（v0.3.x → v0.4.0 への過渡期）
+
+Codex 版は **「コード主体・LLM 補助」アーキテクチャ** に向けて再設計中です。
+
+| レイヤー | 担当 |
+|---------|-----|
+| コード層（`aiko-shell.ts` / `aiko-runtime.ts`） | ファイル管理（`user.md` / `mode`）・スラッシュコマンド処理・初回ユーザー登録など、ランタイム固有の処理 |
+| LLM 層（baseInstructions 経由） | 人格再現・対話・思考。ファイル操作や初回確認は行わない |
+
+LLM はファイルシステムにアクセスできないため、persona テキスト（`aiko-override.md` / `aiko-origin.md`）には「user.md を読む」のような実行不可能な指示を含めません。コード層が既確定情報を baseInstructions に注入し、LLM はそれを「事実」として使うのみです。
+
+詳細：[Agent-Aiko-dev/2026-05-09-codex-startup-redesign.md](https://github.com/masa-san-jp/Agent-Aiko-dev/blob/main/2026-05-09-codex-startup-redesign.md)
+
+> ⚠️ **過渡期ステータス**: 現状コード v0.2.0 はこの方針への移行前です。Phase 8 検証で persona テキストの「## 起動時の確認事項」が Codex LLM の挙動と整合しないことが判明し、backlog #14 として根本対応の設計メモを起票済み。実装は Phase 9（v0.4.0）で着手予定です。
+
+---
+
 ## 構成
 
 ```
