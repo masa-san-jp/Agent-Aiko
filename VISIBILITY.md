@@ -76,7 +76,7 @@
 | リポ | ローカル配置 | 用途 |
 |------|-------------|------|
 | `Agent-Aiko-dev` | `../Agent-Aiko-dev/`（兄弟） | 開発ログ（議事録・設計メモ・dev-log.jsonl） |
-| `Agent-Workplace` | 別ロケーション | 業務エージェント運用環境 |
+| `Agent-Teams-Dev` | 別ロケーション | 業務エージェント運用環境 |
 
 `Agent-Aiko-dev` は **本リポジトリ内に配置しない**。`Agent-Aiko/` の親ディレクトリに兄弟として clone してください：
 
