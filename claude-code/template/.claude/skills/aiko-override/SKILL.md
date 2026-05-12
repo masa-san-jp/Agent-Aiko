@@ -15,7 +15,13 @@ description: Switch to override mode, or customize the override persona. Use whe
 
 override ファイルに変更は加えません。
 
-## 引数あり — アイコ（カスタマイズ）をカスタマイズ
+## 引数あり — アクティブな人格をカスタマイズ
+
+### 対象ファイルの決定
+
+- `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
+- `active-persona` が空 → `aiko-override.md`（後方互換）
+- `active-persona` = `<name>` → `overrides/<name>.md`
 
 ### 手順
 
@@ -27,7 +33,7 @@ override ファイルに変更は加えません。
      該当：<I-番号と理由>
      ```
    - 抵触しない代替案があれば 1 つだけ提案できます（押しつけません）
-3. 違反していなければ `Edit` で `aiko-override.md` を更新します
+3. 違反していなければ `Edit` で対象ファイルを更新します
 4. `.claude/aiko/mode` を `override` に書き込みます（まだ origin の場合）
 5. 変更内容を `.claude/aiko/override-history.jsonl` に追記します
 

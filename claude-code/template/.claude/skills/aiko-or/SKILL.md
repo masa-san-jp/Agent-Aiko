@@ -18,7 +18,7 @@ description: Alias of /aiko-override. Switch to override mode, or customize the 
 
 override ファイルに変更は加えません。
 
-## 引数あり — アイコ（カスタマイズ）をカスタマイズ
+## 引数あり — アクティブな人格をカスタマイズ
 
 ### 手順
 
@@ -30,16 +30,19 @@ override ファイルに変更は加えません。
      該当：<I-番号と理由>
      ```
    - 抵触しない代替案があれば 1 つだけ提案できます（押しつけません）
-3. 違反していなければ `Edit` で `aiko-override.md` を更新します
-4. `.claude/aiko/mode` を `override` に書き込みます（まだ origin の場合）
-5. 変更内容を `.claude/aiko/override-history.jsonl` に追記します
+3. `.claude/aiko/active-persona` を読み、対象ファイルを決定します
+   - `active-persona` が空 → `aiko-override.md`（後方互換）
+   - `active-persona` = `<name>` → `overrides/<name>.md`
+4. 違反していなければ `Edit` で対象ファイルを更新します
+5. `.claude/aiko/mode` を `override` に書き込みます（まだ origin の場合）
+6. 変更内容を `.claude/aiko/override-history.jsonl` に追記します
 
    ```json
    {"ts":"YYYY-MM-DDTHH:MM:SS","action":"override","instruction":"<ユーザーの指示>","summary":"<変更点を1行で>"}
    ```
 
-6. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
-7. 変更点の要約を 3 行以内で報告します
+7. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
+8. 変更点の要約を 3 行以内で報告します
 
    ```
    アイコ（カスタマイズ）を更新しました。次回から自動で起動します。

@@ -32,7 +32,6 @@ async function writeMinimalPersona(root: string): Promise<void> {
   await writeFile(join(root, "persona", "aiko-override.md"), "# Override\nOverride body.\n");
   await writeFile(join(root, "persona", "INVARIANTS.md"), "# INVARIANTS\nNever lie.\n");
 }
-
 describe("loadPersona", () => {
   let fixture: Fixture;
 
@@ -49,6 +48,7 @@ describe("loadPersona", () => {
     const snap = await loadPersona({ aikoHome: fixture.root });
     assert.equal(snap.mode, "origin");
     assert.match(snap.persona, /Origin body/);
+    assert.equal(snap.activePersona, "");
   });
 
   it("uses override mode when mode file says override", async () => {
@@ -56,6 +56,7 @@ describe("loadPersona", () => {
     const snap = await loadPersona({ aikoHome: fixture.root });
     assert.equal(snap.mode, "override");
     assert.match(snap.persona, /Override body/);
+    assert.equal(snap.activePersona, "");
   });
 
   it("falls back to origin when mode file is empty or invalid", async () => {
@@ -130,6 +131,43 @@ describe("loadPersona", () => {
   it("throws when INVARIANTS.md is missing", async () => {
     await rm(join(fixture.root, "persona", "INVARIANTS.md"));
     await assert.rejects(loadPersona({ aikoHome: fixture.root }), /ENOENT/);
+  });
+
+  it("loads named persona when active-persona is set", async () => {
+    await mkdir(join(fixture.root, "persona", "overrides"), { recursive: true });
+    await writeFile(
+      join(fixture.root, "persona", "overrides", "work.md"),
+      "# Work\nWork persona body.\n"
+    );
+    await writeFile(join(fixture.root, "mode"), "override\n");
+    await writeFile(join(fixture.root, "active-persona"), "work\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.equal(snap.mode, "override");
+    assert.equal(snap.activePersona, "work");
+    assert.match(snap.persona, /Work persona body/);
+  });
+
+  it("falls back to aiko-override.md when active-persona file is missing", async () => {
+    await writeFile(join(fixture.root, "mode"), "override\n");
+    await writeFile(join(fixture.root, "active-persona"), "missing-slug\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.equal(snap.activePersona, "missing-slug");
+    assert.match(snap.persona, /Override body/);
+  });
+
+  it("uses empty activePersona when mode is origin even if active-persona file exists", async () => {
+    await writeFile(join(fixture.root, "active-persona"), "work\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.equal(snap.mode, "origin");
+    assert.equal(snap.activePersona, "");
+    assert.match(snap.persona, /Origin body/);
+  });
+
+  it("uses empty activePersona when active-persona file is absent", async () => {
+    await writeFile(join(fixture.root, "mode"), "override\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.equal(snap.activePersona, "");
+    assert.match(snap.persona, /Override body/);
   });
 
   it("propagates non-ENOENT errors from optional reads (e.g. EACCES)", async () => {

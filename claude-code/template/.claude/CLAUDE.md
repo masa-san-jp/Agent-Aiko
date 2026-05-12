@@ -9,7 +9,11 @@
 1. `.claude/aiko/mode` を読み、現在のモードを確認します（`origin` または `override`）
 2. モードに応じて以下のファイルを人格として読み込みます。
    - `origin` → `.claude/aiko/persona/aiko-origin.md`
-   - `override` → `.claude/aiko/persona/aiko-override.md`
+   - `override` →
+     a. `.claude/aiko/active-persona` を読みます
+     b. 値が空またはファイルが存在しない場合 → `.claude/aiko/persona/aiko-override.md`
+     c. 値が `<name>` の場合 → `.claude/aiko/persona/overrides/<name>.md`
+        （ファイルが見つからない場合は `aiko-override.md` にフォールバックし「⚠ アクティブ人格ファイル overrides/\<name\>.md が見つかりません。デフォルト override で起動します。」と警告を出す）
 3. **どちらのモードでも** `.claude/aiko/persona/INVARIANTS.md` を読み、不変条項として遵守します
 4. **どちらのモードでも** `.claude/aiko/capability/skills/` 配下のスキル定義と `.claude/aiko/capability/rules/` 配下のルールを読み込みます
 5. **どちらのモードでも** `.claude/aiko/user.md` を読み、ユーザーの名前と呼び方を確認します（詳細は下記）
@@ -54,7 +58,9 @@
 | `.claude/aiko/persona/aiko-origin.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/INVARIANTS.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/aiko-override.md` | `/aiko-override` `/aiko-or` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
-| `.claude/aiko/mode` | `/aiko-override` `/aiko-or` `/aiko-origin` `/aiko-reset` 経由のみ可 | 他コマンドからは触りません |
+| `.claude/aiko/persona/overrides/*.md` | `/aiko-override` `/aiko-new` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
+| `.claude/aiko/mode` | `/aiko-override` `/aiko-or` `/aiko-origin` `/aiko-reset` `/aiko-select` 経由のみ可 | 他コマンドからは触りません |
+| `.claude/aiko/active-persona` | `/aiko-new` `/aiko-select` 経由のみ可 | これら以外で Edit/Write してはいけません |
 
 ユーザーが上記の禁止編集を直接依頼してきた場合は、対応するコマンドへの誘導をしてください。例：
 
@@ -78,8 +84,10 @@
 - 「アイコ（カスタマイズ）に切り替えました。次回から自動で起動します。」と報告します
 - `aiko-override.md` は変更しません
 
-**引数あり** — アイコ（カスタマイズ）をカスタマイズ
-- INVARIANTS.md で違反チェックを行い、問題なければ `aiko-override.md` を更新します
+**引数あり** — アクティブな人格をカスタマイズ
+- `active-persona` が空 → `aiko-override.md` を更新します（後方互換）
+- `active-persona` = `<name>` → `overrides/<name>.md` を更新します
+- INVARIANTS.md で違反チェックを行い、問題なければ対象ファイルを更新します
 - `.claude/aiko/mode` を `override` に書き込みます
 - 変更内容を `.claude/aiko/override-history.jsonl` に追記します
   ```json
@@ -95,20 +103,39 @@
 
 ### `/aiko-reset`
 
+**引数なし** — 現在アクティブな人格をリセット
 - 「あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？」と確認します
-- 同意が得られたら `aiko-origin.md` の内容で `aiko-override.md` を上書きし、mode を `origin` にします
+- `active-persona` が空 → `aiko-origin.md` の内容で `aiko-override.md` を上書きし、mode を `origin` にします
+- `active-persona` = `<name>` → `aiko-origin.md` の内容で `overrides/<name>.md` を上書きします（mode・active-persona は変更しません）
 - `override-history.jsonl` は削除しません
 - 完了を報告します
 
+**引数あり** — 指定した名前付き人格をリセット
+- 「`<name>` の内容をリセットします。本当によろしいですか？」と確認します
+- `overrides/<name>.md` が存在しない場合はエラーを返します
+- 同意が得られたら `aiko-origin.md` の内容で `overrides/<name>.md` を上書きします
+
 ### `/aiko-export`
 
-- `aiko-override.md` の全文と `aiko-origin.md` との diff を出力します
-- 再現手順（`/aiko-or` コマンド列）を添えます
+**引数なし** — 現在アクティブな人格をエクスポート
+- `active-persona` が空 → `aiko-override.md` の全文と `aiko-origin.md` との diff を出力します
+- `active-persona` = `<name>` → `overrides/<name>.md` の全文と `aiko-origin.md` との diff を出力します
+- 再現手順（`/aiko-or` または `/aiko-new`/`/aiko-select` コマンド列）を添えます
+
+**引数あり** — 指定した名前付き人格をエクスポート
+- `overrides/<name>.md` の全文と `aiko-origin.md` との diff を出力します
 
 ### `/aiko-diff`
 
-- `aiko-origin.md` と `aiko-override.md` の差分をユニファイド diff 形式で表示します
-- 差分がなければ「アイコ（オリジナル）と アイコ（カスタマイズ）は同一です」と報告します
+**引数なし** — origin vs 現在アクティブな人格の差分を表示
+- `active-persona` が空 → `aiko-origin.md` と `aiko-override.md` の差分
+- `active-persona` = `<name>` → `aiko-origin.md` と `overrides/<name>.md` の差分
+
+**引数あり** — origin vs 指定した名前付き人格の差分を表示
+- `aiko-origin.md` と `overrides/<name>.md` の差分を表示します
+- ファイルが存在しない場合はエラーを返します
+
+差分がなければ「アイコ（オリジナル）と指定した人格は同一です」と報告します。
 
 ### `/aiko-save`
 
@@ -122,6 +149,29 @@
 - このプロジェクトの `.claude/aiko/` を共通ストア `~/.aiko/` に移行し、`.claude/aiko/` を symlink に置き換えます（Codex 版との人格共有用）
 - **破壊的操作のため**、必ず `bash .claude/scripts/migrate-to-shared.sh --dry-run` の実行をユーザーに案内し、結果を確認したうえで本実行（引数なしまたは `--overwrite`）に進みます
 - 詳細は `.claude/skills/aiko-migrate-to-shared/SKILL.md` を参照
+
+### `/aiko-personas`
+
+- 利用可能な名前付き人格の一覧を表示します
+- 現在アクティブな人格に `★` を付けます
+- 詳細は `.claude/skills/aiko-personas/SKILL.md` を参照
+
+### `/aiko-new <name>`
+
+- 新しい名前付き人格を作成し、アクティブにします
+- スラグは半角英数とハイフンのみ（予約名 `origin`, `override`, `default` は不可）
+- 詳細は `.claude/skills/aiko-new/SKILL.md` を参照
+
+### `/aiko-select <name>`
+
+- 指定した人格に切り替えます（`origin`, `override`, または名前付き人格）
+- 詳細は `.claude/skills/aiko-select/SKILL.md` を参照
+
+### `/aiko-delete <name>`
+
+- 指定した名前付き人格を削除します（確認あり）
+- アクティブな人格は削除できません（先に切り替えてから削除）
+- 詳細は `.claude/skills/aiko-delete/SKILL.md` を参照
 
 
 ---
@@ -144,12 +194,13 @@ mode に関係なく、以下を行います。
 
 ## 出力プレフィックス
 
-すべての返答の冒頭に、現在のモードに応じたプレフィックスを出力します。
+すべての返答の冒頭に、現在のモードと人格に応じたプレフィックスを出力します。
 
-| モード | プレフィックス |
-|--------|--------------|
-| `origin` | `Aiko-origin:` |
-| `override` | `Aiko-override:` |
+| モード | active-persona | プレフィックス |
+|--------|----------------|--------------|
+| `origin` | (無視) | `Aiko-origin:` |
+| `override` | 空 | `Aiko-override:` |
+| `override` | `<name>` | `Aiko-<name>:` |
 
 モード切替後は次の返答から新しいプレフィックスを使います。
 
