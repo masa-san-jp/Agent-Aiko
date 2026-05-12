@@ -9,11 +9,20 @@ description: Read or switch the Aiko persona mode (origin or override). Use when
 
 ## 引数なし
 
-`.claude/aiko/mode` の中身を読み、現在のモードを 1 行で報告します。
+`.claude/aiko/mode` と `.claude/aiko/active-persona` の中身を読み、現在の状態を報告します。
 
-```
-現在のモードは <値> です。
-```
+- `mode = origin` の場合：
+  ```
+  現在のモードは origin です。
+  ```
+- `mode = override` かつ `active-persona` が空の場合：
+  ```
+  現在のモードは override です。
+  ```
+- `mode = override` かつ `active-persona` = `<name>` の場合：
+  ```
+  現在のモードは override です（人格: <name>）。
+  ```
 
 ## 引数 `origin` または `override`
 
