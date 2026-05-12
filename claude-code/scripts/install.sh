@@ -116,7 +116,9 @@ stash_if_exists() {
 stash_if_exists "aiko/mode"
 stash_if_exists "aiko/user.md"
 stash_if_exists "aiko/override-history.jsonl"
+stash_if_exists "aiko/active-persona"
 stash_if_exists "aiko/persona/aiko-override.md"
+stash_if_exists "aiko/persona/overrides"
 stash_if_exists "aiko/persona/proposals"
 stash_if_exists "aiko/capability/rules/rules-base.md"
 
@@ -140,7 +142,9 @@ USER_HAD_MODE=0
 restore_if_stashed "aiko/mode"
 restore_if_stashed "aiko/user.md"
 restore_if_stashed "aiko/override-history.jsonl"
+restore_if_stashed "aiko/active-persona"
 restore_if_stashed "aiko/persona/aiko-override.md"
+restore_if_stashed "aiko/persona/overrides"
 restore_if_stashed "aiko/persona/proposals"
 restore_if_stashed "aiko/capability/rules/rules-base.md"
 
@@ -162,6 +166,8 @@ chmod 444 "$ORIGIN" "$DEST_DIR/aiko/persona/INVARIANTS.md" 2>/dev/null || true
 find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
 [ -d "$DEST_DIR/scripts" ] && find "$DEST_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 
+mkdir -p "$DEST_DIR/aiko/persona/overrides"
+
 [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
 
 # ─────────────────────────────────────
@@ -178,6 +184,10 @@ printf "  %s/aiko-origin%s (%s/aiko-org%s)  オリジナルの Aiko に戻す\n"
 printf "  %s/aiko-reset%s               自分用 Aiko をリセット（確認あり）\n" "$BOLD" "$RESET"
 printf "  %s/aiko-export%s              自分用 Aiko を書き出す（共有・移行用）\n" "$BOLD" "$RESET"
 printf "  %s/aiko-diff%s                オリジナルとの差分を確認\n" "$BOLD" "$RESET"
+printf "  %s/aiko-personas%s            利用可能な人格の一覧を表示\n" "$BOLD" "$RESET"
+printf "  %s/aiko-new <名前>%s          新しい人格を作成してアクティブにする\n" "$BOLD" "$RESET"
+printf "  %s/aiko-select <名前>%s       人格を切り替える\n" "$BOLD" "$RESET"
+printf "  %s/aiko-delete <名前>%s       名前付き人格を削除する（確認あり）\n" "$BOLD" "$RESET"
 printf "\n"
 printf "  %s────────────────────────────────────────────%s\n\n" "$CYAN" "$RESET"
 

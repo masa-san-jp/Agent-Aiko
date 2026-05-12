@@ -10,7 +10,9 @@ import { join } from "node:path";
 export interface AikoPersonaSnapshot {
   /** 現在のモード。mode ファイルが無い／不正値の場合は "origin" として扱う。 */
   mode: "origin" | "override";
-  /** mode に応じて選んだ persona 本文（aiko-origin.md または aiko-override.md）。 */
+  /** override モード時のアクティブ人格スラグ。空文字列はデフォルト override を意味する。 */
+  activePersona: string;
+  /** mode と activePersona に応じて選んだ persona 本文。 */
   persona: string;
   /** INVARIANTS.md の内容（不変条項）。 */
   invariants: string;
@@ -30,11 +32,12 @@ export interface LoadPersonaOptions {
 /** ~/.aiko/ を読み込んで AikoPersonaSnapshot を返す。
  *
  * 必須ファイル（不在は throw）：
- *   - persona/aiko-origin.md または persona/aiko-override.md（mode に応じて）
+ *   - persona/aiko-origin.md または persona/aiko-override.md または persona/overrides/<slug>.md（mode + activePersona に応じて）
  *   - persona/INVARIANTS.md
  *
  * 任意（不在は安全側にフォールバック）：
  *   - mode（無ければ "origin"）
+ *   - active-persona（無ければ "" = デフォルト override）
  *   - user.md（無ければ name/address とも未設定）
  *   - capability/rules/rules-base.md（無ければ空文字列）
  *   - capability/skills/（無ければ空配列）
@@ -43,8 +46,8 @@ export async function loadPersona(opts: LoadPersonaOptions = {}): Promise<AikoPe
   const aikoHome = opts.aikoHome ?? join(homedir(), ".aiko");
 
   const mode = await readMode(aikoHome);
-  const personaFile = mode === "override" ? "aiko-override.md" : "aiko-origin.md";
-  const persona = await readFile(join(aikoHome, "persona", personaFile), "utf8");
+  const activePersona = mode === "override" ? await readActivePersona(aikoHome) : "";
+  const persona = await readPersonaFile(aikoHome, mode, activePersona);
   const invariants = await readFile(join(aikoHome, "persona", "INVARIANTS.md"), "utf8");
   const user = await readUser(aikoHome);
   const rulesBase = await readOptionalFile(
@@ -52,7 +55,7 @@ export async function loadPersona(opts: LoadPersonaOptions = {}): Promise<AikoPe
   );
   const capabilitySkills = await readSkillNames(join(aikoHome, "capability", "skills"));
 
-  return { mode, persona, invariants, user, rulesBase, capabilitySkills };
+  return { mode, activePersona, persona, invariants, user, rulesBase, capabilitySkills };
 }
 
 /** ENOENT（ファイル／ディレクトリ不在）のときだけ true を返す型ガード。
@@ -74,6 +77,38 @@ async function readMode(aikoHome: string): Promise<"origin" | "override"> {
     if (isNotFound(err)) return "origin";
     throw err;
   }
+}
+
+async function readActivePersona(aikoHome: string): Promise<string> {
+  try {
+    return (await readFile(join(aikoHome, "active-persona"), "utf8")).trim();
+  } catch (err) {
+    if (isNotFound(err)) return "";
+    throw err;
+  }
+}
+
+/** mode と activePersona に応じた人格ファイルを読む。
+ *  named persona のファイルが ENOENT（見つからない）場合のみ aiko-override.md にフォールバックする。
+ *  EACCES / EPERM 等の他エラーは rethrow して呼び出し元に可視化する。 */
+async function readPersonaFile(
+  aikoHome: string,
+  mode: "origin" | "override",
+  activePersona: string
+): Promise<string> {
+  if (mode !== "override") {
+    return readFile(join(aikoHome, "persona", "aiko-origin.md"), "utf8");
+  }
+  if (activePersona) {
+    const namedPath = join(aikoHome, "persona", "overrides", `${activePersona}.md`);
+    try {
+      return await readFile(namedPath, "utf8");
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      // ファイルが消えていた場合は aiko-override.md にフォールバック
+    }
+  }
+  return readFile(join(aikoHome, "persona", "aiko-override.md"), "utf8");
 }
 
 async function readUser(aikoHome: string): Promise<{ name?: string; address?: string }> {

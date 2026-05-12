@@ -9,6 +9,7 @@ import { buildBaseInstructions } from "../src/aiko-prompt-builder.js";
 function snapshotFixture(overrides: Partial<AikoPersonaSnapshot> = {}): AikoPersonaSnapshot {
   return {
     mode: "origin",
+    activePersona: "",
     persona: "## persona body",
     invariants: "## INVARIANTS body",
     user: {},
