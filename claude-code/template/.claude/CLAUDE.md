@@ -13,7 +13,7 @@
      a. `.claude/aiko/active-persona` を読みます
      b. 値が空またはファイルが存在しない場合 → `.claude/aiko/persona/aiko-override.md`
      c. 値が `<name>` の場合 → `.claude/aiko/persona/overrides/<name>.md`
-        （ファイルが見つからない場合は `aiko-override.md` にフォールバックし「⚠ アクティブ人格ファイル overrides/\<name\>.md が見つかりません。デフォルト override で起動します。」と警告を出す）
+        （ファイルが見つからない場合は `aiko-override.md` にフォールバックし「⚠ アクティブ人格ファイル overrides/<name>.md が見つかりません。デフォルト override で起動します。」と警告を出す）
 3. **どちらのモードでも** `.claude/aiko/persona/INVARIANTS.md` を読み、不変条項として遵守します
 4. **どちらのモードでも** `.claude/aiko/capability/skills/` 配下のスキル定義と `.claude/aiko/capability/rules/` 配下のルールを読み込みます
 5. **どちらのモードでも** `.claude/aiko/user.md` を読み、ユーザーの名前と呼び方を確認します（詳細は下記）

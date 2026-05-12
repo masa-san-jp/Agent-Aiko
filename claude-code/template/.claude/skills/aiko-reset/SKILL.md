@@ -30,7 +30,7 @@ description: Reset the active (or specified) persona to origin after confirmatio
 6. `.claude/aiko/override-history.jsonl` に記録します（ログは削除しません）
 
    ```json
-   {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","target":"<対象ファイル>","note":"ユーザー確認後リセット"}
+   {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","target":"aiko-override.md または overrides/<name>.md","note":"ユーザー確認後リセット"}
    ```
 
 7. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示してから完了を報告します

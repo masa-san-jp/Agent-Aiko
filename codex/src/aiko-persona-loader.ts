@@ -89,7 +89,8 @@ async function readActivePersona(aikoHome: string): Promise<string> {
 }
 
 /** mode と activePersona に応じた人格ファイルを読む。
- *  named persona のファイルが見つからない場合は aiko-override.md にフォールバックする。 */
+ *  named persona のファイルが ENOENT（見つからない）場合のみ aiko-override.md にフォールバックする。
+ *  EACCES / EPERM 等の他エラーは rethrow して呼び出し元に可視化する。 */
 async function readPersonaFile(
   aikoHome: string,
   mode: "origin" | "override",

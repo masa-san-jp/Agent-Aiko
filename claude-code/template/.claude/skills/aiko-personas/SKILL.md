@@ -42,5 +42,5 @@ description: List available named personas and show which is active. Use when th
 - 現在のモードが `override` で `active-persona` に書かれたファイルが消えている場合は、`[override]` に ★ を付け、以下の警告も添えます
 
   ```
-  ⚠ アクティブ人格ファイル overrides/<slug>.md が見つかりません。デフォルト override にフォールバックしています。
+  ⚠ アクティブ人格ファイル overrides/<active-personaの値>.md が見つかりません。デフォルト override にフォールバックしています。
   ```
