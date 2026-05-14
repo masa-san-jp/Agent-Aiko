@@ -149,19 +149,19 @@ describe("loadPersona", () => {
 
   it("loads Lab-style persona directories with per-persona user and rules", async () => {
     await mkdir(join(fixture.root, "persona", "origin"), { recursive: true });
-    await mkdir(join(fixture.root, "persona", "overrides", "hisho"), { recursive: true });
+    await mkdir(join(fixture.root, "persona", "overrides", "work"), { recursive: true });
     await writeFile(join(fixture.root, "persona", "origin", "persona.md"), "# Origin dir\n");
     await writeFile(join(fixture.root, "persona", "origin", "user.md"), "name: OriginUser\n");
-    await writeFile(join(fixture.root, "persona", "overrides", "hisho", "persona.md"), "# Hisho\n");
-    await writeFile(join(fixture.root, "persona", "overrides", "hisho", "user.md"), "name: Masa\naddress: マサさん\n");
-    await writeFile(join(fixture.root, "persona", "overrides", "hisho", "rules.md"), "- schedule first\n");
+    await writeFile(join(fixture.root, "persona", "overrides", "work", "persona.md"), "# Work\n");
+    await writeFile(join(fixture.root, "persona", "overrides", "work", "user.md"), "name: Alice\naddress: アリスさん\n");
+    await writeFile(join(fixture.root, "persona", "overrides", "work", "rules.md"), "- schedule first\n");
     await writeFile(join(fixture.root, "mode"), "override\n");
-    await writeFile(join(fixture.root, "active-persona"), "hisho\n");
+    await writeFile(join(fixture.root, "active-persona"), "work\n");
     const snap = await loadPersona({ aikoHome: fixture.root });
-    assert.equal(snap.activePersona, "hisho");
-    assert.match(snap.persona, /Hisho/);
-    assert.equal(snap.user.name, "Masa");
-    assert.equal(snap.user.address, "マサさん");
+    assert.equal(snap.activePersona, "work");
+    assert.match(snap.persona, /Work/);
+    assert.equal(snap.user.name, "Alice");
+    assert.equal(snap.user.address, "アリスさん");
     assert.match(snap.personaRules, /schedule first/);
   });
 

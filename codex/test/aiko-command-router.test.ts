@@ -456,42 +456,42 @@ describe("AikoCommandRouter — named personas", () => {
         confirm: async () => true,
       });
 
-      const created = await router.execute("aiko-new", "hisho");
-      assert.match(created.output, /overrides\/hisho\/persona\.md/);
+      const created = await router.execute("aiko-new", "work");
+      assert.match(created.output, /overrides\/work\/persona\.md/);
       assert.equal(created.needsRestart, true);
       assert.match(
-        await readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        await readFile(join(fixture.aikoHome, "persona", "overrides", "work", "persona.md"), "utf8"),
         /original body/
       );
 
       const listed = await router.execute("aiko-personas", "");
-      assert.match(listed.output, /★ \[hisho\]/);
+      assert.match(listed.output, /★ \[work\]/);
 
       await router.execute("aiko-select", "origin");
-      const selected = await router.execute("aiko-select", "hisho");
-      assert.match(selected.output, /Aiko-hisho/);
-      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "hisho");
+      const selected = await router.execute("aiko-select", "work");
+      assert.match(selected.output, /Aiko-work/);
+      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "work");
 
       await writeFile(
-        join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"),
-        "# Hisho\ncustom\n"
+        join(fixture.aikoHome, "persona", "overrides", "work", "persona.md"),
+        "# Work\ncustom\n"
       );
-      const exported = await router.execute("aiko-export", "hisho");
-      assert.match(exported.output, /overrides\/hisho\/persona\.md/);
+      const exported = await router.execute("aiko-export", "work");
+      assert.match(exported.output, /overrides\/work\/persona\.md/);
       assert.match(exported.output, /custom/);
 
-      const reset = await router.execute("aiko-reset", "hisho");
-      assert.match(reset.output, /hisho/);
+      const reset = await router.execute("aiko-reset", "work");
+      assert.match(reset.output, /work/);
       assert.match(
-        await readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        await readFile(join(fixture.aikoHome, "persona", "overrides", "work", "persona.md"), "utf8"),
         /original body/
       );
 
       await router.execute("aiko-select", "override");
-      const deleted = await router.execute("aiko-delete", "hisho");
+      const deleted = await router.execute("aiko-delete", "work");
       assert.match(deleted.output, /削除しました/);
       await assert.rejects(
-        readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        readFile(join(fixture.aikoHome, "persona", "overrides", "work", "persona.md"), "utf8"),
         /ENOENT/
       );
       await client.stop();
