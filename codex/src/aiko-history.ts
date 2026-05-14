@@ -11,11 +11,13 @@ export interface OverrideHistoryEntry {
   /** ISO8601 タイムスタンプ。 */
   ts: string;
   /** "override" / "reset" 等のアクション種別。 */
-  action: "override" | "reset" | "mode-set";
+  action: "override" | "reset" | "mode-set" | "new-persona" | "delete-persona";
   /** ユーザー指示（reset / mode-set では空文字でよい）。 */
   instruction: string;
   /** 変更点の 1 行サマリ（省略可）。 */
   summary?: string;
+  name?: string;
+  base?: string;
 }
 
 /** ~/.aiko/override-history.jsonl に 1 行追記する。 */
@@ -31,5 +33,7 @@ export async function appendOverrideHistory(
     instruction: entry.instruction,
   };
   if (entry.summary !== undefined) minimal["summary"] = entry.summary;
+  if (entry.name !== undefined) minimal["name"] = entry.name;
+  if (entry.base !== undefined) minimal["base"] = entry.base;
   await appendFile(path, `${JSON.stringify(minimal)}\n`, { encoding: "utf8" });
 }

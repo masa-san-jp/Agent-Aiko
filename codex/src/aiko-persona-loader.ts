@@ -16,10 +16,12 @@ export interface AikoPersonaSnapshot {
   persona: string;
   /** INVARIANTS.md の内容（不変条項）。 */
   invariants: string;
-  /** user.md からパースしたユーザー情報。 */
+  /** active persona の user.md からパースしたユーザー情報。 */
   user: { name?: string; address?: string };
   /** capability/rules/rules-base.md の内容（無ければ空文字列）。 */
   rulesBase: string;
+  /** active persona 固有 rules.md の内容（無ければ空文字列）。 */
+  personaRules: string;
   /** capability/skills/ 配下のスキル名一覧（参照用、ソート済）。 */
   capabilitySkills: string[];
 }
@@ -32,13 +34,14 @@ export interface LoadPersonaOptions {
 /** ~/.aiko/ を読み込んで AikoPersonaSnapshot を返す。
  *
  * 必須ファイル（不在は throw）：
- *   - persona/aiko-origin.md または persona/aiko-override.md または persona/overrides/<slug>.md（mode + activePersona に応じて）
- *   - persona/INVARIANTS.md
+ *   - persona/origin/persona.md または persona/overrides/<slug>/persona.md（Lab 型）
+ *     旧形式（persona/aiko-origin.md / persona/aiko-override.md / persona/overrides/<slug>.md）にも互換対応
+ *   - INVARIANTS.md または persona/INVARIANTS.md
  *
  * 任意（不在は安全側にフォールバック）：
  *   - mode（無ければ "origin"）
  *   - active-persona（無ければ "" = デフォルト override）
- *   - user.md（無ければ name/address とも未設定）
+ *   - active persona の user.md（旧形式 user.md にも互換対応。無ければ name/address とも未設定）
  *   - capability/rules/rules-base.md（無ければ空文字列）
  *   - capability/skills/（無ければ空配列）
  */
@@ -47,15 +50,20 @@ export async function loadPersona(opts: LoadPersonaOptions = {}): Promise<AikoPe
 
   const mode = await readMode(aikoHome);
   const activePersona = mode === "override" ? await readActivePersona(aikoHome) : "";
-  const persona = await readPersonaFile(aikoHome, mode, activePersona);
-  const invariants = await readFile(join(aikoHome, "persona", "INVARIANTS.md"), "utf8");
-  const user = await readUser(aikoHome);
+  const personaRef = await resolvePersonaRef(aikoHome, mode, activePersona);
+  const persona = await readFile(personaRef.personaPath, "utf8");
+  const invariants = await readFirstExisting([
+    join(aikoHome, "INVARIANTS.md"),
+    join(aikoHome, "persona", "INVARIANTS.md"),
+  ]);
+  const user = await readUser(personaRef.userPath, join(aikoHome, "user.md"));
   const rulesBase = await readOptionalFile(
     join(aikoHome, "capability", "rules", "rules-base.md")
   );
+  const personaRules = personaRef.rulesPath ? await readOptionalFile(personaRef.rulesPath) : "";
   const capabilitySkills = await readSkillNames(join(aikoHome, "capability", "skills"));
 
-  return { mode, activePersona, persona, invariants, user, rulesBase, capabilitySkills };
+  return { mode, activePersona, persona, invariants, user, rulesBase, personaRules, capabilitySkills };
 }
 
 /** ENOENT（ファイル／ディレクトリ不在）のときだけ true を返す型ガード。
@@ -88,47 +96,98 @@ async function readActivePersona(aikoHome: string): Promise<string> {
   }
 }
 
-/** mode と activePersona に応じた人格ファイルを読む。
- *  named persona のファイルが ENOENT（見つからない）場合のみ aiko-override.md にフォールバックする。
- *  EACCES / EPERM 等の他エラーは rethrow して呼び出し元に可視化する。 */
-async function readPersonaFile(
+interface PersonaRef {
+  personaPath: string;
+  userPath?: string;
+  rulesPath?: string;
+}
+
+/** mode と activePersona に応じた Lab 型の人格ディレクトリを解決する。
+ *  旧 flat 型も読み込めるよう、見つからない場合だけ互換パスへフォールバックする。 */
+async function resolvePersonaRef(
   aikoHome: string,
   mode: "origin" | "override",
   activePersona: string
-): Promise<string> {
+): Promise<PersonaRef> {
   if (mode !== "override") {
-    return readFile(join(aikoHome, "persona", "aiko-origin.md"), "utf8");
+    return {
+      personaPath: await firstExistingPath([
+        join(aikoHome, "persona", "origin", "persona.md"),
+        join(aikoHome, "persona", "aiko-origin.md"),
+      ]),
+      userPath: join(aikoHome, "persona", "origin", "user.md"),
+      rulesPath: join(aikoHome, "persona", "origin", "rules.md"),
+    };
   }
   if (activePersona) {
-    const namedPath = join(aikoHome, "persona", "overrides", `${activePersona}.md`);
-    try {
-      return await readFile(namedPath, "utf8");
-    } catch (err) {
-      if (!isNotFound(err)) throw err;
-      // ファイルが消えていた場合は aiko-override.md にフォールバック
+    const namedDir = join(aikoHome, "persona", "overrides", activePersona);
+    const namedPath = await firstExistingPath(
+      [join(namedDir, "persona.md"), join(aikoHome, "persona", "overrides", `${activePersona}.md`)],
+      true
+    );
+    if (namedPath) {
+      return {
+        personaPath: namedPath,
+        userPath: join(namedDir, "user.md"),
+        rulesPath: join(namedDir, "rules.md"),
+      };
     }
+    // active-persona が消えていた場合はデフォルト override にフォールバック
   }
-  return readFile(join(aikoHome, "persona", "aiko-override.md"), "utf8");
+  return {
+    personaPath: await firstExistingPath([
+      join(aikoHome, "persona", "override", "persona.md"),
+      join(aikoHome, "persona", "aiko-override.md"),
+    ]),
+    userPath: join(aikoHome, "persona", "override", "user.md"),
+    rulesPath: join(aikoHome, "persona", "override", "rules.md"),
+  };
 }
 
-async function readUser(aikoHome: string): Promise<{ name?: string; address?: string }> {
-  let content: string;
-  try {
-    content = await readFile(join(aikoHome, "user.md"), "utf8");
-  } catch (err) {
-    if (isNotFound(err)) return {};
-    throw err;
+async function readUser(...paths: Array<string | undefined>): Promise<{ name?: string; address?: string }> {
+  for (const path of paths.filter((p): p is string => Boolean(p))) {
+    let content: string;
+    try {
+      content = await readFile(path, "utf8");
+    } catch (err) {
+      if (isNotFound(err)) continue;
+      throw err;
+    }
+    const result: { name?: string; address?: string } = {};
+    const nameMatch = content.match(/^name:\s*(.+)$/m);
+    if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
+      result.name = nameMatch[1].trim();
+    }
+    const addressMatch = content.match(/^address:\s*(.+)$/m);
+    if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
+      result.address = addressMatch[1].trim();
+    }
+    if (result.name !== undefined || result.address !== undefined) return result;
   }
-  const result: { name?: string; address?: string } = {};
-  const nameMatch = content.match(/^name:\s*(.+)$/m);
-  if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
-    result.name = nameMatch[1].trim();
+  return {};
+}
+
+async function readFirstExisting(paths: string[], optional = false): Promise<string> {
+  const path = optional ? await firstExistingPath(paths, true) : await firstExistingPath(paths);
+  if (!path) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+  return readFile(path, "utf8");
+}
+
+async function firstExistingPath(paths: string[], optional?: false): Promise<string>;
+async function firstExistingPath(paths: string[], optional: true): Promise<string | undefined>;
+async function firstExistingPath(paths: string[], optional = false): Promise<string | undefined> {
+  let lastNotFound: unknown;
+  for (const path of paths) {
+    try {
+      await readFile(path, "utf8");
+      return path;
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      lastNotFound = err;
+    }
   }
-  const addressMatch = content.match(/^address:\s*(.+)$/m);
-  if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
-    result.address = addressMatch[1].trim();
-  }
-  return result;
+  if (optional) return undefined;
+  throw lastNotFound ?? Object.assign(new Error("ENOENT"), { code: "ENOENT" });
 }
 
 async function readOptionalFile(path: string): Promise<string> {

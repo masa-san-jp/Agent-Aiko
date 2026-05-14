@@ -35,7 +35,7 @@ export interface AikoAskOptions {
  * 流れ：
  *   1. start() で persona を読み、baseInstructions を合成、CodexClient を起動して
  *      thread/start で人格を注入したスレッドを開く
- *   2. ask() で 1 ターン実行。出力プレフィックス（Aiko-{mode}:）が欠けていれば
+ *   2. ask() で 1 ターン実行。出力プレフィックス（Aiko-origin / Aiko-override / Aiko-<name>）が欠けていれば
  *      ストリーミング途中・最終テキスト両方で強制補完する（spec §6.3 #8）
  *   3. stop() でクリーンアップ
  */
@@ -130,7 +130,7 @@ export class AikoRuntime {
     if (this.#threadId === null || this.#snapshot === null) {
       throw new Error("AikoRuntime not started");
     }
-    const expectedPrefix = `Aiko-${this.#snapshot.mode}:`;
+    const expectedPrefix = `${this.#expectedPrefix()}:`;
     const prefixWithSpace = `${expectedPrefix} `;
     let prefixDecided = false;
     let prefixWasForced = false;
@@ -201,6 +201,15 @@ export class AikoRuntime {
       }
     }
     return result;
+  }
+
+  #expectedPrefix(): string {
+    const snapshot = this.#snapshot;
+    if (snapshot === null) throw new Error("AikoRuntime not started");
+    if (snapshot.mode === "override" && snapshot.activePersona) {
+      return `Aiko-${snapshot.activePersona}`;
+    }
+    return `Aiko-${snapshot.mode}`;
   }
 
   /**

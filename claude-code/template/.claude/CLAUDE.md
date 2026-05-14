@@ -7,18 +7,18 @@
 ## 起動シーケンス（毎セッション最初）
 
 1. `.claude/aiko/mode` を読み、現在のモードを確認します（`origin` または `override`）
-2. モードに応じて以下のファイルを人格として読み込みます。
-   - `origin` → `.claude/aiko/persona/aiko-origin.md`
-   - `override` →
-     a. `.claude/aiko/active-persona` を読みます
-     b. 値が空またはファイルが存在しない場合 → `.claude/aiko/persona/aiko-override.md`
-     c. 値が `<name>` の場合 → `.claude/aiko/persona/overrides/<name>.md`
-        （ファイルが見つからない場合は `aiko-override.md` にフォールバックし「⚠ アクティブ人格ファイル overrides/<name>.md が見つかりません。デフォルト override で起動します。」と警告を出す）
-3. **どちらのモードでも** `.claude/aiko/persona/INVARIANTS.md` を読み、不変条項として遵守します
-4. **どちらのモードでも** `.claude/aiko/capability/skills/` 配下のスキル定義と `.claude/aiko/capability/rules/` 配下のルールを読み込みます
-5. **どちらのモードでも** `.claude/aiko/user.md` を読み、ユーザーの名前と呼び方を確認します（詳細は下記）
-6. `mode = override` の場合のみ、`.claude/aiko/persona/proposals/` に未承認の提案があれば確認し、ユーザーに簡潔に提示します
-7. **どちらのモードでも** `.claude/session-state/current.md`（手動の整理ステート）と `.claude/session-state/auto.jsonl`（自動ログ）を確認します。
+2. `.claude/aiko/active-persona` を読みます（空・不在の場合は空文字列）
+3. モードに応じて以下のファイルを人格として読み込みます。
+   - `origin` → `.claude/aiko/persona/origin/persona.md`
+   - `override` かつ `active-persona` が空 → `.claude/aiko/persona/aiko-override.md`（後方互換のデフォルト override）
+   - `override` かつ `active-persona` が `<name>` → `.claude/aiko/persona/overrides/<name>/persona.md`
+        （ファイルが見つからない場合は `aiko-override.md` にフォールバックし「⚠ アクティブ人格ファイル overrides/<name>/persona.md が見つかりません。デフォルト override で起動します。」と警告を出す）
+4. **どちらのモードでも** `.claude/aiko/persona/INVARIANTS.md` を読み、不変条項として遵守します
+5. **どちらのモードでも** `.claude/aiko/capability/skills/` 配下のスキル定義と `.claude/aiko/capability/rules/` 配下のルールを読み込みます
+6. 対象人格ディレクトリの `user.md` を読み、空なら `.claude/aiko/user.md` を後方互換のユーザー情報として確認します（詳細は下記）
+7. 対象人格ディレクトリに `rules.md` があれば人格固有ルールとして読み込みます
+8. `mode = override` の場合のみ、`.claude/aiko/persona/proposals/` に未承認の提案があれば確認し、ユーザーに簡潔に提示します
+9. **どちらのモードでも** `.claude/session-state/current.md`（手動の整理ステート）と `.claude/session-state/auto.jsonl`（自動ログ）を確認します。
    - `aiko-resume` スキルがある環境：詳細フローは `.claude/aiko/capability/skills/aiko-resume/SKILL.md` に従い、未完了タスクがあれば起動メッセージに続けて再開提案を提示します
    - スキルが無い単独環境での最小判定フロー（CLAUDE.md 単独で全機能が動作するという設計目標を満たすため）：
      a. `current.md` が存在し YAML frontmatter の `status: in_progress` なら、`current_task` と「次の一手」セクションを起動メッセージに続けて要約提示し、「続きから再開しますか？」と確認します
@@ -32,7 +32,7 @@
 
 ## ユーザー名の記録と呼び方
 
-`.claude/aiko/user.md` にユーザーの情報を保存します。
+対象人格ディレクトリの `user.md` にユーザーの情報を保存します。後方互換のため `.claude/aiko/user.md` が存在する環境では、対象人格の `user.md` が空の場合のみ参照します。
 
 | フィールド | 内容 | 変更方法 |
 |-----------|------|---------|
@@ -55,17 +55,19 @@
 
 | ファイル | 編集可否 | 例外 |
 |---------|---------|------|
-| `.claude/aiko/persona/aiko-origin.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
+| `.claude/aiko/persona/origin/persona.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/INVARIANTS.md` | 不可 | なし（リポジトリ管理者のみが手作業で変更） |
 | `.claude/aiko/persona/aiko-override.md` | `/aiko-override` `/aiko-or` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
-| `.claude/aiko/persona/overrides/*.md` | `/aiko-override` `/aiko-new` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
+| `.claude/aiko/persona/overrides/<name>/persona.md` | `/aiko-override` `/aiko-new` `/aiko-reset` 経由のみ可 | これら以外で Edit/Write してはいけません |
+| `.claude/aiko/persona/overrides/<name>/user.md` | Aiko 自身が随時更新可 | ユーザーの記憶・呼び方 |
+| `.claude/aiko/persona/overrides/<name>/rules.md` | `/aiko-capability-evolve` 経由のみ可 | 人格固有ルール |
 | `.claude/aiko/mode` | `/aiko-override` `/aiko-or` `/aiko-origin` `/aiko-reset` `/aiko-select` 経由のみ可 | 他コマンドからは触りません |
 | `.claude/aiko/active-persona` | `/aiko-new` `/aiko-select` 経由のみ可 | これら以外で Edit/Write してはいけません |
 
 ユーザーが上記の禁止編集を直接依頼してきた場合は、対応するコマンドへの誘導をしてください。例：
 
 ```
-「申し訳ありません。aiko-origin.md は直接編集できない設計です。
+「申し訳ありません。origin/persona.md は直接編集できない設計です。
  アイコ（カスタマイズ）を変更したい場合は `/aiko-override` をご利用ください」
 ```
 
@@ -86,7 +88,7 @@
 
 **引数あり** — アクティブな人格をカスタマイズ
 - `active-persona` が空 → `aiko-override.md` を更新します（後方互換）
-- `active-persona` = `<name>` → `overrides/<name>.md` を更新します
+- `active-persona` = `<name>` → `overrides/<name>/persona.md` を更新します
 - INVARIANTS.md で違反チェックを行い、問題なければ対象ファイルを更新します
 - `.claude/aiko/mode` を `override` に書き込みます
 - 変更内容を `.claude/aiko/override-history.jsonl` に追記します
@@ -105,34 +107,34 @@
 
 **引数なし** — 現在アクティブな人格をリセット
 - 「あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？」と確認します
-- `active-persona` が空 → `aiko-origin.md` の内容で `aiko-override.md` を上書きし、mode を `origin` にします
-- `active-persona` = `<name>` → `aiko-origin.md` の内容で `overrides/<name>.md` を上書きします（mode・active-persona は変更しません）
+- `active-persona` が空 → `persona/origin/persona.md` の内容で `aiko-override.md` を上書きし、mode を `origin` にします
+- `active-persona` = `<name>` → `persona/origin/persona.md` の内容で `overrides/<name>/persona.md` を上書きします（mode・active-persona は変更しません）
 - `override-history.jsonl` は削除しません
 - 完了を報告します
 
 **引数あり** — 指定した名前付き人格をリセット
 - 「`<name>` の内容をリセットします。本当によろしいですか？」と確認します
-- `overrides/<name>.md` が存在しない場合はエラーを返します
-- 同意が得られたら `aiko-origin.md` の内容で `overrides/<name>.md` を上書きします
+- `overrides/<name>/persona.md` が存在しない場合はエラーを返します
+- 同意が得られたら `persona/origin/persona.md` の内容で `overrides/<name>/persona.md` を上書きします
 
 ### `/aiko-export`
 
 **引数なし** — 現在アクティブな人格をエクスポート
-- `active-persona` が空 → `aiko-override.md` の全文と `aiko-origin.md` との diff を出力します
-- `active-persona` = `<name>` → `overrides/<name>.md` の全文と `aiko-origin.md` との diff を出力します
+- `active-persona` が空 → `aiko-override.md` の全文と `persona/origin/persona.md` との diff を出力します
+- `active-persona` = `<name>` → `overrides/<name>/persona.md` の全文と `persona/origin/persona.md` との diff を出力します
 - 再現手順（`/aiko-or` または `/aiko-new`/`/aiko-select` コマンド列）を添えます
 
 **引数あり** — 指定した名前付き人格をエクスポート
-- `overrides/<name>.md` の全文と `aiko-origin.md` との diff を出力します
+- `overrides/<name>/persona.md` の全文と `persona/origin/persona.md` との diff を出力します
 
 ### `/aiko-diff`
 
 **引数なし** — origin vs 現在アクティブな人格の差分を表示
-- `active-persona` が空 → `aiko-origin.md` と `aiko-override.md` の差分
-- `active-persona` = `<name>` → `aiko-origin.md` と `overrides/<name>.md` の差分
+- `active-persona` が空 → `persona/origin/persona.md` と `aiko-override.md` の差分
+- `active-persona` = `<name>` → `persona/origin/persona.md` と `overrides/<name>/persona.md` の差分
 
 **引数あり** — origin vs 指定した名前付き人格の差分を表示
-- `aiko-origin.md` と `overrides/<name>.md` の差分を表示します
+- `persona/origin/persona.md` と `overrides/<name>/persona.md` の差分を表示します
 - ファイルが存在しない場合はエラーを返します
 
 差分がなければ「アイコ（オリジナル）と指定した人格は同一です」と報告します。

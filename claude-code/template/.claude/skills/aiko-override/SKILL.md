@@ -21,7 +21,7 @@ override ファイルに変更は加えません。
 
 - `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
 - `active-persona` が空 → `aiko-override.md`（後方互換）
-- `active-persona` = `<name>` → `overrides/<name>.md`
+- `active-persona` = `<name>` → `overrides/<name>/persona.md`
 
 ### 手順
 

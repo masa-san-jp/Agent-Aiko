@@ -3,7 +3,7 @@
 //
 // 設計の正本: 非公開設計メモ v0.3.1 §6.4 / §6.7
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -59,6 +59,10 @@ export const KNOWN_COMMANDS = new Set([
   "aiko-reset",
   "aiko-export",
   "aiko-diff",
+  "aiko-personas",
+  "aiko-new",
+  "aiko-select",
+  "aiko-delete",
 ]);
 
 export class AikoCommandRouter {
@@ -90,11 +94,19 @@ export class AikoCommandRouter {
       case "aiko-or":
         return this.#cmdOverride(args);
       case "aiko-reset":
-        return this.#cmdReset();
+        return this.#cmdReset(args);
       case "aiko-export":
-        return this.#cmdExport();
+        return this.#cmdExport(args);
       case "aiko-diff":
-        return this.#cmdDiff();
+        return this.#cmdDiff(args);
+      case "aiko-personas":
+        return this.#cmdPersonas();
+      case "aiko-new":
+        return this.#cmdNew(args);
+      case "aiko-select":
+        return this.#cmdSelect(args);
+      case "aiko-delete":
+        return this.#cmdDelete(args);
       default:
         throw new Error(`unknown command: /${name}`);
     }
@@ -163,7 +175,7 @@ export class AikoCommandRouter {
     }
 
     // 引数あり → INVARIANTS チェック → override.md 更新 → mode を override に
-    const invariantsPath = join(this.#aikoHome, "persona", "INVARIANTS.md");
+    const invariantsPath = await this.#invariantsPath();
     const invariants = await readFile(invariantsPath, "utf8");
 
     const verdict = await this.#runtime.runInvariantsCheck(invariants, trimmedArgs);
@@ -178,7 +190,7 @@ export class AikoCommandRouter {
 
     // 既存 override に指示を追記する形（spec §6.4 では明確な合成方針が無いので、
     // 「ユーザー指示」セクションを末尾に追記する保守的な実装にする）
-    const overridePath = join(this.#aikoHome, "persona", "aiko-override.md");
+    const overridePath = await this.#activeOverridePersonaPath();
     const existing = await readFile(overridePath, "utf8");
     const merged = mergeOverrideInstruction(existing, trimmedArgs);
     await writeFile(overridePath, merged, "utf8");
@@ -201,60 +213,169 @@ export class AikoCommandRouter {
     };
   }
 
-  async #cmdReset(): Promise<CommandResult> {
+  async #cmdReset(args: string): Promise<CommandResult> {
+    const target = args.trim() || (await this.#readActivePersona());
+    const targetPath = target
+      ? await this.#namedPersonaPath(target)
+      : await this.#defaultOverridePath();
+    if (target && !targetPath) {
+      return { output: `エラー：人格「${target}」が見つかりません。/aiko-personas で一覧を確認できます。` };
+    }
     const ok = await this.#confirm(
-      "あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？(y/N)"
+      target
+        ? `「${target}」の内容をリセットします。本当によろしいですか？(y/N)`
+        : "あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？(y/N)"
     );
     if (!ok) {
       return { output: "リセットをキャンセルしました。" };
     }
-    const originPath = join(this.#aikoHome, "persona", "aiko-origin.md");
-    const overridePath = join(this.#aikoHome, "persona", "aiko-override.md");
+    const originPath = await this.#originPersonaPath();
     const origin = await readFile(originPath, "utf8");
-    await writeFile(overridePath, origin, "utf8");
-    await this.#writeMode("origin");
+    await writeFile(targetPath ?? (await this.#defaultOverridePath()), origin, "utf8");
+    if (!target) await this.#writeMode("origin");
     await appendOverrideHistory(
-      { ts: new Date().toISOString(), action: "reset", instruction: "" },
+      { ts: new Date().toISOString(), action: "reset", instruction: target },
       this.#aikoHome
     );
     return {
-      output: "リセット完了。アイコ（オリジナル）に戻り、次回から自動で起動します。",
+      output: target
+        ? `リセット完了。人格「${target}」をオリジナルの内容で初期化しました。`
+        : "リセット完了。アイコ（オリジナル）に戻り、次回から自動で起動します。",
       needsRestart: true,
     };
   }
 
-  async #cmdExport(): Promise<CommandResult> {
-    const overridePath = join(this.#aikoHome, "persona", "aiko-override.md");
-    const originPath = join(this.#aikoHome, "persona", "aiko-origin.md");
+  async #cmdExport(args: string): Promise<CommandResult> {
+    const target = args.trim() || (await this.#readActivePersona());
+    const overridePath = target
+      ? await this.#namedPersonaPath(target)
+      : await this.#defaultOverridePath();
+    if (!overridePath) {
+      return { output: `エラー：人格「${target}」が見つかりません。/aiko-personas で一覧を確認できます。` };
+    }
+    const originPath = await this.#originPersonaPath();
     const override = await readFile(overridePath, "utf8");
     const origin = await readFile(originPath, "utf8");
-    const diff = unifiedDiff("aiko-origin.md", "aiko-override.md", origin, override);
+    const label = target ? `overrides/${target}/persona.md` : "aiko-override.md";
+    const diff = unifiedDiff("origin/persona.md", label, origin, override);
     return {
       output: [
-        "===== aiko-override.md（全文） =====",
+        `===== ${label}（全文） =====`,
         override,
         "===== origin との diff =====",
         diff || "（差分なし）",
         "",
         "===== 再現手順 =====",
-        "1. Agent-Aiko をインストール済の環境で、上記 aiko-override.md 全文を ~/.aiko/persona/aiko-override.md に貼り付ける",
-        "2. `/aiko-override`（引数なし）で override モードに切り替える",
-        "   — もしくは差分中の「ユーザー指示」セクションだけを `/aiko-or <指示>` で個別適用する",
+        target
+          ? `1. /aiko-new ${target} で人格を作成し、上記全文を ~/.aiko/persona/overrides/${target}/persona.md に貼り付ける`
+          : "1. 上記全文を ~/.aiko/persona/aiko-override.md に貼り付ける",
+        target ? `2. /aiko-select ${target} で切り替える` : "2. /aiko-override で override モードに切り替える",
       ].join("\n"),
     };
   }
 
-  async #cmdDiff(): Promise<CommandResult> {
-    const overridePath = join(this.#aikoHome, "persona", "aiko-override.md");
-    const originPath = join(this.#aikoHome, "persona", "aiko-origin.md");
+  async #cmdDiff(args: string): Promise<CommandResult> {
+    const target = args.trim() || (await this.#readActivePersona());
+    const overridePath = target
+      ? await this.#namedPersonaPath(target)
+      : await this.#defaultOverridePath();
+    if (!overridePath) {
+      return { output: `エラー：人格「${target}」が見つかりません。/aiko-personas で一覧を確認できます。` };
+    }
+    const originPath = await this.#originPersonaPath();
     const override = await readFile(overridePath, "utf8");
     const origin = await readFile(originPath, "utf8");
     if (override === origin) {
-      return { output: "アイコ（オリジナル）と アイコ（カスタマイズ）は同一です。" };
+      return { output: "アイコ（オリジナル）と指定した人格は同一です。" };
     }
+    const label = target ? `overrides/${target}/persona.md` : "aiko-override.md";
     return {
-      output: unifiedDiff("aiko-origin.md", "aiko-override.md", origin, override),
+      output: unifiedDiff("origin/persona.md", label, origin, override),
     };
+  }
+
+  async #cmdPersonas(): Promise<CommandResult> {
+    const mode = await this.#readCurrentMode();
+    const active = mode === "override" ? await this.#readActivePersona() : "";
+    const names = await this.#listNamedPersonas();
+    const lines = ["利用可能な人格:"];
+    lines.push(`${mode === "origin" ? "★" : " "} [origin]   Aiko-origin（オリジナル、変更不可）`);
+    lines.push(`${mode === "override" && !active ? "★" : " "} [override] Aiko-override（デフォルトカスタマイズ）`);
+    for (const name of names) {
+      lines.push(`${mode === "override" && active === name ? "★" : " "} [${name}]     overrides/${name}/persona.md`);
+    }
+    if (active && !names.includes(active)) {
+      lines.push(`⚠ アクティブ人格ファイル overrides/${active}/persona.md が見つかりません。デフォルト override にフォールバックしています。`);
+    }
+    return { output: lines.join("\n") };
+  }
+
+  async #cmdNew(args: string): Promise<CommandResult> {
+    const name = args.trim();
+    const validation = validatePersonaName(name);
+    if (validation) return { output: validation };
+    if (await this.#namedPersonaPath(name)) {
+      return { output: `エラー：「${name}」はすでに存在します。/aiko-select ${name} で切り替えられます。` };
+    }
+    const dir = join(this.#aikoHome, "persona", "overrides", name);
+    await mkdir(dir, { recursive: true });
+    const origin = await readFile(await this.#originPersonaPath(), "utf8");
+    await writeFile(join(dir, "persona.md"), origin, "utf8");
+    await writeFile(join(dir, "user.md"), "name:\naddress:\n", "utf8");
+    await writeFile(join(dir, "README.md"), `# ${name}\n\n名前付き人格 ${name} のローカル設定です。\n`, "utf8");
+    await this.#writeActivePersona(name);
+    await this.#writeMode("override");
+    await appendOverrideHistory(
+      { ts: new Date().toISOString(), action: "new-persona", instruction: name, name, base: "origin" },
+      this.#aikoHome
+    );
+    return {
+      output: `人格「${name}」を作成しました（overrides/${name}/persona.md）。\n現在のプレフィックスは Aiko-${name}: です。`,
+      needsRestart: true,
+    };
+  }
+
+  async #cmdSelect(args: string): Promise<CommandResult> {
+    const name = args.trim() || "override";
+    if (name === "origin") {
+      await this.#writeMode("origin");
+      await this.#writeActivePersona("");
+      return { output: "アイコ（オリジナル）に切り替えました。プレフィックスは Aiko-origin: です。", needsRestart: true };
+    }
+    if (name === "override") {
+      await this.#writeMode("override");
+      await this.#writeActivePersona("");
+      return { output: "アイコ（カスタマイズ）に切り替えました。プレフィックスは Aiko-override: です。", needsRestart: true };
+    }
+    if (!(await this.#namedPersonaPath(name))) {
+      return { output: `エラー：人格「${name}」が見つかりません。\n/aiko-personas で利用可能な人格を確認できます。` };
+    }
+    await this.#writeMode("override");
+    await this.#writeActivePersona(name);
+    return { output: `人格「${name}」に切り替えました。プレフィックスは Aiko-${name}: です。`, needsRestart: true };
+  }
+
+  async #cmdDelete(args: string): Promise<CommandResult> {
+    const name = args.trim();
+    const validation = validatePersonaName(name);
+    if (validation) return { output: name ? validation : "削除する人格名を指定してください。例: /aiko-delete work" };
+    const active = await this.#readActivePersona();
+    if (active === name) {
+      return { output: `エラー：「${name}」は現在アクティブな人格のため削除できません。\n先に /aiko-select で別の人格に切り替えてから削除してください。` };
+    }
+    const path = await this.#namedPersonaPath(name);
+    if (!path) {
+      return { output: `エラー：人格「${name}」が見つかりません。\n/aiko-personas で利用可能な人格を確認できます。` };
+    }
+    const ok = await this.#confirm(`「${name}」を削除します。元に戻せません。本当によろしいですか？(y/N)`);
+    if (!ok) return { output: "削除をキャンセルしました。" };
+    await rm(join(this.#aikoHome, "persona", "overrides", name), { recursive: true, force: true });
+    await rm(join(this.#aikoHome, "persona", "overrides", `${name}.md`), { force: true });
+    await appendOverrideHistory(
+      { ts: new Date().toISOString(), action: "delete-persona", instruction: name, name },
+      this.#aikoHome
+    );
+    return { output: `人格「${name}」を削除しました。` };
   }
 
   // ─────────────────────────────────────
@@ -263,6 +384,82 @@ export class AikoCommandRouter {
 
   async #writeMode(mode: "origin" | "override"): Promise<void> {
     await writeFile(join(this.#aikoHome, "mode"), `${mode}\n`, "utf8");
+  }
+
+  async #readActivePersona(): Promise<string> {
+    try {
+      return (await readFile(join(this.#aikoHome, "active-persona"), "utf8")).trim();
+    } catch (err) {
+      if (isNotFound(err)) return "";
+      throw err;
+    }
+  }
+
+  async #writeActivePersona(name: string): Promise<void> {
+    await writeFile(join(this.#aikoHome, "active-persona"), name ? `${name}\n` : "", "utf8");
+  }
+
+  async #originPersonaPath(): Promise<string> {
+    return firstExistingPath([
+      join(this.#aikoHome, "persona", "origin", "persona.md"),
+      join(this.#aikoHome, "persona", "aiko-origin.md"),
+    ]);
+  }
+
+  async #defaultOverridePath(): Promise<string> {
+    const path = await firstExistingPath(
+      [
+        join(this.#aikoHome, "persona", "override", "persona.md"),
+        join(this.#aikoHome, "persona", "aiko-override.md"),
+      ],
+      true
+    );
+    if (path) return path;
+    const fallback = join(this.#aikoHome, "persona", "aiko-override.md");
+    await mkdir(join(this.#aikoHome, "persona"), { recursive: true });
+    await writeFile(fallback, await readFile(await this.#originPersonaPath(), "utf8"), "utf8");
+    return fallback;
+  }
+
+  async #activeOverridePersonaPath(): Promise<string> {
+    const active = await this.#readActivePersona();
+    if (!active) return this.#defaultOverridePath();
+    return (await this.#namedPersonaPath(active)) ?? (await this.#defaultOverridePath());
+  }
+
+  async #namedPersonaPath(name: string): Promise<string | undefined> {
+    return firstExistingPath(
+      [
+        join(this.#aikoHome, "persona", "overrides", name, "persona.md"),
+        join(this.#aikoHome, "persona", "overrides", `${name}.md`),
+      ],
+      true
+    );
+  }
+
+  async #invariantsPath(): Promise<string> {
+    return firstExistingPath([
+      join(this.#aikoHome, "INVARIANTS.md"),
+      join(this.#aikoHome, "persona", "INVARIANTS.md"),
+    ]);
+  }
+
+  async #listNamedPersonas(): Promise<string[]> {
+    const dir = join(this.#aikoHome, "persona", "overrides");
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      return entries
+        .flatMap((entry) => {
+          if (entry.isDirectory()) return [entry.name];
+          if (entry.isFile() && entry.name.endsWith(".md")) return [entry.name.slice(0, -3)];
+          return [];
+        })
+        .filter((name) => !RESERVED_PERSONA_NAMES.has(name))
+        .sort();
+    } catch (err) {
+      if (isNotFound(err)) return [];
+      throw err;
+    }
   }
 
   /** ディスクから現在の mode を読む（ランタイムのキャッシュは restartThread を呼ばないと
@@ -290,6 +487,43 @@ export class AikoCommandRouter {
 // ─────────────────────────────────────
 // pure helpers (export for testability)
 // ─────────────────────────────────────
+
+const RESERVED_PERSONA_NAMES = new Set(["origin", "override", "default", ".", "..", ""]);
+
+function isNotFound(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "ENOENT"
+  );
+}
+
+function validatePersonaName(name: string): string | undefined {
+  if (!name) return "エラー：人格名を指定してください。例: work, teacher, casual-aiko";
+  if (RESERVED_PERSONA_NAMES.has(name)) return `エラー：「${name}」は予約名のため使用できません。`;
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(name)) {
+    return "エラー：人格名には小文字英数字とハイフンのみ使用できます。先頭・末尾のハイフンは使えません。";
+  }
+  return undefined;
+}
+
+async function firstExistingPath(paths: string[], optional?: false): Promise<string>;
+async function firstExistingPath(paths: string[], optional: true): Promise<string | undefined>;
+async function firstExistingPath(paths: string[], optional = false): Promise<string | undefined> {
+  let lastNotFound: unknown;
+  for (const path of paths) {
+    try {
+      await readFile(path, "utf8");
+      return path;
+    } catch (err) {
+      if (!isNotFound(err)) throw err;
+      lastNotFound = err;
+    }
+  }
+  if (optional) return undefined;
+  throw lastNotFound ?? Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+}
 
 /** ユーザー指示を override.md の末尾に追記する保守的なマージ。 */
 export function mergeOverrideInstruction(existing: string, instruction: string): string {

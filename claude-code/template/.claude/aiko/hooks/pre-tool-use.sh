@@ -22,6 +22,10 @@ esac
 [ -z "$PATH_VAL" ] && exit 0
 
 case "$PATH_VAL" in
+  .claude/aiko/persona/origin/persona.md|./.claude/aiko/persona/origin/persona.md|*/.claude/aiko/persona/origin/persona.md)
+    echo "Refused: origin/persona.md is protected. Use /aiko-override or /aiko-reset to change override persona instead." 1>&2
+    exit 2
+    ;;
   .claude/aiko/persona/aiko-origin.md|./.claude/aiko/persona/aiko-origin.md|*/.claude/aiko/persona/aiko-origin.md)
     echo "Refused: aiko-origin.md is protected. Use /aiko-override or /aiko-reset to change override persona instead." 1>&2
     exit 2

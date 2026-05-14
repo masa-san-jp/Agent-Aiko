@@ -42,7 +42,7 @@ async function main(): Promise<number> {
   process.stdout.write(`mode: ${runtime.mode} | thread: ${runtime.threadId}\n`);
   process.stdout.write(
     "「/exit」で終了。Ctrl+C は 1 度で応答中断、2 度で即時終了。\n" +
-      "スラッシュコマンド: /aiko-mode /aiko-origin /aiko-override /aiko-reset /aiko-export /aiko-diff\n\n"
+      "スラッシュコマンド: /aiko-mode /aiko-origin /aiko-override /aiko-personas /aiko-new /aiko-select /aiko-delete /aiko-reset /aiko-export /aiko-diff\n\n"
   );
 
   const rl = createInterface({ input, output, terminal: true });
@@ -52,7 +52,7 @@ async function main(): Promise<number> {
     runtime,
     confirm: async (message: string) => {
       const ans = await rl.question(`${message} `);
-      return /^y(es)?$/i.test(ans.trim());
+      return /^(y(es)?|はい)$/i.test(ans.trim());
     },
   });
 
@@ -120,7 +120,7 @@ async function main(): Promise<number> {
     }
     if (parsed !== null && !router.isKnown(parsed.name)) {
       process.stderr.write(
-        `unknown command: /${parsed.name}（/aiko-mode /aiko-origin /aiko-override /aiko-reset /aiko-export /aiko-diff /exit のいずれかをご利用ください）\n`
+        `unknown command: /${parsed.name}（/aiko-mode /aiko-origin /aiko-override /aiko-personas /aiko-new /aiko-select /aiko-delete /aiko-reset /aiko-export /aiko-diff /exit のいずれかをご利用ください）\n`
       );
       rl.prompt();
       continue;

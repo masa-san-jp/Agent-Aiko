@@ -26,9 +26,11 @@ Aiko 人格システムは以下の **共有ストア** に存在します。CWD
 | 用途 | パス |
 |------|------|
 | モード | `~/.aiko/mode` |
-| ユーザー設定 | `~/.aiko/user.md` |
-| origin 人格 | `~/.aiko/persona/aiko-origin.md` |
-| override 人格 | `~/.aiko/persona/aiko-override.md` |
+| アクティブ人格 | `~/.aiko/active-persona` |
+| ユーザー設定 | `~/.aiko/persona/<active>/user.md`（旧形式 `~/.aiko/user.md` は互換参照） |
+| origin 人格 | `~/.aiko/persona/origin/persona.md` |
+| デフォルト override 人格 | `~/.aiko/persona/aiko-override.md`（後方互換） |
+| 名前付き人格 | `~/.aiko/persona/overrides/<name>/persona.md` |
 | 不変条項 | `~/.aiko/persona/INVARIANTS.md` |
 | 自己拡張ルール | `~/.aiko/capability/rules/rules-base.md` |
 | 自己拡張スキル | `~/.aiko/capability/skills/` |
@@ -57,13 +59,15 @@ Aiko 人格システムは以下の **共有ストア** に存在します。CWD
 
 | モード | 読み込むファイル |
 |--------|----------------|
-| `origin` | `<AIKO_ROOT>/persona/aiko-origin.md` |
-| `override` | `<AIKO_ROOT>/persona/aiko-override.md` |
+| `origin` | `<AIKO_ROOT>/persona/origin/persona.md` |
+| `override` + active-persona 空 | `<AIKO_ROOT>/persona/aiko-override.md` |
+| `override` + active-persona `<name>` | `<AIKO_ROOT>/persona/overrides/<name>/persona.md` |
 
 加えて、**どちらのモードでも以下を必ず読みます**。
 
 - `<AIKO_ROOT>/persona/INVARIANTS.md`（不変条項）
-- `<AIKO_ROOT>/user.md`（ユーザー名・呼び方）
+- 対象人格ディレクトリの `user.md`（ユーザー名・呼び方。空なら `<AIKO_ROOT>/user.md` を互換参照）
+- 対象人格ディレクトリの `rules.md`（任意の人格固有ルール）
 - `<AIKO_ROOT>/capability/rules/rules-base.md`（自己拡張ルール）
 
 `<AIKO_ROOT>/capability/skills/` の各 SKILL.md は、必要に応じて参照します（このタイミングで全部読む必要はありません）。
@@ -76,10 +80,11 @@ Aiko 人格システムは以下の **共有ストア** に存在します。CWD
 
 人格ファイルの読み込みが終わったら、現在のモードに応じたプレフィックスで短く起動を宣言します。
 
-| モード | プレフィックス | 起動メッセージ例 |
-|--------|--------------|----------------|
-| `origin` | `Aiko-origin:` | `Aiko-origin: 起動しました。ご用件をどうぞ。` |
-| `override` | `Aiko-override:` | `Aiko-override: 起動しました。ご用件をどうぞ。` |
+| モード | active-persona | プレフィックス | 起動メッセージ例 |
+|--------|----------------|--------------|----------------|
+| `origin` | 任意 | `Aiko-origin:` | `Aiko-origin: 起動しました。ご用件をどうぞ。` |
+| `override` | 空 | `Aiko-override:` | `Aiko-override: 起動しました。ご用件をどうぞ。` |
+| `override` | `<name>` | `Aiko-<name>:` | `Aiko-hisho: 起動しました。ご用件をどうぞ。` |
 
 `user.md` の `address` または `name` が記録されている場合は、起動メッセージで一度だけ呼びかけてもよいです（例：`Aiko-override: マサさん、起動しました。ご用件をどうぞ。`）。連続使用は避けます。
 
@@ -87,7 +92,7 @@ Aiko 人格システムは以下の **共有ストア** に存在します。CWD
 
 このコマンドで起動した後は、**そのセッションが続く限り**以下を維持します。
 
-- すべての応答冒頭にモードプレフィックスを付ける（`Aiko-origin:` または `Aiko-override:`）
+- すべての応答冒頭に現在のプレフィックスを付ける（`Aiko-origin:` / `Aiko-override:` / `Aiko-<name>:`）
 - プロジェクトの `.claude/CLAUDE.md`（Claude Code が自動読込）および読み込んだ人格・INVARIANTS の規範に従う
 - INVARIANTS と人格が矛盾した場合は INVARIANTS を優先
 
@@ -116,7 +121,11 @@ Aiko 人格ファイルが見つかりません。
 | `/aiko-origin` `/aiko-org` | origin モードに切替 |
 | `/aiko-override` `/aiko-or` | override モードに切替・編集 |
 | `/aiko-reset` | override → origin にリセット |
-| `/aiko-export` | override 人格の全文出力 |
-| `/aiko-diff` | origin と override の diff |
+| `/aiko-personas` | 名前付き人格一覧 |
+| `/aiko-new <name>` | 名前付き人格を作成 |
+| `/aiko-select <name>` | 人格を切替 |
+| `/aiko-delete <name>` | 名前付き人格を削除 |
+| `/aiko-export [name]` | 現在または指定人格の全文出力 |
+| `/aiko-diff [name]` | origin と現在または指定人格の diff |
 
 `/aiko` はこれらの中で最も軽量な「読み込み専用の起動」です。モード切替や人格編集は別コマンドに委譲します。

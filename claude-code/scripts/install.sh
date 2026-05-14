@@ -150,19 +150,24 @@ restore_if_stashed "aiko/capability/rules/rules-base.md"
 
 rm -rf "$STASH"
 
-ORIGIN="$DEST_DIR/aiko/persona/aiko-origin.md"
+ORIGIN="$DEST_DIR/aiko/persona/origin/persona.md"
+LEGACY_ORIGIN="$DEST_DIR/aiko/persona/aiko-origin.md"
 OVERRIDE="$DEST_DIR/aiko/persona/aiko-override.md"
 MODE_FILE="$DEST_DIR/aiko/mode"
 
 if [ "$USER_HAD_OVERRIDE" -eq 0 ]; then
-  cp "$ORIGIN" "$OVERRIDE"
+  if [ -f "$ORIGIN" ]; then
+    cp "$ORIGIN" "$OVERRIDE"
+  else
+    cp "$LEGACY_ORIGIN" "$OVERRIDE"
+  fi
 fi
 
 if [ "$USER_HAD_MODE" -eq 0 ]; then
   printf 'origin\n' > "$MODE_FILE"
 fi
 
-chmod 444 "$ORIGIN" "$DEST_DIR/aiko/persona/INVARIANTS.md" 2>/dev/null || true
+chmod 444 "$ORIGIN" "$LEGACY_ORIGIN" "$DEST_DIR/aiko/persona/INVARIANTS.md" 2>/dev/null || true
 find "$DEST_DIR/aiko/hooks" -type f -name '*.sh' -exec chmod +x {} +
 [ -d "$DEST_DIR/scripts" ] && find "$DEST_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 

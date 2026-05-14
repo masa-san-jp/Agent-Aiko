@@ -20,7 +20,7 @@ description: Delete a named persona after confirmation. Use when the user types 
    エラー：「<name>」は削除できません。
    ```
 
-3. `overrides/<name>.md` が存在しない場合：
+3. `overrides/<name>/persona.md` が存在しない場合：
    ```
    エラー：人格「<name>」が見つかりません。
    /aiko-personas で利用可能な人格を確認できます。
@@ -38,7 +38,7 @@ description: Delete a named persona after confirmation. Use when the user types 
    ```
 
 6. 「`y`」「`yes`」「`はい`」などの肯定が得られた場合のみ続行します：
-   - `overrides/<name>.md` を削除します
+   - `overrides/<name>/` ディレクトリを削除します
    - `.claude/aiko/override-history.jsonl` に追記します
      ```json
      {"ts":"YYYY-MM-DDTHH:MM:SS","action":"delete-persona","name":"<name>","summary":"人格 <name> を削除"}

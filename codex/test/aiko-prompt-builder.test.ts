@@ -14,6 +14,7 @@ function snapshotFixture(overrides: Partial<AikoPersonaSnapshot> = {}): AikoPers
     invariants: "## INVARIANTS body",
     user: {},
     rulesBase: "",
+    personaRules: "",
     capabilitySkills: [],
     ...overrides,
   };

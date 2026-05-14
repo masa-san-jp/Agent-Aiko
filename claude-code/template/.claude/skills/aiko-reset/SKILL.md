@@ -24,13 +24,13 @@ description: Reset the active (or specified) persona to origin after confirmatio
    - `.claude/aiko/mode` を `origin` に書き込みます
 
 5. **`active-persona` = `<name>` の場合：**
-   - `aiko-origin.md` の内容で `overrides/<name>.md` を `Write` で上書きします
+   - `aiko-origin.md` の内容で `overrides/<name>/persona.md` を `Write` で上書きします
    - `mode` と `active-persona` は変更しません（引き続き `<name>` がアクティブ）
 
 6. `.claude/aiko/override-history.jsonl` に記録します（ログは削除しません）
 
    ```json
-   {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","target":"aiko-override.md または overrides/<name>.md","note":"ユーザー確認後リセット"}
+   {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","target":"aiko-override.md または overrides/<name>/persona.md","note":"ユーザー確認後リセット"}
    ```
 
 7. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示してから完了を報告します
@@ -44,7 +44,7 @@ description: Reset the active (or specified) persona to origin after confirmatio
 
 ## 引数あり（`/aiko-reset <name>`）— 指定した名前付き人格をリセット
 
-1. `overrides/<name>.md` が存在するか確認します
+1. `overrides/<name>/persona.md` が存在するか確認します
    - 存在しない場合：
      ```
      エラー：人格「<name>」が見つかりません。/aiko-personas で一覧を確認できます。
@@ -56,7 +56,7 @@ description: Reset the active (or specified) persona to origin after confirmatio
    「<name>」の内容をリセットします。本当によろしいですか？
    ```
 
-3. 同意が得られた場合のみ `aiko-origin.md` の内容で `overrides/<name>.md` を `Write` で上書きします
+3. 同意が得られた場合のみ `aiko-origin.md` の内容で `overrides/<name>/persona.md` を `Write` で上書きします
 
 4. 履歴に記録して完了を報告します
 

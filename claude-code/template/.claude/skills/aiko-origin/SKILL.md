@@ -22,4 +22,4 @@ description: Switch to origin mode so Aiko (original) starts by default. Use whe
 
 - `aiko-override.md` の内容は変更しません
 - `override-history.jsonl` も変更しません
-- 切替後は次の発話から `aiko-origin.md` に従って振る舞います
+- 切替後は次の発話から `persona/origin/persona.md` に従って振る舞います

@@ -444,6 +444,63 @@ describe("AikoCommandRouter — /aiko-reset", () => {
   });
 });
 
+describe("AikoCommandRouter — named personas", () => {
+  it("creates, lists, selects, resets, exports, and deletes Lab-style persona directories", async () => {
+    const fixture = await makeFixture();
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async () => true,
+      });
+
+      const created = await router.execute("aiko-new", "hisho");
+      assert.match(created.output, /overrides\/hisho\/persona\.md/);
+      assert.equal(created.needsRestart, true);
+      assert.match(
+        await readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        /original body/
+      );
+
+      const listed = await router.execute("aiko-personas", "");
+      assert.match(listed.output, /★ \[hisho\]/);
+
+      await router.execute("aiko-select", "origin");
+      const selected = await router.execute("aiko-select", "hisho");
+      assert.match(selected.output, /Aiko-hisho/);
+      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "hisho");
+
+      await writeFile(
+        join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"),
+        "# Hisho\ncustom\n"
+      );
+      const exported = await router.execute("aiko-export", "hisho");
+      assert.match(exported.output, /overrides\/hisho\/persona\.md/);
+      assert.match(exported.output, /custom/);
+
+      const reset = await router.execute("aiko-reset", "hisho");
+      assert.match(reset.output, /hisho/);
+      assert.match(
+        await readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        /original body/
+      );
+
+      await router.execute("aiko-select", "override");
+      const deleted = await router.execute("aiko-delete", "hisho");
+      assert.match(deleted.output, /削除しました/);
+      await assert.rejects(
+        readFile(join(fixture.aikoHome, "persona", "overrides", "hisho", "persona.md"), "utf8"),
+        /ENOENT/
+      );
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+});
+
 describe("AikoCommandRouter — /aiko-export and /aiko-diff", () => {
   let fixture: Fixture;
   let transport: MockTransport;

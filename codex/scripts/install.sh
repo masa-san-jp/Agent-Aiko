@@ -159,14 +159,14 @@ if [ ! -d "$TEMPLATE_AIKO_DIR" ]; then
 fi
 
 # 不在 / 既存にかかわらず一貫したルールで初期化する（spec §5.2）：
-#   不変ファイル（aiko-origin.md / INVARIANTS.md / capability/skills/）は常に上書き
+#   不変ファイル（persona/origin/persona.md / aiko-origin.md / INVARIANTS.md / capability/skills/）は常に上書き
 #   ユーザーデータ（mode / user.md / aiko-override.md / capability/rules/rules-base.md）は
 #     既存があれば温存、無ければテンプレからコピー（mode は不在なら "origin" で初期化、
 #     override は不在なら origin と同内容で初期化）
 mkdir -p "$AIKO_HOME"
 
 # 必須テンプレファイルの存在確認（不在ならここで明示的に fail）
-for required in "persona/aiko-origin.md" "persona/INVARIANTS.md"; do
+for required in "persona/origin/persona.md" "persona/aiko-origin.md" "persona/INVARIANTS.md"; do
   if [ ! -f "$TEMPLATE_AIKO_DIR/$required" ]; then
     fail "必須テンプレートファイルが見つかりません: $TEMPLATE_AIKO_DIR/$required"
     fail "  リポジトリの claude-code/template/.claude/aiko/ が壊れている可能性があります。"
@@ -184,6 +184,11 @@ copy_overwrite() {
 }
 
 # 不変ファイルは常に上書き
+copy_overwrite "$TEMPLATE_AIKO_DIR/persona/origin/persona.md" "$AIKO_HOME/persona/origin/persona.md"
+if [ -f "$TEMPLATE_AIKO_DIR/persona/origin/user.md" ] && [ ! -f "$AIKO_HOME/persona/origin/user.md" ]; then
+  mkdir -p "$AIKO_HOME/persona/origin"
+  cp "$TEMPLATE_AIKO_DIR/persona/origin/user.md" "$AIKO_HOME/persona/origin/user.md"
+fi
 copy_overwrite "$TEMPLATE_AIKO_DIR/persona/aiko-origin.md" "$AIKO_HOME/persona/aiko-origin.md"
 copy_overwrite "$TEMPLATE_AIKO_DIR/persona/INVARIANTS.md"  "$AIKO_HOME/persona/INVARIANTS.md"
 
@@ -210,10 +215,11 @@ if [ ! -f "$AIKO_HOME/mode" ]; then
   printf 'origin\n' > "$AIKO_HOME/mode"
 fi
 if [ ! -f "$AIKO_HOME/persona/aiko-override.md" ]; then
-  cp "$AIKO_HOME/persona/aiko-origin.md" "$AIKO_HOME/persona/aiko-override.md"
+  cp "$AIKO_HOME/persona/origin/persona.md" "$AIKO_HOME/persona/aiko-override.md"
 fi
 
 # 不変ファイルを 444 に固める（書込時は chmod で一時昇格する設計）
+chmod 444 "$AIKO_HOME/persona/origin/persona.md" 2>/dev/null || true
 chmod 444 "$AIKO_HOME/persona/aiko-origin.md" 2>/dev/null || true
 chmod 444 "$AIKO_HOME/persona/INVARIANTS.md"  2>/dev/null || true
 

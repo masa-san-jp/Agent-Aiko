@@ -13,7 +13,7 @@ description: Switch to a named persona (or back to origin/override default). Use
 |------|------|
 | `origin` | `mode` を `origin` に、`active-persona` を空に |
 | `override` または 引数なし | `mode` を `override` に、`active-persona` を空に |
-| `<slug>` | `overrides/<slug>.md` が存在すれば `mode` を `override` に、`active-persona` を `<slug>` に |
+| `<slug>` | `overrides/<slug>/persona.md` が存在すれば `mode` を `override` に、`active-persona` を `<slug>` に |
 
 ## 手順
 
@@ -36,7 +36,7 @@ description: Switch to a named persona (or back to origin/override default). Use
      ```
 
 4. **その他の `<slug>` の場合：**
-   - `overrides/<slug>.md` の存在を確認します
+   - `overrides/<slug>/persona.md` の存在を確認します
    - ファイルが存在しない場合：
      ```
      エラー：人格「<slug>」が見つかりません。

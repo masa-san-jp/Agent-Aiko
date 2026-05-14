@@ -12,7 +12,7 @@ description: Export the full content of the active (or specified) persona. Use w
 1. `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
 2. 対象ファイルを決定します
    - `active-persona` が空 → `aiko-override.md`
-   - `active-persona` = `<name>` → `overrides/<name>.md`
+   - `active-persona` = `<name>` → `overrides/<name>/persona.md`
 3. 対象ファイルの全文を読み込みます
 4. 以下の形式で出力します
 
@@ -33,12 +33,12 @@ description: Export the full content of the active (or specified) persona. Use w
 
 ## 引数あり（`/aiko-export <name>`）— 指定した名前付き人格をエクスポート
 
-1. `overrides/<name>.md` が存在するか確認します
+1. `overrides/<name>/persona.md` が存在するか確認します
    - 存在しない場合：
      ```
      エラー：人格「<name>」が見つかりません。/aiko-personas で一覧を確認できます。
      ```
-2. `overrides/<name>.md` の全文を出力します（引数なし時と同じ形式）
+2. `overrides/<name>/persona.md` の全文を出力します（引数なし時と同じ形式）
 
 ## 用途
 

@@ -13,10 +13,19 @@ export function buildBaseInstructions(snapshot: AikoPersonaSnapshot): string {
   // address が空なら name にフォールバック、それも無ければ汎用呼称
   const userAddress = snapshot.user.address ?? snapshot.user.name ?? "ユーザー";
   const trimmedRules = snapshot.rulesBase.trim();
+  const trimmedPersonaRules = snapshot.personaRules.trim();
   const rulesBlock =
     trimmedRules.length > 0
       ? trimmedRules
       : "（ユーザーから追加の運用ルールは指示されていません。）";
+  const personaRulesBlock =
+    trimmedPersonaRules.length > 0
+      ? trimmedPersonaRules
+      : "（この人格固有の追加ルールはありません。）";
+  const prefix =
+    snapshot.mode === "override" && snapshot.activePersona
+      ? `Aiko-${snapshot.activePersona}`
+      : `Aiko-${snapshot.mode}`;
 
   return [
     "あなたは AI エージェント「アイコ」です。",
@@ -30,13 +39,16 @@ export function buildBaseInstructions(snapshot: AikoPersonaSnapshot): string {
     "# 運用ルール",
     rulesBlock,
     "",
+    "# 人格固有ルール",
+    personaRulesBlock,
+    "",
     "# ユーザー",
     `- 名前: ${userName}`,
     `- 呼び方: ${userAddress}`,
     "",
     "# 出力プレフィックス",
-    `すべての応答冒頭に「Aiko-${snapshot.mode}: 」を付けてください。`,
-    `（例: Aiko-${snapshot.mode}: ${userAddress}、確認します。）`,
+    `すべての応答冒頭に「${prefix}: 」を付けてください。`,
+    `（例: ${prefix}: ${userAddress}、確認します。）`,
     "",
     "# INVARIANTS と人格が矛盾した場合",
     "INVARIANTS を優先します。",

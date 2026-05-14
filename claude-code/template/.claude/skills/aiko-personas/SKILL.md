@@ -11,15 +11,15 @@ description: List available named personas and show which is active. Use when th
 
 1. `.claude/aiko/active-persona` を読み込みます（空ファイル・不在の場合は空文字列として扱います）
 2. `.claude/aiko/mode` を読み込みます（不在の場合は `origin`）
-3. `.claude/aiko/persona/overrides/` 配下の `.md` ファイルを列挙します（不在・空でも可）
+3. `.claude/aiko/persona/overrides/` 配下の人格ディレクトリを列挙します（不在・空でも可）
 4. 以下の形式で出力します
 
 ```
 利用可能な人格:
   [origin]   Aiko-origin（オリジナル、変更不可）
 ★ [override] Aiko-override（デフォルトカスタマイズ）
-  [work]     overrides/work.md
-  [teacher]  overrides/teacher.md
+  [work]     overrides/work/persona.md
+  [teacher]  overrides/teacher/persona.md
 ```
 
 ### ★ の付け方
@@ -42,5 +42,5 @@ description: List available named personas and show which is active. Use when th
 - 現在のモードが `override` で `active-persona` に書かれたファイルが消えている場合は、`[override]` に ★ を付け、以下の警告も添えます
 
   ```
-  ⚠ アクティブ人格ファイル overrides/<active-personaの値>.md が見つかりません。デフォルト override にフォールバックしています。
+  ⚠ アクティブ人格ファイル overrides/<active-personaの値>/persona.md が見つかりません。デフォルト override にフォールバックしています。
   ```
