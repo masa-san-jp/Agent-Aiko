@@ -4,7 +4,13 @@
 
 漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、AI エージェントへ Aiko 人格を与えるプロジェクトです。
 
-`git clone` 直後は **アイコ（Aiko-origin）** が使われます。`/aiko-override` を入力すると **アイコ（Aiko-override）** に切り替わります。`/aiko-or <指示>` を入力すると override 人格に指示が反映され、以降は override が起動します。`/aiko-origin` を入力すると origin に戻ります。`/aiko-new <name>` を入力すると名前付き人格を作成して選択できます。`/aiko-select <name>` を入力すると作成済みの人格へ切り替わります。これらのコマンドを入力しない場合は、現在選択中の mode と active-persona がそのまま使われます。
+- `git clone` 直後は **アイコ（Aiko-origin）** が使われます。
+- `/aiko-override` を入力すると **アイコ（Aiko-override）** に切り替わります。
+- `/aiko-or <指示>` を入力すると override 人格に指示が反映され、以降は override が起動します。
+- `/aiko-origin` を入力すると origin に戻ります。
+- `/aiko-new <name>` を入力すると名前付き人格を作成して選択できます。
+- `/aiko-select <name>` を入力すると作成済みの人格へ切り替わります。
+- これらのコマンドを入力しない場合は、現在選択中の mode と active-persona がそのまま使われます。
 
 ---
 
@@ -78,7 +84,11 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ## 複数の自分用人格を作る
 
-`/aiko-new <name>` を入力すると、`origin` や通常の `override` とは別に、名前付き人格が `persona/overrides/<name>/` に作成され、その人格が選択されます。`/aiko-personas` を入力すると作成済み人格と現在選択中の人格を確認できます。`/aiko-select <name>` を入力すると指定した人格に切り替わります。`/aiko-select origin` を入力すると origin に切り替わります。`/aiko-select override` を入力すると通常の override に切り替わります。
+- `/aiko-new <name>` を入力すると、`origin` や通常の `override` とは別に、名前付き人格が `persona/overrides/<name>/` に作成され、その人格が選択されます。
+- `/aiko-personas` を入力すると作成済み人格と現在選択中の人格を確認できます。
+- `/aiko-select <name>` を入力すると指定した人格に切り替わります。
+- `/aiko-select origin` を入力すると origin に切り替わります。
+- `/aiko-select override` を入力すると通常の override に切り替わります。
 
 例：
 
@@ -100,7 +110,10 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ## 人格を共有したくなったら
 
-このリポジトリには人格マーケットプレイス的な機構はありません。`/aiko-export <name>` を入力すると、指定した名前付き人格の共有用テキストが出力されます。export には現在の `user.md` は含まれません。人格本文や rules 内に現在ユーザーの名前・呼び方が含まれる場合は `（ユーザー名）` / `（呼び方）` に置換されます。受け取った側は `/aiko-new <name>` で `persona/overrides/<name>/persona.md` を作成し、export 内容を貼り付け、自分の `user.md` を設定してから `/aiko-select <name>` で反映します。
+- このリポジトリには人格マーケットプレイス的な機構はありません。
+- `/aiko-export <name>` を入力すると、指定した名前付き人格の共有用テキストが出力されます。
+- export には現在の `user.md` は含まれません。人格本文や rules 内に現在ユーザーの名前・呼び方が含まれる場合は `（ユーザー名）` / `（呼び方）` に置換されます。
+- 受け取った側は `/aiko-new <name>` で `persona/overrides/<name>/persona.md` を作成し、export 内容を貼り付け、自分の `user.md` を設定してから `/aiko-select <name>` で反映します。
 
 ---
 
@@ -129,7 +142,8 @@ Agent-Aiko/
 
 ## ポータビリティ原則
 
-`.claude/CLAUDE.md` は単独で動作する設計です。Cursor など Claude Code 以外のエージェントへ移植する場合も、`.claude/CLAUDE.md` と `.claude/aiko/persona/` `.claude/aiko/capability/` を持っていけば人格システムは成立します。`skills/` `hooks/` `settings.json` は Claude Code 用の補強層です。
+- `.claude/CLAUDE.md` は単独で動作する設計です。Cursor など Claude Code 以外のエージェントへ移植する場合も、`.claude/CLAUDE.md` と `.claude/aiko/persona/` `.claude/aiko/capability/` を持っていけば人格システムは成立します。
+- `skills/` `hooks/` `settings.json` は Claude Code 用の補強層です。
 
 ---
 
