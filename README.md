@@ -4,7 +4,7 @@
 
 漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、AI エージェントへ Aiko 人格を与えるプロジェクトです。
 
-`git clone` した時点では漫画版の **アイコ（Aiko-origin）**。コマンド一発で自分用の **アイコ（Aiko-override）** に切り替え、緩やかに育て、いつでもオリジナルに戻せます。
+`git clone` した時点では漫画版の **アイコ（Aiko-origin）**。コマンド一発で自分用の **アイコ（Aiko-override）** に切り替え、緩やかに育て、いつでもオリジナルに戻せます。さらに `/aiko-new <name>` で自分だけのオリジナル人格を複数作成し、`/aiko-select <name>` で用途や気分に合わせて切り替えられます。
 
 ---
 
@@ -75,6 +75,21 @@ Claude Code 版にはさらに以下のコマンドがあります：
 ```
 
 > **注記**：Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
+
+## 複数の自分用人格を作る
+
+`/aiko-new <name>` を使うと、`origin` や通常の `override` とは別に、自分で育てる人格を複数作れます。作成した人格は `persona/overrides/<name>/` に保存され、`/aiko-personas` で一覧確認、`/aiko-select <name>` で切り替えできます。
+
+例：
+
+```text
+/aiko-new review
+/aiko-new planning
+/aiko-personas
+/aiko-select review
+```
+
+この仕組みにより、レビュー用・設計相談用・日常対話用のように、同じ Aiko をベースにしながら用途ごとの人格を使い分けられます。
 
 人格を直接編集しないでください。両版とも `persona/origin/persona.md`、互換用の `aiko-origin.md`、`INVARIANTS.md` は **OS パーミッション（chmod 444）** で書込から保護されています。これに加えて：
 
