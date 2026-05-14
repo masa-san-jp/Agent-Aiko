@@ -50,16 +50,16 @@ describe("buildBaseInstructions", () => {
 
   it("uses address as the example address when provided", () => {
     const out = buildBaseInstructions(
-      snapshotFixture({ user: { name: "Alice", address: "アリスさん" } })
+      snapshotFixture({ user: { name: "（ユーザー名）", address: "（呼び方）" } })
     );
-    assert.match(out, /呼び方: アリスさん/);
-    assert.match(out, /Aiko-origin: アリスさん、確認します。/);
+    assert.match(out, /呼び方: （呼び方）/);
+    assert.match(out, /Aiko-origin: （呼び方）、確認します。/);
   });
 
   it("falls back to name when address is missing", () => {
-    const out = buildBaseInstructions(snapshotFixture({ user: { name: "Bob" } }));
-    assert.match(out, /呼び方: Bob/);
-    assert.match(out, /Aiko-origin: Bob、確認します。/);
+    const out = buildBaseInstructions(snapshotFixture({ user: { name: "（ユーザー名）" } }));
+    assert.match(out, /呼び方: （ユーザー名）/);
+    assert.match(out, /Aiko-origin: （ユーザー名）、確認します。/);
   });
 
   it("falls back to a generic addressee when both name and address are missing", () => {

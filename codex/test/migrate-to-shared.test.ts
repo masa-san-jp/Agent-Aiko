@@ -62,7 +62,7 @@ async function populateSource(source: string): Promise<void> {
   await mkdir(join(source, "capability", "rules"), { recursive: true });
   await mkdir(join(source, "capability", "skills"), { recursive: true });
   await writeFile(join(source, "mode"), "override\n");
-  await writeFile(join(source, "user.md"), "# user\n\nname: tester\n");
+  await writeFile(join(source, "user.md"), "# user\n\nname: （ユーザー名）\n");
   await writeFile(join(source, "persona", "aiko-origin.md"), "# origin\n");
   await writeFile(join(source, "persona", "aiko-override.md"), "# override\n");
   await writeFile(join(source, "persona", "INVARIANTS.md"), "# invariants\n");

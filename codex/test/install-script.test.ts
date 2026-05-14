@@ -134,7 +134,7 @@ describe("codex/scripts/install.sh", () => {
     await runInstaller(sandbox);
     // ユーザーデータをカスタマイズ
     await writeFile(join(sandbox.aikoHome, "mode"), "override\n");
-    await writeFile(join(sandbox.aikoHome, "user.md"), "name: TestUser\n");
+    await writeFile(join(sandbox.aikoHome, "user.md"), "name: （ユーザー名）\n");
     await writeFile(
       join(sandbox.aikoHome, "persona/aiko-override.md"),
       "# Custom\nmy custom body\n"
@@ -147,7 +147,7 @@ describe("codex/scripts/install.sh", () => {
     await runInstaller(sandbox);
 
     assert.equal((await readFile(join(sandbox.aikoHome, "mode"), "utf8")).trim(), "override");
-    assert.match(await readFile(join(sandbox.aikoHome, "user.md"), "utf8"), /TestUser/);
+    assert.match(await readFile(join(sandbox.aikoHome, "user.md"), "utf8"), /（ユーザー名）/);
     assert.match(
       await readFile(join(sandbox.aikoHome, "persona/aiko-override.md"), "utf8"),
       /my custom body/

@@ -71,17 +71,17 @@ describe("loadPersona", () => {
   it("parses user.md name and address fields", async () => {
     await writeFile(
       join(fixture.root, "user.md"),
-      "# User\nname: Alice\naddress: アリスさん\n"
+      "# User\nname: （ユーザー名）\naddress: （呼び方）\n"
     );
     const snap = await loadPersona({ aikoHome: fixture.root });
-    assert.equal(snap.user.name, "Alice");
-    assert.equal(snap.user.address, "アリスさん");
+    assert.equal(snap.user.name, "（ユーザー名）");
+    assert.equal(snap.user.address, "（呼び方）");
   });
 
   it("treats empty address as not set (caller will fall back to name)", async () => {
-    await writeFile(join(fixture.root, "user.md"), "name: Bob\naddress:\n");
+    await writeFile(join(fixture.root, "user.md"), "name: （ユーザー名）\naddress:\n");
     const snap = await loadPersona({ aikoHome: fixture.root });
-    assert.equal(snap.user.name, "Bob");
+    assert.equal(snap.user.name, "（ユーザー名）");
     assert.equal(snap.user.address, undefined);
   });
 
@@ -151,17 +151,17 @@ describe("loadPersona", () => {
     await mkdir(join(fixture.root, "persona", "origin"), { recursive: true });
     await mkdir(join(fixture.root, "persona", "overrides", "example"), { recursive: true });
     await writeFile(join(fixture.root, "persona", "origin", "persona.md"), "# Origin dir\n");
-    await writeFile(join(fixture.root, "persona", "origin", "user.md"), "name: OriginUser\n");
+    await writeFile(join(fixture.root, "persona", "origin", "user.md"), "name: （origin用ユーザー名）\n");
     await writeFile(join(fixture.root, "persona", "overrides", "example", "persona.md"), "# Example\n");
-    await writeFile(join(fixture.root, "persona", "overrides", "example", "user.md"), "name: Alice\naddress: アリスさん\n");
+    await writeFile(join(fixture.root, "persona", "overrides", "example", "user.md"), "name: （ユーザー名）\naddress: （呼び方）\n");
     await writeFile(join(fixture.root, "persona", "overrides", "example", "rules.md"), "- schedule first\n");
     await writeFile(join(fixture.root, "mode"), "override\n");
     await writeFile(join(fixture.root, "active-persona"), "example\n");
     const snap = await loadPersona({ aikoHome: fixture.root });
     assert.equal(snap.activePersona, "example");
     assert.match(snap.persona, /Example/);
-    assert.equal(snap.user.name, "Alice");
-    assert.equal(snap.user.address, "アリスさん");
+    assert.equal(snap.user.name, "（ユーザー名）");
+    assert.equal(snap.user.address, "（呼び方）");
     assert.match(snap.personaRules, /schedule first/);
   });
 
