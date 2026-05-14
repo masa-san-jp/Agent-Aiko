@@ -358,7 +358,7 @@ export class AikoCommandRouter {
   async #cmdDelete(args: string): Promise<CommandResult> {
     const name = args.trim();
     const validation = validatePersonaName(name);
-    if (validation) return { output: name ? validation : "削除する人格名を指定してください。例: /aiko-delete work" };
+    if (validation) return { output: name ? validation : "削除する人格名を指定してください。例: /aiko-delete example" };
     const active = await this.#readActivePersona();
     if (active === name) {
       return { output: `エラー：「${name}」は現在アクティブな人格のため削除できません。\n先に /aiko-select で別の人格に切り替えてから削除してください。` };
@@ -500,7 +500,7 @@ function isNotFound(err: unknown): boolean {
 }
 
 function validatePersonaName(name: string): string | undefined {
-  if (!name) return "エラー：人格名を指定してください。例: work, teacher, casual-aiko";
+  if (!name) return "エラー：人格名を指定してください。例: example, teacher, casual-aiko";
   if (RESERVED_PERSONA_NAMES.has(name)) return `エラー：「${name}」は予約名のため使用できません。`;
   if (!/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/.test(name)) {
     return "エラー：人格名には小文字英数字とハイフンのみ使用できます。先頭・末尾のハイフンは使えません。";
