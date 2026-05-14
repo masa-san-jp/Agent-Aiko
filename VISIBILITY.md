@@ -26,10 +26,12 @@
 
 - `CLAUDE.md` `README.md` `VISIBILITY.md`（このファイル）`logo.svg` `.gitignore`
 
-### テスト・ドキュメント
+### テスト
 
 - `codex/test/` — Codex 版テスト資材（実装と同居）
-- `docs/` — 配布対象ドキュメント
+
+公開ドキュメントはルートの `README.md`、`claude-code/README.md`、`codex/README.md` に集約します。
+設計メモ・検証ログ・SNS連携などの実装計画は、非公開の `../Agent-Lab/` 側で管理します。
 
 ---
 
@@ -55,7 +57,7 @@
 
 - `/Agent-Aiko/` — 本リポを誤って自身配下に clone した場合の予防
 - `/Agent-Lab/` — 非公開ラボを誤って本リポ配下に clone した場合の予防（正しい配置は `../Agent-Lab/`）
-- `/dev-docs/` — 旧 dev-docs ネスト構造の再混入予防（`../Agent-Lab/Agent-team/agents/aiko/dev-docs/` へ統合済み）
+- `/dev-docs/` — 旧 dev-docs ネスト構造の再混入予防（`../Agent-Lab/` へ統合済み）
 
 ---
 

@@ -133,6 +133,6 @@ claude-code/
 
 ## 設計メモ
 
-開発用の設計メモや検証ログは非公開の `Agent-Lab/Agent-team/agents/aiko/dev-docs/` に統合済みです。
+開発用の設計メモや検証ログは非公開の `Agent-Lab/` に統合済みです。
 
 Claude Code 版独自の起動原則は `template/.claude/CLAUDE.md` に直接記述されています（配布物としてユーザー環境にコピーされるため、ここが正本）。

@@ -1,7 +1,7 @@
 // codex app-server child process lifecycle.
 //
 // Transport インターフェース（transport.ts）の実機実装。
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.5
+// 設計の正本: 非公開設計メモ v0.3.1 §6.5
 
 import { type ChildProcess, spawn } from "node:child_process";
 

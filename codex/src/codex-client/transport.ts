@@ -3,7 +3,7 @@
 // 実機では ProcessManager（codex app-server を spawn）が実装する。
 // テストでは MockTransport が実装し、stdin への書込と stdout のチャンクを完全に制御する。
 //
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.5
+// 設計の正本: 非公開設計メモ v0.3.1 §6.5
 
 export interface Transport {
   /** トランスポートを開始する（プロセス起動など）。冪等。 */

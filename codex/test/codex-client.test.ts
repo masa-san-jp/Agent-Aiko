@@ -2,7 +2,7 @@
 //
 //   node --import tsx --test test/codex-client.test.ts
 //
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.1 / §6.7
+// 設計の正本: 非公開設計メモ v0.3.1 §6.1 / §6.7
 
 import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";

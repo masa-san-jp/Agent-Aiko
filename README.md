@@ -131,7 +131,7 @@ Agent-Aiko/
 
 **Agent-Lab 側の dev-docs はエージェントのランタイムに不要**なため、配布物（本リポジトリ）には含めません。
 
-設計仕様書や開発ログは `Agent-Lab/Agent-team/agents/aiko/dev-docs/` で管理します。
+設計仕様書や開発ログは非公開の `Agent-Lab/` で管理します。
 SNS連携などの実装計画は非公開の `Agent-Lab/docs/` で管理します。
 
 ### ローカル開発環境のセットアップ

@@ -17,7 +17,7 @@
 #   4. ~/.aiko/ を初期化（既存ならユーザーデータ温存、不変ファイルのみ更新）
 #   5. ~/.local/bin/aiko に shim を設置
 #
-# 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.5 / §7.1
+# 設計の正本: 非公開設計メモ v0.3.1 §6.5 / §7.1
 
 set -euo pipefail
 

@@ -4,7 +4,7 @@ Codex 版 Agent-Aiko の TypeScript パッケージ。`codex app-server`（OpenA
 
 トップレベル: [Agent-Aiko README](../README.md) ／ Claude Code 版: [`claude-code/README.md`](../claude-code/README.md)
 
-> **ステータス**: MVP 達成（Phase 0〜6 完了）。`bash codex/scripts/install.sh` で Node.js / codex CLI 確認 → ビルド → `~/.aiko/` 初期化 → `aiko` shim 設置までを 1 コマンドで実行できる状態です。開発用の設計メモや検証ログは非公開の `Agent-Lab/Agent-team/agents/aiko/dev-docs/` に統合済みです。
+> **ステータス**: MVP 達成（Phase 0〜6 完了）。`bash codex/scripts/install.sh` で Node.js / codex CLI 確認 → ビルド → `~/.aiko/` 初期化 → `aiko` shim 設置までを 1 コマンドで実行できる状態です。開発用の設計メモや検証ログは非公開の `Agent-Lab/` に統合済みです。
 
 ## クイックスタート
 
@@ -113,7 +113,7 @@ npm run schema:generate
 
 ## 設計メモ
 
-実装方針・API 形・人格注入経路・キャンセル経路などの開発用メモは、非公開の `Agent-Lab/Agent-team/agents/aiko/dev-docs/` に統合済みです。公開 README では、利用者がインストールと運用に必要な情報だけを扱います。
+実装方針・API 形・人格注入経路・キャンセル経路などの開発用メモは、非公開の `Agent-Lab/` に統合済みです。公開 README では、利用者がインストールと運用に必要な情報だけを扱います。
 
 主要な確定事項（v0.3.0 で実機検証済）：
 

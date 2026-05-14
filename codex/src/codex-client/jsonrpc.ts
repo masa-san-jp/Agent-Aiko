@@ -1,7 +1,7 @@
 // JSON-RPC 2.0 framing layer.
 //
 // codex app-server は stdio トランスポートで 1 行 1 メッセージの JSON を喋る。
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.1
+// 設計の正本: 非公開設計メモ v0.3.1 §6.1
 //
 // Codex 公式仕様に準拠し、ワイヤ上は jsonrpc: "2.0" ヘッダを省略する形でも
 // 受け付けるが、本クライアントは明示的に付与して送信する。

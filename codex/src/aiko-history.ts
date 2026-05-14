@@ -1,6 +1,6 @@
 // override-history.jsonl への追記を扱う小ユーティリティ。
 //
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.4 の
+// 設計の正本: 非公開設計メモ v0.3.1 §6.4 の
 //   "/aiko-override" コマンド仕様
 
 import { appendFile } from "node:fs/promises";

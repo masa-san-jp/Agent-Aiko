@@ -3,7 +3,7 @@
 // 合成された文字列は CodexClient.startThread の baseInstructions に渡され、
 // スレッド存続中の人格指示として固定される（ターン単位の上書きは不可）。
 //
-// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.3
+// 設計の正本: 非公開設計メモ v0.3.1 §6.3
 
 import type { AikoPersonaSnapshot } from "./aiko-persona-loader.js";
 
