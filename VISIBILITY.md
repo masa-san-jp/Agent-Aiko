@@ -54,8 +54,8 @@
 ### 同名ネスト clone の予防
 
 - `/Agent-Aiko/` — 本リポを誤って自身配下に clone した場合の予防
-- `/Agent-Aiko-dev/` — 兄弟リポを誤って本リポ配下に clone した場合の予防（正しい配置は `../Agent-Aiko-dev/`）
-- `/dev-docs/` — 旧 dev-docs ネスト構造の再混入予防（`../Agent-Aiko-dev/` へ分離済み）
+- `/Agent-Lab/` — 非公開ラボを誤って本リポ配下に clone した場合の予防（正しい配置は `../Agent-Lab/`）
+- `/dev-docs/` — 旧 dev-docs ネスト構造の再混入予防（`../Agent-Lab/Agent-team/agents/aiko/dev-docs/` へ統合済み）
 
 ---
 
@@ -63,7 +63,7 @@
 
 `claude-code/template/` はユーザー環境にコピーされる配布物です。次は **絶対に含めない**：
 
-- 開発者専用リポへのパス参照（`dev-docs/` `Agent-Aiko-dev/`）
+- 開発者専用リポへのパス参照（`dev-docs/` `Agent-Lab/`）
 - 開発者固有のツール・ファイルパス
 - 本リポジトリ専用の設定
 
@@ -75,14 +75,13 @@
 
 | リポ | ローカル配置 | 用途 |
 |------|-------------|------|
-| `Agent-Aiko-dev` | `../Agent-Aiko-dev/`（兄弟） | 開発ログ（議事録・設計メモ・dev-log.jsonl） |
-| `Agent-Teams-Dev` | 別ロケーション | 業務エージェント運用環境 |
+| `Agent-Lab` | `../Agent-Lab/` | 非公開の開発・実験ラボ。Aiko の設計メモ・検証ログ・dev-log を管理 |
 
-`Agent-Aiko-dev` は **本リポジトリ内に配置しない**。`Agent-Aiko/` の親ディレクトリに兄弟として clone してください：
+`Agent-Lab` は **本リポジトリ内に配置しない**。`Agent-Aiko/` の親ディレクトリに兄弟として clone してください：
 
 ```bash
 git clone https://github.com/masa-san-jp/Agent-Aiko
-git clone https://github.com/masa-san-jp/Agent-Aiko-dev
+git clone https://github.com/masa-san-jp/Agent-Lab
 ```
 
 ---

@@ -81,24 +81,24 @@ else
   echo "$SESSION" | sed 's/^/    /'
 fi
 
-print_section "6. dev-docs/ ・ Agent-Aiko-dev/ が本リポ内に存在しないか（兄弟分離の維持）"
+print_section "6. dev-docs/ ・ Agent-Lab/ が本リポ内に存在しないか（非公開ラボ分離の維持）"
 
 if [ -d "dev-docs" ]; then
-  check_ng "dev-docs/ が本リポ内に存在します。../Agent-Aiko-dev/ に分離してください"
+  check_ng "dev-docs/ が本リポ内に存在します。../Agent-Lab/Agent-team/agents/aiko/dev-docs/ に統合してください"
 else
-  check_ok "dev-docs/ は本リポ内に存在しない（兄弟分離 OK）"
+  check_ok "dev-docs/ は本リポ内に存在しない（非公開ラボ分離 OK）"
 fi
 
-if [ -d "Agent-Aiko-dev" ]; then
-  check_ng "Agent-Aiko-dev/ が本リポ内に存在します。../Agent-Aiko-dev/（兄弟）として配置し直してください"
+if [ -d "Agent-Lab" ]; then
+  check_ng "Agent-Lab/ が本リポ内に存在します。../Agent-Lab/（兄弟）として配置し直してください"
 else
-  check_ok "Agent-Aiko-dev/ は本リポ内に存在しない（兄弟分離 OK）"
+  check_ok "Agent-Lab/ は本リポ内に存在しない（非公開ラボ分離 OK）"
 fi
 
-if [ -d "../Agent-Aiko-dev" ]; then
-  check_ok "../Agent-Aiko-dev/ が兄弟ディレクトリとして存在"
+if [ -d "../Agent-Lab/Agent-team/agents/aiko/dev-docs" ]; then
+  check_ok "../Agent-Lab/Agent-team/agents/aiko/dev-docs/ が存在"
 else
-  echo "  [WARN] ../Agent-Aiko-dev/ が見当たりません。dev-log 操作には clone が必要です"
+  echo "  [WARN] ../Agent-Lab/Agent-team/agents/aiko/dev-docs/ が見当たりません。dev-log 操作には Agent-Lab の clone が必要です"
 fi
 
 print_section "7. 直近 push 予定（uncommitted を含む）"

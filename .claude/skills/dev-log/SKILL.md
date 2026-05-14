@@ -1,6 +1,6 @@
 # /dev-log — 開発ログ記録スキル
 
-`../Agent-Aiko-dev/dev-log.jsonl` への追記と、`../Agent-Aiko-dev/` へのドキュメント作成を担います。
+`../Agent-Lab/Agent-team/agents/aiko/dev-docs/dev-log.jsonl` への追記と、`../Agent-Lab/Agent-team/agents/aiko/dev-docs/` へのドキュメント作成を担います。
 
 ---
 
@@ -14,7 +14,7 @@
 提案内容：
 ```
 「議事録と dev-log を記録しますか？
-  1. ../Agent-Aiko-dev/ に議事録ファイルを作成（YYYY-MM-DD-<slug>.md）
+  1. ../Agent-Lab/Agent-team/agents/aiko/dev-docs/ に議事録ファイルを作成（YYYY-MM-DD-<slug>.md）
   2. dev-log.jsonl に本セッションのタスクを追記
   両方まとめて行います。よろしければ「はい」とお伝えください。」
 ```
@@ -46,9 +46,9 @@
 
 ---
 
-## モード2: ../Agent-Aiko-dev/ へのドキュメント作成
+## モード2: Agent-Lab 側 dev-docs/ へのドキュメント作成
 
-議事録・設計メモ・調査結果などを `../Agent-Aiko-dev/` に新規作成するときに実行します。
+議事録・設計メモ・調査結果などを `../Agent-Lab/Agent-team/agents/aiko/dev-docs/` に新規作成するときに実行します。
 
 ### ファイル命名規則（必須）
 
@@ -66,8 +66,8 @@ YYYY-MM-DD-<slug>.md
 
 1. 今日の日付を確認（`date +%Y-%m-%d`）
 2. ファイル名を `YYYY-MM-DD-<slug>.md` 形式で決定する
-3. ファイルを `../Agent-Aiko-dev/` 直下に作成する
-4. `../Agent-Aiko-dev/README.md` のファイル一覧テーブルに追記する
+3. ファイルを `../Agent-Lab/Agent-team/agents/aiko/dev-docs/` 直下に作成する
+4. `../Agent-Lab/Agent-team/agents/aiko/dev-docs/README.md` のファイル一覧テーブルに追記する
 5. `dev-log.jsonl` にも1行追記する（モード1のフォーマットで）
 
 ### 議事録の構成（標準テンプレート）
@@ -90,21 +90,21 @@ YYYY-MM-DD-<slug>.md
 
 ### ドキュメント更新時のリネーム
 
-既存ファイルを大幅に更新した場合は、日付を更新する。`git mv` は **`Agent-Aiko-dev` リポ内**で、リポ基準の相対パスで実行する:
+既存ファイルを大幅に更新した場合は、日付を更新する。`git mv` は **Agent-Lab リポ内**で、リポ基準の相対パスで実行する:
 
 ```sh
-cd ../Agent-Aiko-dev
-git mv 2026-04-27-design.md 2026-05-01-design.md
+cd ../Agent-Lab
+git mv Agent-team/agents/aiko/dev-docs/2026-04-27-design.md Agent-team/agents/aiko/dev-docs/2026-05-01-design.md
 ```
 
 ---
 
 ## 共通: 完了後の操作
 
-追記・作成後は `../Agent-Aiko-dev/` 内で commit & push してください:
+追記・作成後は `../Agent-Lab/` 内で commit & push してください:
 
 ```sh
-cd /path/to/Agent-Aiko-dev
+cd /path/to/Agent-Lab
 git add .
 git commit -m "<変更内容>"
 git push origin main

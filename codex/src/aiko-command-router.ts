@@ -1,7 +1,7 @@
 // Aiko slash command router — `/aiko-*` コマンドを受け取り、~/.aiko/ への
 // 書込・mode 切替・人格カスタマイズ・差分表示などを処理する。
 //
-// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1 §6.4 / §6.7
+// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.4 / §6.7
 
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";

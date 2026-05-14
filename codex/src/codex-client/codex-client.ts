@@ -1,6 +1,6 @@
 // CodexClient — high-level client for codex app-server.
 //
-// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1 §6.1
+// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.1
 
 import {
   type IncomingMessage,
@@ -224,7 +224,7 @@ export class CodexClient {
    *
    * 同一 threadId に対する並列 ask() は拒否する（spec §6.7：1 スレッド 1 ターンが原則）。
    *
-   * 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1 §6.1 / §6.7
+   * 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.1 / §6.7
    */
   async ask(opts: AskOptions): Promise<AskResult> {
     if (this.#activeTurns.has(opts.threadId)) {

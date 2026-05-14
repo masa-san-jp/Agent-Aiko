@@ -1,6 +1,6 @@
 // Agent-Aiko for Codex — public package entry.
 //
-// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1
+// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1
 
 import { CLIENT_VERSION } from "./codex-client/codex-client.js";
 

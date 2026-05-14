@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Aiko shell — `aiko` コマンドのエントリ。対話 REPL を提供する。
 //
-// 設計の正本: 2026-05-05-Agent-Aiko-Codex-design.md（masa-san-jp/Agent-Aiko-dev リポ） v0.3.1 §6.5 / §6.7
+// 設計の正本: Agent-Lab/Agent-team/agents/aiko/dev-docs/2026-05-05-Agent-Aiko-Codex-design.md v0.3.1 §6.5 / §6.7
 
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
