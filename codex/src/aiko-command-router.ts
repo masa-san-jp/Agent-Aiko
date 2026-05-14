@@ -256,20 +256,55 @@ export class AikoCommandRouter {
     const originPath = await this.#originPersonaPath();
     const override = await readFile(overridePath, "utf8");
     const origin = await readFile(originPath, "utf8");
+    const user = await this.#readExportUser(target);
+    const sanitizedOverride = sanitizeExportContent(override, user);
+    const sanitizedOrigin = sanitizeExportContent(origin, user);
+    const rules = await this.#readExportRules(target);
+    const sanitizedRules = rules ? sanitizeExportContent(rules, user) : "";
     const label = target ? `overrides/${target}/persona.md` : "aiko-override.md";
-    const diff = unifiedDiff("origin/persona.md", label, origin, override);
+    const diff = unifiedDiff("origin/persona.md", label, sanitizedOrigin, sanitizedOverride);
+    const rulesSection = sanitizedRules
+      ? [
+          "",
+          `===== ${target ? `overrides/${target}/rules.md` : "rules.md"}（任意・共有用） =====`,
+          sanitizedRules,
+        ]
+      : [];
+    const steps = [
+      target
+        ? `1. /aiko-new ${target} で人格を作成し、上記全文を ~/.aiko/persona/overrides/${target}/persona.md に貼り付ける`
+        : "1. 上記全文を ~/.aiko/persona/aiko-override.md に貼り付ける",
+    ];
+    if (sanitizedRules) {
+      steps.push(
+        target
+          ? `2. rules.md が必要な場合は ~/.aiko/persona/overrides/${target}/rules.md に貼り付ける`
+          : "2. rules.md が必要な場合は ~/.aiko/persona/override/rules.md に貼り付ける"
+      );
+    }
+    const userStepNumber = sanitizedRules ? 3 : 2;
+    steps.push(`${userStepNumber}. user.md に受け取り側自身の name/address を設定する`);
+    steps.push(
+      target
+        ? `${userStepNumber + 1}. /aiko-select ${target} で切り替える`
+        : `${userStepNumber + 1}. /aiko-override で override モードに切り替える`
+    );
     return {
       output: [
-        `===== ${label}（全文） =====`,
-        override,
+        "===== 共有用人格エクスポート =====",
+        "この出力には現在の user.md を含めません。受け取った側が自分の名前・呼び方を設定してください。",
+        `===== ${label}（共有用・ユーザー情報除去済み） =====`,
+        sanitizedOverride,
+        ...rulesSection,
         "===== origin との diff =====",
         diff || "（差分なし）",
         "",
+        "===== user.md（受け取り側で作成） =====",
+        "name: （ユーザー名）",
+        "address: （呼び方）",
+        "",
         "===== 再現手順 =====",
-        target
-          ? `1. /aiko-new ${target} で人格を作成し、上記全文を ~/.aiko/persona/overrides/${target}/persona.md に貼り付ける`
-          : "1. 上記全文を ~/.aiko/persona/aiko-override.md に貼り付ける",
-        target ? `2. /aiko-select ${target} で切り替える` : "2. /aiko-override で override モードに切り替える",
+        ...steps,
       ].join("\n"),
     };
   }
@@ -462,6 +497,34 @@ export class AikoCommandRouter {
     }
   }
 
+  async #readExportUser(target: string): Promise<{ name?: string; address?: string }> {
+    const userPaths = target
+      ? [join(this.#aikoHome, "persona", "overrides", target, "user.md"), join(this.#aikoHome, "user.md")]
+      : [join(this.#aikoHome, "persona", "override", "user.md"), join(this.#aikoHome, "user.md")];
+    for (const path of userPaths) {
+      try {
+        const user = parseUserFields(await readFile(path, "utf8"));
+        if (user.name !== undefined || user.address !== undefined) return user;
+      } catch (err) {
+        if (isNotFound(err)) continue;
+        throw err;
+      }
+    }
+    return {};
+  }
+
+  async #readExportRules(target: string): Promise<string> {
+    const rulesPath = target
+      ? join(this.#aikoHome, "persona", "overrides", target, "rules.md")
+      : join(this.#aikoHome, "persona", "override", "rules.md");
+    try {
+      return await readFile(rulesPath, "utf8");
+    } catch (err) {
+      if (isNotFound(err)) return "";
+      throw err;
+    }
+  }
+
   /** ディスクから現在の mode を読む（ランタイムのキャッシュは restartThread を呼ばないと
    *  古いままなので、コマンド分岐は毎回ディスクを真として扱う）。
    *  不在（ENOENT）のみ "origin" にフォールバックし、それ以外（EACCES/EPERM 等）は
@@ -536,6 +599,41 @@ export function mergeOverrideInstruction(existing: string, instruction: string):
 export function summarizeInstruction(instruction: string): string {
   const head = instruction.split(/\r?\n/)[0]?.trim() ?? "";
   return head.length > 60 ? `${head.slice(0, 60)}…` : head;
+}
+
+export function parseUserFields(content: string): { name?: string; address?: string } {
+  const result: { name?: string; address?: string } = {};
+  const nameMatch = content.match(/^name:\s*(.+)$/m);
+  if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
+    result.name = nameMatch[1].trim();
+  }
+  const addressMatch = content.match(/^address:\s*(.+)$/m);
+  if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
+    result.address = addressMatch[1].trim();
+  }
+  return result;
+}
+
+export function sanitizeExportContent(
+  content: string,
+  user: { name?: string; address?: string }
+): string {
+  const replacements = [
+    user.address ? { value: user.address, placeholder: "（呼び方）" } : undefined,
+    user.name ? { value: user.name, placeholder: "（ユーザー名）" } : undefined,
+  ]
+    .filter((item): item is { value: string; placeholder: string } => Boolean(item))
+    .filter((item) => item.value !== item.placeholder)
+    .sort((a, b) => b.value.length - a.value.length);
+
+  return replacements.reduce(
+    (text, item) => text.replace(new RegExp(escapeRegExp(item.value), "g"), item.placeholder),
+    content
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** ごくシンプルな unified diff（外部依存なし）。差分が無ければ空文字を返す。 */

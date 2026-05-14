@@ -58,7 +58,7 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 /aiko-or <自然文>                アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
 /aiko-origin                     アイコ（オリジナル）に切替（/aiko-org でも可）
 /aiko-reset [name]               アイコ（カスタマイズ）または指定人格をリセット（確認あり・履歴は残る）
-/aiko-export [name]              現在または指定の人格を再現可能な形式で出力
+/aiko-export [name]              現在または指定の人格を共有用に出力（ユーザー情報は含めない）
 /aiko-diff [name]                オリジナルと現在または指定の人格との差分を表示
 /aiko-personas                   利用できる名前付き人格と現在の選択状態を表示
 /aiko-new <name>                 新しい名前付き人格を作成して選択
@@ -85,7 +85,7 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ## 人格を共有したくなったら
 
-このリポジトリには人格マーケットプレイス的な機構はありません。育てた名前付き人格を誰かと共有したい場合は、`/aiko-export <name>` でファイルを書き出し、**GitHub Discussions** に貼り付けてください。受け取った側は `/aiko-new <name>` で作成した `persona/overrides/<name>/persona.md` に貼り付けて `/aiko-select <name>` で反映できます。
+このリポジトリには人格マーケットプレイス的な機構はありません。育てた名前付き人格を誰かと共有したい場合は、`/aiko-export <name>` で共有用の内容を書き出し、**GitHub Discussions** に貼り付けてください。export には現在の `user.md` は含めず、人格本文や rules 内に現在ユーザーの名前・呼び方が混ざっていた場合も `（ユーザー名）` / `（呼び方）` に置換します。受け取った側は `/aiko-new <name>` で作成した `persona/overrides/<name>/persona.md` に貼り付け、自分の `user.md` を設定してから `/aiko-select <name>` で反映できます。
 
 ---
 

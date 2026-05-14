@@ -543,10 +543,27 @@ describe("AikoCommandRouter — /aiko-export and /aiko-diff", () => {
       "# Override\ncustomized\n"
     );
     const result = await router.execute("aiko-export", "");
-    assert.match(result.output, /aiko-override.md（全文）/);
+    assert.match(result.output, /aiko-override.md（共有用・ユーザー情報除去済み）/);
     assert.match(result.output, /customized/);
     assert.match(result.output, /origin との diff/);
+    assert.match(result.output, /user\.md（受け取り側で作成）/);
     assert.match(result.output, /再現手順/);
+  });
+
+  it("/aiko-export does not include the current user's name or address", async () => {
+    await writeFile(join(fixture.aikoHome, "user.md"), "name: CurrentUser\naddress: CurrentUserさん\n");
+    await writeFile(
+      join(fixture.aikoHome, "persona", "aiko-override.md"),
+      "# Override\nCurrentUserさん向け。CurrentUserの設定。\n"
+    );
+
+    const result = await router.execute("aiko-export", "");
+
+    assert.doesNotMatch(result.output, /CurrentUser/);
+    assert.match(result.output, /（呼び方）向け。/);
+    assert.match(result.output, /（ユーザー名）の設定。/);
+    assert.match(result.output, /name: （ユーザー名）/);
+    assert.match(result.output, /address: （呼び方）/);
   });
 });
 
