@@ -66,11 +66,15 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ```
 /aiko                            現在のモードでアイコを起動（モードは変えない）
+/aiko-personas                   利用できる名前付き人格と現在の選択状態を表示
+/aiko-new <name>                 新しい名前付き人格を作成して選択
+/aiko-select <name>              名前付き人格を選択（origin / override も指定可）
+/aiko-delete <name>              名前付き人格を確認後に削除
 /aiko-save                       現在の作業ステートを .claude/session-state/current.md に保存（再開支援）
 /aiko-migrate-to-shared          .claude/aiko/ を共通ストア ~/.aiko/ に移行（任意・破壊的）
 ```
 
-> **注記**：上記 3 つは Claude Code 版固有のコマンドです。Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
+> **注記**：上記は Claude Code 版固有のコマンドです。Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
 
 人格を直接編集しないでください。両版とも `aiko-origin.md` と `INVARIANTS.md` は **OS パーミッション（chmod 444）** で書込から保護されています。これに加えて：
 
@@ -118,26 +122,25 @@ Agent-Aiko/
 
 ### リポジトリ構成
 
-本プロジェクトは2つのリポジトリで管理されています。
+本プロジェクトは公開配布リポジトリと非公開の開発リポジトリで管理されています。
 
 | リポジトリ | URL | 用途 |
 |-----------|-----|------|
 | **agent-aiko**（本リポジトリ） | [masa-san-jp/Agent-Aiko](https://github.com/masa-san-jp/Agent-Aiko) | 配布物。ユーザーが clone・インストールする |
-| **agent-aiko-dev** | [masa-san-jp/Agent-Aiko-dev](https://github.com/masa-san-jp/Agent-Aiko-dev) | 開発専用ドキュメント。設計仕様・dev-log・議事録 |
+| **Agent-Lab** | 非公開 | 開発専用ドキュメント。設計仕様・dev-log・議事録 |
 
-**agent-aiko-dev はエージェントのランタイムに不要**なため、配布物（本リポジトリ）には含めません。
+**Agent-Lab 側の dev-docs はエージェントのランタイムに不要**なため、配布物（本リポジトリ）には含めません。
 
-設計仕様書（最新版 v0.3.1）：[`Agent-Aiko-dev/2026-05-05-Agent-Aiko-Codex-design.md`](https://github.com/masa-san-jp/Agent-Aiko-dev/blob/main/2026-05-05-Agent-Aiko-Codex-design.md)
+設計仕様書や開発ログは `Agent-Lab/Agent-team/agents/aiko/dev-docs/` で管理します。
 
 ### ローカル開発環境のセットアップ
 
 ```bash
-# 兄弟ディレクトリとして並置クローンする
+# 公開配布物
 git clone https://github.com/masa-san-jp/Agent-Aiko
-git clone https://github.com/masa-san-jp/Agent-Aiko-dev
 ```
 
-`Agent-Aiko-dev` は完全に独立した兄弟リポジトリです。`Agent-Aiko/` の中にネストさせず、同階層に並べることで、agent-aiko に誤って commit される可能性を構造的に排除しています。
+開発用の設計メモや検証ログは非公開の `Agent-Lab` に統合済みです。公開リポジトリには、ユーザーがインストールに必要な配布物だけを置きます。
 
 ---
 
