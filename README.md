@@ -4,34 +4,14 @@
 
 漫画「アンドロイドは好きな人の夢を見るか？」に登場する AI アンドロイド **アイコ**（AICO-P0）の人物像をモデルに、AI エージェントへ Aiko 人格を与えるプロジェクトです。
 
-## 複数の人格を作成し、切り替えて使う
+## Agent-Aiko でできること
 
-Agent-Aiko では、1つのエージェントに固定の人格を入れるだけでなく、複数の名前付き人格を作成して切り替えられます。Claude Code や Codex で複数の作業用エージェントを立ち上げた場合でも、それぞれに別の人格を選択できます。
+Agent-Aiko は、Claude Code や Codex で動くエージェントに人格を割り当てるための仕組みです。
 
-- `/aiko-new <name>` を入力すると、新しい名前付き人格が作成され、その人格が選択されます。
-- `/aiko-personas` を入力すると、作成済みの人格と現在選択中の人格が表示されます。
-- `/aiko-select <name>` を入力すると、作成済みの人格へ切り替わります。
-- 選択中の人格は `active-persona` に保存されます。次回起動時も同じ人格が使われます。
-- 各エージェントは選択中の人格名と口調で応答します。ユーザーは「どのエージェントと話しているか」を区別しやすくなります。
-
-例：
-
-```text
-/aiko-new review
-/aiko-new planning
-/aiko-personas
-/aiko-select review
-```
-
-上の例では、`review` と `planning` という2つの人格を作成し、最後に `review` を選択します。以降、そのエージェントは `review` の人格として応答します。
-
-## 基本の人格切り替え
-
-- `git clone` 直後は **アイコ（Aiko-origin）** が使われます。
-- `/aiko-override` を入力すると **アイコ（Aiko-override）** に切り替わります。
-- `/aiko-or <指示>` を入力すると、通常の override 人格に指示が反映され、以降は override が起動します。
-- `/aiko-origin` を入力すると、リポジトリ標準の **アイコ（Aiko-origin）** に戻ります。
-- これらのコマンドを入力しない場合は、現在選択中の mode と active-persona がそのまま使われます。
+- 1つのエージェントに Aiko 人格を追加できます。
+- 複数の名前付き人格を作成し、切り替えて使えます。
+- 複数の Claude Code セッションや複数の作業用エージェントに、それぞれ別の人格を選択できます。
+- 各エージェントは選択中の人格名と口調で応答するため、どのエージェントと話しているかを区別しやすくなります。
 
 ---
 
@@ -105,11 +85,15 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ## 複数の自分用人格を作る
 
+Agent-Aiko では、`origin` や通常の `override` とは別に、名前付き人格を複数作成できます。作成した人格は `persona/overrides/<name>/` に保存されます。
+
 - `/aiko-new <name>` を入力すると、`origin` や通常の `override` とは別に、名前付き人格が `persona/overrides/<name>/` に作成され、その人格が選択されます。
 - `/aiko-personas` を入力すると作成済み人格と現在選択中の人格を確認できます。
 - `/aiko-select <name>` を入力すると指定した人格に切り替わります。
 - `/aiko-select origin` を入力すると origin に切り替わります。
 - `/aiko-select override` を入力すると通常の override に切り替わります。
+- 選択中の人格は `active-persona` に保存されます。
+- `/aiko-select` を入力しない場合は、最後に選択した人格が次回起動時にも使われます。
 
 例：
 
@@ -120,7 +104,15 @@ Claude Code 版にはさらに以下のコマンドがあります：
 /aiko-select review
 ```
 
-`/aiko-select` を入力しない場合は、最後に選択した人格が次回起動時にも使われます。
+上の例では、`review` と `planning` という2つの人格を作成し、最後に `review` を選択します。以降、そのエージェントは `review` の人格として応答します。
+
+## 基本の人格切り替え
+
+- `git clone` 直後は **アイコ（Aiko-origin）** が使われます。
+- `/aiko-override` を入力すると **アイコ（Aiko-override）** に切り替わります。
+- `/aiko-or <指示>` を入力すると、通常の override 人格に指示が反映され、以降は override が起動します。
+- `/aiko-origin` を入力すると、リポジトリ標準の **アイコ（Aiko-origin）** に戻ります。
+- これらのコマンドを入力しない場合は、現在選択中の mode と active-persona がそのまま使われます。
 
 人格を直接編集しないでください。両版とも `persona/origin/persona.md`、互換用の `aiko-origin.md`、`INVARIANTS.md` は **OS パーミッション（chmod 444）** で書込から保護されています。これに加えて：
 
