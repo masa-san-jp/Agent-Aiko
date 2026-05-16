@@ -24,7 +24,7 @@
 
 ### ルートドキュメント
 
-- `CLAUDE.md` `README.md` `VISIBILITY.md`（このファイル）`logo.svg` `.gitignore`
+- `CLAUDE.md` `README.md` `VISIBILITY.md`（このファイル）`LICENSE` `logo.svg` `.gitignore`
 
 ### テスト
 

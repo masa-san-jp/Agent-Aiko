@@ -189,4 +189,6 @@ git clone https://github.com/masa-san-jp/Agent-Aiko
 
 ## ライセンス
 
-MIT
+MIT License — Copyright (c) 2026 masa-san-jp。詳細は [`LICENSE`](./LICENSE) を参照。
+
+商用・非商用問わず自由に利用・改変・再配布できます。著作権表示と本許諾文を保持してください。
