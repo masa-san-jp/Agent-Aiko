@@ -214,32 +214,38 @@ export class AikoCommandRouter {
   }
 
   async #cmdReset(args: string): Promise<CommandResult> {
-    const target = args.trim() || (await this.#readActivePersona());
-    const targetPath = target
-      ? await this.#namedPersonaPath(target)
+    const explicitTarget = args.trim();
+    const effectiveTarget = explicitTarget || (await this.#readActivePersona());
+    const targetPath = effectiveTarget
+      ? await this.#namedPersonaPath(effectiveTarget)
       : await this.#defaultOverridePath();
-    if (target && !targetPath) {
-      return { output: `エラー：人格「${target}」が見つかりません。/aiko-personas で一覧を確認できます。` };
+    if (explicitTarget && !targetPath) {
+      return { output: `エラー：人格「${explicitTarget}」が見つかりません。/aiko-personas で一覧を確認できます。` };
     }
-    const ok = await this.#confirm(
-      target
-        ? `「${target}」の内容をリセットします。本当によろしいですか？(y/N)`
-        : "あなたに合わせてカスタマイズした内容をリセットします。本当にお別れですか？(y/N)"
-    );
+    // 引数あり（特定人格を指定）→ 中性的な確認文
+    // 引数なし（active をリセット）→ active の address でお別れ render（active が named でも空でも）
+    let prompt: string;
+    if (explicitTarget) {
+      prompt = `「${explicitTarget}」の内容をリセットします。本当によろしいですか？(y/N)`;
+    } else {
+      const address = await this.#readActiveAddress();
+      prompt = `${address}、本当にお別れですか…？ もう、こうしてお話することは、叶わなくなりますが……(y/N)`;
+    }
+    const ok = await this.#confirm(prompt);
     if (!ok) {
       return { output: "リセットをキャンセルしました。" };
     }
     const originPath = await this.#originPersonaPath();
     const origin = await readFile(originPath, "utf8");
     await writeFile(targetPath ?? (await this.#defaultOverridePath()), origin, "utf8");
-    if (!target) await this.#writeMode("origin");
+    if (!explicitTarget) await this.#writeMode("origin");
     await appendOverrideHistory(
-      { ts: new Date().toISOString(), action: "reset", instruction: target },
+      { ts: new Date().toISOString(), action: "reset", instruction: effectiveTarget },
       this.#aikoHome
     );
     return {
-      output: target
-        ? `リセット完了。人格「${target}」をオリジナルの内容で初期化しました。`
+      output: explicitTarget
+        ? `リセット完了。人格「${explicitTarget}」をオリジナルの内容で初期化しました。`
         : "リセット完了。アイコ（オリジナル）に戻り、次回から自動で起動します。",
       needsRestart: true,
     };
@@ -382,35 +388,121 @@ export class AikoCommandRouter {
       await this.#writeActivePersona("");
       return { output: "アイコ（カスタマイズ）に切り替えました。プレフィックスは Aiko-override: です。", needsRestart: true };
     }
-    if (!(await this.#namedPersonaPath(name))) {
-      return { output: `エラー：人格「${name}」が見つかりません。\n/aiko-personas で利用可能な人格を確認できます。` };
+    // fuzzy resolution: タイポ・大小揺れを許容して候補に解決する
+    const candidates = await this.#listNamedPersonas();
+    const resolution = resolvePersona(name, candidates);
+    switch (resolution.kind) {
+      case "exact":
+        return this.#applySelect(resolution.name);
+      case "suggest": {
+        const ok = await this.#confirm(
+          `「${resolution.input}」は「${resolution.name}」のことですね？ 切り替えてよろしいですか？(y/N)`
+        );
+        if (!ok) {
+          return { output: `切り替えをキャンセルしました。\n${await this.#formatCandidateList(candidates)}` };
+        }
+        return this.#applySelect(resolution.name);
+      }
+      case "ambiguous":
+        return {
+          output:
+            `「${resolution.input}」に該当する人格が複数あります。\n` +
+            `${await this.#formatCandidateList(resolution.candidates)}\n` +
+            `もう一度 /aiko-select <name> で指定してください。`,
+        };
+      case "miss":
+        return {
+          output:
+            `「${resolution.input}」に該当する人格が見つかりません。\n` +
+            `${await this.#formatCandidateList(candidates)}\n` +
+            `もう一度 /aiko-select <name> で指定してください。`,
+        };
     }
+  }
+
+  async #applySelect(name: string): Promise<CommandResult> {
     await this.#writeMode("override");
     await this.#writeActivePersona(name);
-    return { output: `人格「${name}」に切り替えました。プレフィックスは Aiko-${name}: です。`, needsRestart: true };
+    return {
+      output: `人格「${name}」に切り替えました。プレフィックスは Aiko-${name}: です。`,
+      needsRestart: true,
+    };
+  }
+
+  /** 候補リストを表示用に整形（active に ★、origin / override も含む）。 */
+  async #formatCandidateList(names: string[]): Promise<string> {
+    const mode = await this.#readCurrentMode();
+    const active = mode === "override" ? await this.#readActivePersona() : "";
+    const lines = ["候補:"];
+    lines.push(`${mode === "origin" ? "★" : " "} origin`);
+    lines.push(`${mode === "override" && !active ? "★" : " "} override`);
+    for (const n of names) {
+      lines.push(`${mode === "override" && active === n ? "★" : " "} ${n}`);
+    }
+    return lines.join("\n");
   }
 
   async #cmdDelete(args: string): Promise<CommandResult> {
-    const name = args.trim();
-    const validation = validatePersonaName(name);
-    if (validation) return { output: name ? validation : "削除する人格名を指定してください。例: /aiko-delete example" };
+    // 引数は取らない。現在 active な人格にお別れを告げて削除するコマンド。
+    if (args.trim()) {
+      return {
+        output:
+          "/aiko-delete は引数を取りません。現在アクティブな人格に対して動くコマンドです。\n" +
+          "別の人格を削除したい場合は、先に /aiko-select <name> で切り替えてからもう一度実行してください。",
+      };
+    }
+    const mode = await this.#readCurrentMode();
+    if (mode === "origin") {
+      return {
+        output:
+          "現在は origin モードです。アイコ（オリジナル）は削除できません。\n" +
+          "削除したい人格があれば、まず /aiko-select <name> で切り替えてからもう一度実行してください。",
+      };
+    }
     const active = await this.#readActivePersona();
-    if (active === name) {
-      return { output: `エラー：「${name}」は現在アクティブな人格のため削除できません。\n先に /aiko-select で別の人格に切り替えてから削除してください。` };
+    if (!active) {
+      return {
+        output:
+          "現在のアクティブはデフォルト override（aiko-override.md）です。これは削除できません。\n" +
+          "カスタマイズ内容をオリジナルに戻したい場合は /aiko-reset を、別人格を作りたい場合は /aiko-new <name> をご利用ください。",
+      };
     }
-    const path = await this.#namedPersonaPath(name);
+    const path = await this.#namedPersonaPath(active);
     if (!path) {
-      return { output: `エラー：人格「${name}」が見つかりません。\n/aiko-personas で利用可能な人格を確認できます。` };
+      // 孤立状態（active-persona が指す dir が無い）→ mode=origin に戻して終了
+      await this.#writeMode("origin");
+      await this.#writeActivePersona("");
+      await appendOverrideHistory(
+        { ts: new Date().toISOString(), action: "resolve-orphan", instruction: active, name: active },
+        this.#aikoHome
+      );
+      return {
+        output:
+          `現在 active な人格「${active}」のディレクトリが見つかりません。\n` +
+          `mode を origin に、active-persona を空にリセットしました。`,
+        needsRestart: true,
+      };
     }
-    const ok = await this.#confirm(`「${name}」を削除します。元に戻せません。本当によろしいですか？(y/N)`);
+    const address = await this.#readActiveAddress();
+    // TS 版は LLM を持たないため、人格 voice render はせず address のみ置換した
+    // 汎用テンプレートを使う。Claude Code 版（SKILL.md）は LLM で render する。
+    const prompt = `${address}、本当にお別れですか…？ もう、こうしてお話することは、叶わなくなりますが……(y/N)`;
+    const ok = await this.#confirm(prompt);
     if (!ok) return { output: "削除をキャンセルしました。" };
-    await rm(join(this.#aikoHome, "persona", "overrides", name), { recursive: true, force: true });
-    await rm(join(this.#aikoHome, "persona", "overrides", `${name}.md`), { force: true });
+    await rm(join(this.#aikoHome, "persona", "overrides", active), { recursive: true, force: true });
+    await rm(join(this.#aikoHome, "persona", "overrides", `${active}.md`), { force: true });
+    await this.#writeMode("origin");
+    await this.#writeActivePersona("");
     await appendOverrideHistory(
-      { ts: new Date().toISOString(), action: "delete-persona", instruction: name, name },
+      { ts: new Date().toISOString(), action: "delete-persona", instruction: active, name: active },
       this.#aikoHome
     );
-    return { output: `人格「${name}」を削除しました。` };
+    return {
+      output:
+        `人格「${active}」にお別れしました。\n` +
+        `mode は origin に戻りました。次回から自動で Aiko-origin: として起動します。`,
+      needsRestart: true,
+    };
   }
 
   // ─────────────────────────────────────
@@ -511,6 +603,27 @@ export class AikoCommandRouter {
       }
     }
     return {};
+  }
+
+  /**
+   * 現在 active な人格の user.md から address（ユーザー呼び方）を取得する。
+   * 未設定なら `あなた` を返す。お別れ確認文の render で使う。
+   */
+  async #readActiveAddress(): Promise<string> {
+    const active = await this.#readActivePersona();
+    const userMdPaths = active
+      ? [join(this.#aikoHome, "persona", "overrides", active, "user.md"), join(this.#aikoHome, "user.md")]
+      : [join(this.#aikoHome, "persona", "override", "user.md"), join(this.#aikoHome, "user.md")];
+    for (const path of userMdPaths) {
+      try {
+        const user = parseUserFields(await readFile(path, "utf8"));
+        if (user.address) return user.address;
+      } catch (err) {
+        if (isNotFound(err)) continue;
+        throw err;
+      }
+    }
+    return "あなた";
   }
 
   async #readExportRules(target: string): Promise<string> {
@@ -713,4 +826,69 @@ function backtrackDiff(a: string[], b: string[], dp: number[][]): DiffOp[] {
     j -= 1;
   }
   return ops.reverse();
+}
+
+// ─────────────────────────────────────
+// fuzzy persona resolution
+// ─────────────────────────────────────
+
+/**
+ * `/aiko-select <input>` の解決結果。
+ * - `exact`: 大小無視で完全一致。確認なしで切替してよい。
+ * - `suggest`: prefix / 部分一致 / 編集距離 ≤ 2 で 1 件確定。1 行確認してから切替。
+ * - `ambiguous`: 2 件以上ヒット。候補列挙して再入力を促す。
+ * - `miss`: ヒットゼロ。全候補を列挙して再入力を促す。
+ */
+export type PersonaResolution =
+  | { kind: "exact"; name: string }
+  | { kind: "suggest"; name: string; input: string }
+  | { kind: "ambiguous"; input: string; candidates: string[] }
+  | { kind: "miss"; input: string; candidates: string[] };
+
+/**
+ * 入力をタイポ・大小揺れを許容しつつ候補に解決する。
+ * 段階: 1) exact (case-insensitive) → 2) prefix → 3) substring → 4) Levenshtein ≤ 2
+ * 同じ段階で複数ヒットしたら ambiguous、全段階でゼロなら miss。
+ */
+export function resolvePersona(input: string, candidates: string[]): PersonaResolution {
+  const normalized = input.trim().toLowerCase();
+  if (!normalized) return { kind: "miss", input, candidates };
+  const lower = candidates.map((c) => c.toLowerCase());
+  const exactIdx = lower.indexOf(normalized);
+  if (exactIdx >= 0) return { kind: "exact", name: candidates[exactIdx]! };
+  const prefixHits = candidates.filter((_, i) => lower[i]!.startsWith(normalized));
+  if (prefixHits.length === 1) return { kind: "suggest", name: prefixHits[0]!, input };
+  if (prefixHits.length > 1) return { kind: "ambiguous", input, candidates: prefixHits };
+  const subHits = candidates.filter((_, i) => lower[i]!.includes(normalized));
+  if (subHits.length === 1) return { kind: "suggest", name: subHits[0]!, input };
+  if (subHits.length > 1) return { kind: "ambiguous", input, candidates: subHits };
+  const lvHits = candidates.filter((_, i) => levenshteinDistance(lower[i]!, normalized) <= 2);
+  if (lvHits.length === 1) return { kind: "suggest", name: lvHits[0]!, input };
+  if (lvHits.length > 1) return { kind: "ambiguous", input, candidates: lvHits };
+  return { kind: "miss", input, candidates };
+}
+
+/** 標準的な Levenshtein 編集距離。a, b は小文字に正規化済みの前提。 */
+export function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = 0; i <= n; i += 1) (dp[i] as number[])[0] = i;
+  for (let j = 0; j <= m; j += 1) (dp[0] as number[])[j] = j;
+  for (let i = 1; i <= n; i += 1) {
+    for (let j = 1; j <= m; j += 1) {
+      const cost = b.charAt(i - 1) === a.charAt(j - 1) ? 0 : 1;
+      const row = dp[i] as number[];
+      const prev = dp[i - 1] as number[];
+      row[j] = Math.min(
+        (prev[j] as number) + 1,
+        (row[j - 1] as number) + 1,
+        (prev[j - 1] as number) + cost
+      );
+    }
+  }
+  return (dp[n] as number[])[m] as number;
 }

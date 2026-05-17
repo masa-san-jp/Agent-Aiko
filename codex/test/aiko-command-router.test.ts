@@ -487,19 +487,303 @@ describe("AikoCommandRouter — named personas", () => {
         /original body/
       );
 
-      await router.execute("aiko-select", "override");
-      const deleted = await router.execute("aiko-delete", "example");
-      assert.match(deleted.output, /削除しました/);
+      // aiko-delete は active を対象にする：example が active のまま実行する
+      const deleted = await router.execute("aiko-delete", "");
+      assert.match(deleted.output, /お別れしました/);
+      assert.match(deleted.output, /mode は origin に戻りました/);
+      assert.equal(deleted.needsRestart, true);
       await assert.rejects(
         readFile(join(fixture.aikoHome, "persona", "overrides", "example", "persona.md"), "utf8"),
         /ENOENT/
       );
+      assert.equal((await readFile(join(fixture.aikoHome, "mode"), "utf8")).trim(), "origin");
+      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "");
       await client.stop();
     } finally {
       await fixture.cleanup();
     }
   });
 });
+
+describe("AikoCommandRouter — /aiko-delete (active-only semantics)", () => {
+  it("rejects when called with an argument", async () => {
+    const fixture = await makeFixture();
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-delete", "anything");
+      assert.match(result.output, /引数を取りません/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("rejects in origin mode (cannot delete origin)", async () => {
+    const fixture = await makeFixture();
+    try {
+      await writeFile(join(fixture.aikoHome, "mode"), "origin\n");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-delete", "");
+      assert.match(result.output, /origin モード/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("rejects when active-persona is empty (legacy default override)", async () => {
+    const fixture = await makeFixture();
+    try {
+      await writeFile(join(fixture.aikoHome, "mode"), "override\n");
+      await writeFile(join(fixture.aikoHome, "active-persona"), "");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-delete", "");
+      assert.match(result.output, /デフォルト override/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("uses address from user.md in farewell prompt", async () => {
+    const fixture = await makeFixture();
+    try {
+      const personaDir = join(fixture.aikoHome, "persona", "overrides", "example");
+      await mkdir(personaDir, { recursive: true });
+      await writeFile(join(personaDir, "persona.md"), "# Example\noriginal body\n");
+      await writeFile(join(personaDir, "user.md"), "name: Alice\naddress: 先生\n");
+      await writeFile(join(fixture.aikoHome, "mode"), "override\n");
+      await writeFile(join(fixture.aikoHome, "active-persona"), "example\n");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const prompts: string[] = [];
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async (msg) => {
+          prompts.push(msg);
+          return false; // cancel
+        },
+      });
+      const result = await router.execute("aiko-delete", "");
+      assert.equal(prompts.length, 1);
+      assert.match(prompts[0]!, /^先生、本当にお別れですか…？/);
+      assert.match(result.output, /キャンセル/);
+      // dir is still there
+      await readFile(join(personaDir, "persona.md"), "utf8");
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("defaults to 'あなた' when address is missing", async () => {
+    const fixture = await makeFixture();
+    try {
+      const personaDir = join(fixture.aikoHome, "persona", "overrides", "example");
+      await mkdir(personaDir, { recursive: true });
+      await writeFile(join(personaDir, "persona.md"), "# Example\noriginal body\n");
+      await writeFile(join(personaDir, "user.md"), "name:\naddress:\n");
+      await writeFile(join(fixture.aikoHome, "mode"), "override\n");
+      await writeFile(join(fixture.aikoHome, "active-persona"), "example\n");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const prompts: string[] = [];
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async (msg) => {
+          prompts.push(msg);
+          return false;
+        },
+      });
+      await router.execute("aiko-delete", "");
+      assert.match(prompts[0]!, /^あなた、本当にお別れですか…？/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("recovers from orphan state (active-persona points to missing dir)", async () => {
+    const fixture = await makeFixture();
+    try {
+      await writeFile(join(fixture.aikoHome, "mode"), "override\n");
+      await writeFile(join(fixture.aikoHome, "active-persona"), "ghost\n");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-delete", "");
+      assert.match(result.output, /ディレクトリが見つかりません/);
+      assert.equal((await readFile(join(fixture.aikoHome, "mode"), "utf8")).trim(), "origin");
+      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "");
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+});
+
+describe("AikoCommandRouter — /aiko-select fuzzy resolution", () => {
+  async function setupFixtureWithPersonas(names: string[]): Promise<Fixture> {
+    const fixture = await makeFixture();
+    for (const n of names) {
+      const dir = join(fixture.aikoHome, "persona", "overrides", n);
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "persona.md"), `# ${n}\nbody\n`);
+    }
+    return fixture;
+  }
+
+  it("exact case-insensitive match switches without confirmation", async () => {
+    const fixture = await setupFixtureWithPersonas(["work", "study"]);
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      let confirmCalled = false;
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async () => {
+          confirmCalled = true;
+          return true;
+        },
+      });
+      const result = await router.execute("aiko-select", "Work");
+      assert.equal(confirmCalled, false);
+      assert.match(result.output, /Aiko-work/);
+      assert.equal((await readFile(join(fixture.aikoHome, "active-persona"), "utf8")).trim(), "work");
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("prefix match asks confirmation, switches on yes", async () => {
+    const fixture = await setupFixtureWithPersonas(["work", "study"]);
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const prompts: string[] = [];
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async (msg) => {
+          prompts.push(msg);
+          return true;
+        },
+      });
+      const result = await router.execute("aiko-select", "wo");
+      assert.equal(prompts.length, 1);
+      assert.match(prompts[0]!, /「wo」は「work」のことですね/);
+      assert.match(result.output, /Aiko-work/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("Levenshtein match handles typos", async () => {
+    const fixture = await setupFixtureWithPersonas(["work", "study"]);
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const prompts: string[] = [];
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async (msg) => {
+          prompts.push(msg);
+          return true;
+        },
+      });
+      const result = await router.execute("aiko-select", "worl");
+      assert.match(prompts[0]!, /「worl」は「work」のことですね/);
+      assert.match(result.output, /Aiko-work/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("ambiguous prefix lists candidates without switching", async () => {
+    const fixture = await setupFixtureWithPersonas(["work", "writing"]);
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-select", "w");
+      assert.match(result.output, /複数あります/);
+      assert.match(result.output, /work/);
+      assert.match(result.output, /writing/);
+      // active-persona は変わっていない
+      assert.equal(await readActiveOrEmpty(fixture.aikoHome), "");
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("miss lists all candidates without switching", async () => {
+    const fixture = await setupFixtureWithPersonas(["work", "study"]);
+    try {
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const router = new AikoCommandRouter({ aikoHome: fixture.aikoHome, runtime, confirm: async () => true });
+      const result = await router.execute("aiko-select", "xyz");
+      assert.match(result.output, /見つかりません/);
+      assert.match(result.output, /work/);
+      assert.match(result.output, /study/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+});
+
+describe("AikoCommandRouter — /aiko-reset farewell address render", () => {
+  it("uses address from active persona's user.md in no-arg reset", async () => {
+    const fixture = await makeFixture();
+    try {
+      const personaDir = join(fixture.aikoHome, "persona", "overrides", "example");
+      await mkdir(personaDir, { recursive: true });
+      await writeFile(join(personaDir, "persona.md"), "# Example\noriginal body\n");
+      await writeFile(join(personaDir, "user.md"), "name: Bob\naddress: ボス\n");
+      await writeFile(join(fixture.aikoHome, "mode"), "override\n");
+      await writeFile(join(fixture.aikoHome, "active-persona"), "example\n");
+      const transport = new MockTransport();
+      const { runtime, client } = await bootRuntime(transport, fixture.aikoHome);
+      const prompts: string[] = [];
+      const router = new AikoCommandRouter({
+        aikoHome: fixture.aikoHome,
+        runtime,
+        confirm: async (msg) => {
+          prompts.push(msg);
+          return false;
+        },
+      });
+      await router.execute("aiko-reset", "");
+      assert.match(prompts[0]!, /^ボス、本当にお別れですか…？/);
+      await client.stop();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+});
+
+async function readActiveOrEmpty(home: string): Promise<string> {
+  try {
+    return (await readFile(join(home, "active-persona"), "utf8")).trim();
+  } catch {
+    return "";
+  }
+}
 
 describe("AikoCommandRouter — /aiko-export and /aiko-diff", () => {
   let fixture: Fixture;

@@ -169,10 +169,13 @@
 - 指定した人格に切り替えます（`origin`, `override`, または名前付き人格）
 - 詳細は `.claude/skills/aiko-select/SKILL.md` を参照
 
-### `/aiko-delete <name>`
+### `/aiko-delete`
 
-- 指定した名前付き人格を削除します（確認あり）
-- アクティブな人格は削除できません（先に切り替えてから削除）
+- 現在アクティブな人格にお別れを告げて削除します（確認あり）
+- **引数は取りません**。常に「現在アクティブな人格」に対して動きます
+- 他の人格を削除したい場合は、先に `/aiko-select <name>` で切り替えてから実行します
+- 削除後は自動的に `mode` を `origin` に戻します
+- 確認文は active な人格の口調・user.md の `address` で render します（固定文字列ではなく）
 - 詳細は `.claude/skills/aiko-delete/SKILL.md` を参照
 
 
