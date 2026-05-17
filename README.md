@@ -69,8 +69,8 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 /aiko-diff [name]                オリジナルと現在または指定の人格との差分を表示
 /aiko-personas                   利用できる名前付き人格と現在の選択状態を表示
 /aiko-new <name>                 新しい名前付き人格を作成して選択
-/aiko-select <name>              名前付き人格を選択（origin / override も指定可）
-/aiko-delete <name>              名前付き人格を確認後に削除
+/aiko-select <name>              名前付き人格を選択（タイポ・大小揺れも fuzzy で解決、origin / override も指定可）
+/aiko-delete                     現在の人格にお別れを告げて削除（引数なし・確認あり）
 ```
 
 Claude Code 版にはさらに以下のコマンドがあります：
