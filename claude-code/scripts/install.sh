@@ -192,7 +192,7 @@ printf "  %s/aiko-diff%s                オリジナルとの差分を確認\n" 
 printf "  %s/aiko-personas%s            利用可能な人格の一覧を表示\n" "$BOLD" "$RESET"
 printf "  %s/aiko-new <名前>%s          新しい人格を作成してアクティブにする\n" "$BOLD" "$RESET"
 printf "  %s/aiko-select <名前>%s       人格を切り替える\n" "$BOLD" "$RESET"
-printf "  %s/aiko-delete <名前>%s       名前付き人格を削除する（確認あり）\n" "$BOLD" "$RESET"
+printf "  %s/aiko-delete%s              現在の人格にお別れを告げて削除する（確認あり）\n" "$BOLD" "$RESET"
 printf "\n"
 printf "  %s────────────────────────────────────────────%s\n\n" "$CYAN" "$RESET"
 

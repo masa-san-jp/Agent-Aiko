@@ -11,7 +11,7 @@ export interface OverrideHistoryEntry {
   /** ISO8601 タイムスタンプ。 */
   ts: string;
   /** "override" / "reset" 等のアクション種別。 */
-  action: "override" | "reset" | "mode-set" | "new-persona" | "delete-persona";
+  action: "override" | "reset" | "mode-set" | "new-persona" | "delete-persona" | "resolve-orphan";
   /** ユーザー指示（reset / mode-set では空文字でよい）。 */
   instruction: string;
   /** 変更点の 1 行サマリ（省略可）。 */
