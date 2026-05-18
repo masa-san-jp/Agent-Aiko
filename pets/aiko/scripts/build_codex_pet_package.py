@@ -19,15 +19,15 @@ PADDING = 8
 ATTACHED_COMPONENT_MARGIN = 10
 
 ROW_SPECS = [
-    ("idle", "idle", 6, False, [0, 1, 2, 3, 0, 1], [0, 0, 0, 0, 0, 0]),
-    ("running-right", "walking", 8, False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 0, 0, 0, 0, 0, 0]),
-    ("running-left", "walking", 8, True, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 0, 0, 0, 0, 0, 0]),
-    ("waving", "happy", 4, False, [0, 0, 0, 0], [0, -2, -4, -2]),
-    ("jumping", "happy", 5, False, [0, 0, 0, 0, 0], [0, -8, -16, -8, 0]),
-    ("failed", "failed", 8, False, [0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 2, 1, 0, 1, 2, 1]),
-    ("waiting", "idle", 6, False, [0, 1, 0, 1, 0, 1], [0, 1, 0, 1, 0, 1]),
-    ("running", "thinking", 6, False, [0, 0, 0, 0, 0, 0], [0, 1, 0, -1, 0, 1]),
-    ("review", "thinking", 6, False, [0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 1]),
+    ("idle", "idle", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 0, 0, 0, 0, 0, 0]),
+    ("running-right", "walking", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 0, 0, 0, 0, 0, 0]),
+    ("running-left", "walking", True, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 0, 0, 0, 0, 0, 0]),
+    ("thinking", "thinking", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 0, 1, 0, 0, 0, 1, 0]),
+    ("working", "thinking", False, [0, 0, 1, 1, 2, 2, 3, 3], [0, 1, 0, -1, 0, 1, 0, -1]),
+    ("success", "happy", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, -4, -8, -4, 0, -4, -8, -4]),
+    ("error", "failed", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 1, 2, 1, 0, 1, 2, 1]),
+    ("sleeping", "sleeping", False, [0, 1, 2, 3, 0, 1, 2, 3], [0, 1, 0, 1, 0, 1, 0, 1]),
+    ("alert", "idle", False, [0, 1, 0, 1, 2, 3, 2, 3], [0, -2, -4, -2, 0, -2, -4, -2]),
 ]
 
 
@@ -225,20 +225,20 @@ def write_previews(atlas: Image.Image) -> None:
     previews_dir.mkdir(parents=True, exist_ok=True)
 
     durations = {
-        "idle": [280, 110, 110, 140, 140, 320],
+        "idle": [280, 110, 110, 140, 140, 280, 110, 240],
         "running-right": [120, 120, 120, 120, 120, 120, 120, 220],
         "running-left": [120, 120, 120, 120, 120, 120, 120, 220],
-        "waving": [140, 140, 140, 280],
-        "jumping": [140, 140, 140, 140, 280],
-        "failed": [140, 140, 140, 140, 140, 140, 140, 240],
-        "waiting": [150, 150, 150, 150, 150, 260],
-        "running": [120, 120, 120, 120, 120, 220],
-        "review": [150, 150, 150, 150, 150, 280],
+        "thinking": [150, 150, 150, 150, 150, 150, 150, 240],
+        "working": [120, 120, 120, 120, 120, 120, 120, 220],
+        "success": [140, 140, 140, 140, 140, 140, 140, 240],
+        "error": [140, 140, 140, 140, 140, 140, 140, 240],
+        "sleeping": [220, 220, 220, 220, 220, 220, 220, 300],
+        "alert": [130, 130, 130, 130, 130, 130, 130, 220],
     }
 
-    for row, (target_state, _source_state, used, _mirror, _frame_indexes, _y_offsets) in enumerate(ROW_SPECS):
+    for row, (target_state, _source_state, _mirror, _frame_indexes, _y_offsets) in enumerate(ROW_SPECS):
         frames = []
-        for col in range(used):
+        for col in range(COLS):
             cell = atlas.crop((col * CELL_W, row * CELL_H, (col + 1) * CELL_W, (row + 1) * CELL_H))
             frames.append(cell.resize((CELL_W * 2, CELL_H * 2), Image.Resampling.NEAREST))
         frames[0].save(
@@ -257,10 +257,10 @@ def make_contact_sheet(atlas: Image.Image) -> Image.Image:
     sheet = Image.new("RGBA", (label_w + atlas.width * scale, atlas.height * scale), (255, 255, 255, 255))
     draw = ImageDraw.Draw(sheet)
 
-    for row, (target_state, _source_state, used, _mirror, _frame_indexes, _y_offsets) in enumerate(ROW_SPECS):
+    for row, (target_state, _source_state, _mirror, _frame_indexes, _y_offsets) in enumerate(ROW_SPECS):
         y = row * CELL_H * scale
         draw.text((8, y + 8), target_state, fill=(20, 20, 20, 255))
-        draw.text((8, y + 28), f"{used} frames", fill=(80, 80, 80, 255))
+        draw.text((8, y + 28), f"{COLS} frames", fill=(80, 80, 80, 255))
 
     sheet.alpha_composite(atlas.resize((atlas.width * scale, atlas.height * scale), Image.Resampling.NEAREST), (label_w, 0))
 
@@ -300,13 +300,11 @@ def validate(atlas: Image.Image, webp_path: Path, pet_json: dict[str, str]) -> d
     if pet_json.get("spritesheetPath") != "spritesheet.webp":
         errors.append("pet.json spritesheetPath must be spritesheet.webp")
 
-    for row, (_target_state, _source_state, used, _mirror, _frame_indexes, _y_offsets) in enumerate(ROW_SPECS):
-        for col in range(used, COLS):
+    for row in range(ROWS):
+        for col in range(COLS):
             cell = atlas.crop((col * CELL_W, row * CELL_H, (col + 1) * CELL_W, (row + 1) * CELL_H))
-            if cell.getbbox() is not None:
-                errors.append(f"atlas row {row} col {col} should be transparent")
-        if used < COLS:
-            warnings.append(f"row {row} intentionally leaves cols {used}-{COLS - 1} transparent")
+            if cell.getbbox() is None:
+                errors.append(f"atlas row {row} col {col} is unexpectedly transparent")
 
     return {
         "ok": not errors,
@@ -324,14 +322,14 @@ def validate(atlas: Image.Image, webp_path: Path, pet_json: dict[str, str]) -> d
                 "row": row,
                 "target_state": target,
                 "source_state": source,
-                "used_columns": used,
+                "used_columns": COLS,
                 "mirrored": mirror,
                 "source_frame_indexes": frame_indexes,
                 "y_offsets": y_offsets,
             }
-            for row, (target, source, used, mirror, frame_indexes, y_offsets) in enumerate(ROW_SPECS)
+            for row, (target, source, mirror, frame_indexes, y_offsets) in enumerate(ROW_SPECS)
         ],
-        "stability_policy": "Rows with repeated frame 0 intentionally avoid detached effects in the original source art.",
+        "stability_policy": "All rows contain 8 visible frames because Codex App may advance every row across all 8 columns.",
     }
 
 
@@ -342,17 +340,21 @@ def main() -> None:
     qa_dir.mkdir(exist_ok=True)
 
     atlas = Image.new("RGBA", (CELL_W * COLS, CELL_H * ROWS), (0, 0, 0, 0))
-    for row, (_target_state, source_state, _used, mirror, frame_indexes, y_offsets) in enumerate(ROW_SPECS):
+    for row, (_target_state, source_state, mirror, frame_indexes, y_offsets) in enumerate(ROW_SPECS):
         source_frames = load_source_frames(source_state)
         frames = expand_frames(source_frames, frame_indexes, y_offsets, mirror)
+        if len(frames) != COLS:
+            raise RuntimeError(f"row {row} must contain exactly {COLS} frames, got {len(frames)}")
         for col, (frame, y_offset) in enumerate(frames):
             atlas.alpha_composite(fit_cell(frame, y_offset), (col * CELL_W, row * CELL_H))
 
     spritesheet_png = final_dir / "spritesheet.png"
     spritesheet_webp = final_dir / "spritesheet.webp"
+    package_webp = ROOT / "spritesheet.webp"
     atlas = normalize_transparent_rgb(atlas)
     atlas.save(spritesheet_png)
     atlas.save(spritesheet_webp, "WEBP", lossless=True, quality=100, exact=True)
+    atlas.save(package_webp, "WEBP", lossless=True, quality=100, exact=True)
 
     pet_json = {
         "id": PET_ID,
@@ -364,13 +366,14 @@ def main() -> None:
 
     make_contact_sheet(atlas).save(qa_dir / "contact-sheet.png")
     write_previews(atlas)
-    validation = validate(atlas, spritesheet_webp, pet_json)
+    validation = validate(atlas, package_webp, pet_json)
     (qa_dir / "validation.json").write_text(json.dumps(validation, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     if not validation["ok"]:
         raise SystemExit("validation failed; see qa/validation.json")
 
     print(f"wrote {spritesheet_webp}")
+    print(f"wrote {package_webp}")
     print(f"wrote {ROOT / 'pet.json'}")
     print(f"wrote {qa_dir / 'contact-sheet.png'}")
     print(f"wrote {qa_dir / 'validation.json'}")

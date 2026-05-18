@@ -93,15 +93,15 @@
       const cell = { width: 192, height: 208 };
       const scale = 2;
       const rows = [
-        { name: "idle", frames: 6, durations: [280, 110, 110, 140, 140, 320] },
+        { name: "idle", frames: 8, durations: [280, 110, 110, 140, 140, 280, 110, 240] },
         { name: "running-right", frames: 8, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
         { name: "running-left", frames: 8, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
-        { name: "waving", frames: 4, durations: [140, 140, 140, 280] },
-        { name: "jumping", frames: 5, durations: [140, 140, 140, 140, 280] },
-        { name: "failed", frames: 8, durations: [140, 140, 140, 140, 140, 140, 140, 240] },
-        { name: "waiting", frames: 6, durations: [150, 150, 150, 150, 150, 260] },
-        { name: "running", frames: 6, durations: [120, 120, 120, 120, 120, 220] },
-        { name: "review", frames: 6, durations: [150, 150, 150, 150, 150, 280] },
+        { name: "thinking", frames: 8, durations: [150, 150, 150, 150, 150, 150, 150, 240] },
+        { name: "working", frames: 8, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+        { name: "success", frames: 8, durations: [140, 140, 140, 140, 140, 140, 140, 240] },
+        { name: "error", frames: 8, durations: [140, 140, 140, 140, 140, 140, 140, 240] },
+        { name: "sleeping", frames: 8, durations: [220, 220, 220, 220, 220, 220, 220, 300] },
+        { name: "alert", frames: 8, durations: [130, 130, 130, 130, 130, 130, 130, 220] },
       ];
 
       const sprite = document.getElementById("sprite");
