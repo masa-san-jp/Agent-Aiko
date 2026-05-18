@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aiko Codex Pet Preview</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f7f7f4;
+        color: #202124;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 220px 1fr;
+      }
+
+      aside {
+        border-right: 1px solid #d8d8d3;
+        padding: 20px;
+        background: #ffffff;
+      }
+
+      main {
+        display: grid;
+        place-items: center;
+        padding: 32px;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin: 0 0 16px;
+      }
+
+      button {
+        width: 100%;
+        margin: 0 0 8px;
+        padding: 10px 12px;
+        border: 1px solid #c8c8c3;
+        border-radius: 6px;
+        background: #ffffff;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      button.active {
+        border-color: #2f80ed;
+        background: #eaf2ff;
+      }
+
+      .stage {
+        width: min(70vw, 560px);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        border: 1px solid #d8d8d3;
+        background:
+          linear-gradient(45deg, #ecece7 25%, transparent 25%),
+          linear-gradient(-45deg, #ecece7 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #ecece7 75%),
+          linear-gradient(-45deg, transparent 75%, #ecece7 75%);
+        background-color: #ffffff;
+        background-size: 24px 24px;
+        background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+      }
+
+      .sprite {
+        width: 384px;
+        height: 416px;
+        background-image: url("final/spritesheet.webp");
+        background-size: 3072px 3744px;
+        background-position: 0 0;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h1>Aiko Preview</h1>
+      <div id="controls"></div>
+    </aside>
+    <main>
+      <div class="stage">
+        <div class="sprite" id="sprite" aria-label="Aiko pet animation preview"></div>
+      </div>
+    </main>
+    <script>
+      const cell = { width: 192, height: 208 };
+      const scale = 2;
+      const rows = [
+        { name: "idle", frames: 6, durations: [280, 110, 110, 140, 140, 320] },
+        { name: "running-right", frames: 8, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+        { name: "running-left", frames: 8, durations: [120, 120, 120, 120, 120, 120, 120, 220] },
+        { name: "waving", frames: 4, durations: [140, 140, 140, 280] },
+        { name: "jumping", frames: 5, durations: [140, 140, 140, 140, 280] },
+        { name: "failed", frames: 8, durations: [140, 140, 140, 140, 140, 140, 140, 240] },
+        { name: "waiting", frames: 6, durations: [150, 150, 150, 150, 150, 260] },
+        { name: "running", frames: 6, durations: [120, 120, 120, 120, 120, 220] },
+        { name: "review", frames: 6, durations: [150, 150, 150, 150, 150, 280] },
+      ];
+
+      const sprite = document.getElementById("sprite");
+      const controls = document.getElementById("controls");
+      let active = 0;
+      let frame = 0;
+      let timer = 0;
+
+      function render() {
+        const row = rows[active];
+        sprite.style.backgroundPosition = `-${frame * cell.width * scale}px -${active * cell.height * scale}px`;
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          frame = (frame + 1) % row.frames;
+          render();
+        }, row.durations[frame]);
+      }
+
+      rows.forEach((row, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = row.name;
+        button.addEventListener("click", () => {
+          active = index;
+          frame = 0;
+          for (const item of controls.querySelectorAll("button")) item.classList.remove("active");
+          button.classList.add("active");
+          render();
+        });
+        controls.appendChild(button);
+        if (index === 0) button.classList.add("active");
+      });
+
+      render();
+    </script>
+  </body>
+</html>

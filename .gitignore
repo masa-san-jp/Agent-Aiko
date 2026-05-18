@@ -12,6 +12,15 @@
 # === コンテンツ素材 ===
 images/
 
+# === Codex custom pet local work ===
+# 公開配布する最小パッケージ以外の元素材・検証生成物・過去互換資材
+/pets/*/archive/
+/pets/*/source/
+/pets/*/qa/previews/
+/pets/*/final/*.png
+/pets/*/scripts/__pycache__/
+/pets/*/**/*.pyc
+
 # === Aiko ランタイム実データ（雛形 .example のみコミット） ===
 **/session-state/auto.jsonl
 **/session-state/current.md

@@ -14,6 +14,7 @@
 - `claude-code/scripts/` — Claude Code 版 installer 実体
 - `claude-code/plugin/` — Claude Code Plugin メタデータ
 - `codex/` — Codex 版実装
+- `pets/` — Codex custom pet の公開配布パッケージ、README、検証済みビルド資材
 - `scripts/install.sh` — 旧 URL 維持用の互換ラッパー
 
 ### 開発資材（公開）
@@ -45,6 +46,11 @@
 ### コンテンツ素材
 
 - `images/` — 原典漫画データ（別途管理）
+- `pets/*/source/` — pet 生成元画像などの元素材
+- `pets/*/archive/` — 旧 runtime・過去互換資材・作業アーカイブ
+- `pets/*/qa/previews/` — 検証用 GIF の大量生成物
+- `pets/*/final/*.png` — 検査用 PNG。配布対象は `spritesheet.webp`
+- `pets/*/scripts/__pycache__/` `pets/*/**/*.pyc` — Python 実行キャッシュ
 
 ### Aiko ランタイム実データ
 
