@@ -56,7 +56,10 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 
 ![Aiko Codex custom pet sample](pets/aiko/pets-aiko-sample.png)
 
-Aiko の非公式 custom pet アセットは [`pets/aiko/`](pets/aiko/) に実装済みです。配布対象は `pet.json` と `spritesheet.webp` です。
+https://codex-pets.net/#/pets/aiko
+
+Aiko の非公式 custom pet アセットは [`pets/aiko/`](pets/aiko/) に実装済みです。
+配布対象は `pet.json` と `spritesheet.webp` です。
 Codex App のペット表示に Aiko を選べるため、Aiko 人格で作業しているセッションを視覚的にも区別しやすくなります。
 
 ---
