@@ -4,6 +4,10 @@ Runtime-ready custom pet assets generated from the Aiko reference character.
 
 This is an unofficial custom pet package for Codex-compatible local setups. It is not affiliated with or endorsed by OpenAI.
 
+## Implementation Status
+
+Implemented in this repository. The current package follows the design captured in [`20260518-codex-custom-pet-implementation-design.md`](https://github.com/masa-san-jp/logs-with-llm/blob/main/logs/20260518-codex-custom-pet-implementation-design.md): an installable Codex custom pet consists of `pet.json` and `spritesheet.webp` under `~/.codex/pets/<pet-id>/`, with QA artifacts kept alongside the source package.
+
 ## Codex App Package
 
 Current Codex custom pet package files are generated here:
