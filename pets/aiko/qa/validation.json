@@ -1,0 +1,238 @@
+{
+  "ok": true,
+  "errors": [],
+  "warnings": [
+    "row 0 intentionally leaves cols 6-7 transparent",
+    "row 3 intentionally leaves cols 4-7 transparent",
+    "row 4 intentionally leaves cols 5-7 transparent",
+    "row 6 intentionally leaves cols 6-7 transparent",
+    "row 7 intentionally leaves cols 6-7 transparent",
+    "row 8 intentionally leaves cols 6-7 transparent"
+  ],
+  "atlas": {
+    "width": 1536,
+    "height": 1872,
+    "columns": 8,
+    "rows": 9,
+    "cell": [
+      192,
+      208
+    ]
+  },
+  "row_mapping": [
+    {
+      "row": 0,
+      "target_state": "idle",
+      "source_state": "idle",
+      "used_columns": 6,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1
+      ],
+      "y_offsets": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "row": 1,
+      "target_state": "running-right",
+      "source_state": "walking",
+      "used_columns": 8,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1,
+        2,
+        3
+      ],
+      "y_offsets": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "row": 2,
+      "target_state": "running-left",
+      "source_state": "walking",
+      "used_columns": 8,
+      "mirrored": true,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1,
+        2,
+        3
+      ],
+      "y_offsets": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "row": 3,
+      "target_state": "waving",
+      "source_state": "happy",
+      "used_columns": 4,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "y_offsets": [
+        0,
+        -2,
+        -4,
+        -2
+      ]
+    },
+    {
+      "row": 4,
+      "target_state": "jumping",
+      "source_state": "happy",
+      "used_columns": 5,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "y_offsets": [
+        0,
+        -8,
+        -16,
+        -8,
+        0
+      ]
+    },
+    {
+      "row": 5,
+      "target_state": "failed",
+      "source_state": "failed",
+      "used_columns": 8,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "y_offsets": [
+        0,
+        1,
+        2,
+        1,
+        0,
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "row": 6,
+      "target_state": "waiting",
+      "source_state": "idle",
+      "used_columns": 6,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1
+      ],
+      "y_offsets": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "row": 7,
+      "target_state": "running",
+      "source_state": "thinking",
+      "used_columns": 6,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "y_offsets": [
+        0,
+        1,
+        0,
+        -1,
+        0,
+        1
+      ]
+    },
+    {
+      "row": 8,
+      "target_state": "review",
+      "source_state": "thinking",
+      "used_columns": 6,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "y_offsets": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "stability_policy": "Rows with repeated frame 0 intentionally avoid detached effects in the original source art."
+}

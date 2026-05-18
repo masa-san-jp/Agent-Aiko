@@ -1,0 +1,124 @@
+# Aiko Pet
+
+Runtime-ready custom pet assets generated from the Aiko reference character.
+
+This is an unofficial custom pet package for Codex-compatible local setups. It is not affiliated with or endorsed by OpenAI.
+
+## Codex App Package
+
+Current Codex custom pet package files are generated here:
+
+- `pet.json`
+- `final/spritesheet.webp`
+
+Install target:
+
+```text
+~/.codex/pets/aiko/
+├── pet.json
+└── spritesheet.webp
+```
+
+Build the current package:
+
+```bash
+python3 scripts/build_codex_pet_package.py
+```
+
+The current builder prioritizes stability over expressive motion:
+
+- It composes `final/spritesheet.webp` from the higher-resolution `master/` frames, not the older 64px atlas.
+- It removes the off-white source background and normalizes transparent pixels.
+- It validates the generated WebP by reading it back from disk.
+- It avoids source frames with detached sparkles, thought bubbles, light bulbs, and other floating effects that can become noisy in the Codex pet overlay.
+
+QA outputs:
+
+- `qa/contact-sheet.png`
+- `qa/validation.json`
+
+Local-only QA previews are written to `qa/previews/` and are ignored by git.
+
+The compatibility package maps the earlier six Aiko states into the current Codex 9-row atlas contract:
+
+| Codex row | Source state |
+| --- | --- |
+| `idle` | `idle` |
+| `running-right` | `walking` |
+| `running-left` | mirrored `walking` |
+| `waving` | `happy` |
+| `jumping` | `happy` |
+| `failed` | `failed` |
+| `waiting` | `idle` |
+| `running` | `thinking` |
+| `review` | `thinking` |
+
+The package is structurally valid, but some rows are semantic approximations until dedicated Aiko pose rows are generated.
+
+## Legacy Runtime Assets
+
+Earlier browser-canvas runtime assets are archived under `archive/legacy-runtime/`.
+They are kept locally for reference and recovery, but they are ignored by git and are not part of the current public package.
+
+## Files
+
+- `pet.json`: Codex custom pet metadata.
+- `final/spritesheet.webp`: Codex custom pet spritesheet to install.
+- `master/`: source frames used by `scripts/build_codex_pet_package.py`.
+- `qa/contact-sheet.png`: generated visual QA sheet.
+- `qa/validation.json`: generated validation result.
+- `scripts/build_codex_pet_package.py`: current Codex package builder.
+- `scripts/process_aiko_pet_sheet.py`: local source-sheet slicer for regenerating `master/`.
+
+Ignored local work areas:
+
+- `source/`: original generated source sheet.
+- `archive/legacy-runtime/`: older atlas, browser runtime, preview HTML, and legacy scripts.
+- `qa/previews/`: generated preview GIFs.
+- `final/spritesheet.png`: generated PNG copy used for inspection.
+
+## Animations
+
+- `idle`
+- `walking`
+- `sleeping`
+- `happy`
+- `failed`
+- `thinking`
+
+Each animation has 4 frames.
+
+## State Rules
+
+Use `idle` as the default state. Switch animations only when the app state clearly changes, then return to `idle` after short-lived states finish.
+
+- `idle`: normal waiting, ready state, no active task.
+- `thinking`: task is running, response is being generated, search or tool work is in progress.
+- `happy`: task completed successfully, user approved something, or a positive acknowledgement is useful.
+- `failed`: task failed, command returned an error, or the app needs user attention.
+- `sleeping`: inactive, hidden, minimized, or long idle state.
+- `walking`: lightweight movement or transition state. Current asset is a standing sway, not a literal walk.
+
+Recommended timings:
+
+- `happy`: play for 1-2 loops, then return to `idle`.
+- `failed`: hold until the error is dismissed or replaced by `thinking`.
+- `thinking`: hold while work is in progress.
+- `sleeping`: enter after a long idle timeout.
+- `walking`: use only for transitions or ambient motion.
+
+## Rebuild
+
+Build the current Codex custom pet package from the working folder:
+
+```bash
+python3 scripts/build_codex_pet_package.py
+```
+
+If `master/` needs to be regenerated from the local original source sheet, restore `source/aiko_pet_generated_sheet.png` locally and run:
+
+```bash
+python3 scripts/process_aiko_pet_sheet.py
+```
+
+The slicer detects sprite positions from the source sheet instead of using equal grid cuts. This keeps frame boundaries stable even when row spacing is uneven.

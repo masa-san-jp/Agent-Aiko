@@ -52,6 +52,10 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 
 詳細は [`codex/README.md`](codex/README.md) を参照。
 
+### Codex custom pet
+
+Aiko の非公式 custom pet アセットは [`pets/aiko/`](pets/aiko/) にあります。配布対象は `pet.json` と `final/spritesheet.webp` です。
+
 ---
 
 ## 共通の使い方
@@ -143,12 +147,14 @@ Agent-Aiko/
 │   ├── scripts/install.sh    # Claude Code 版 installer の実体
 │   ├── plugin/               # Claude Code Plugin マニフェスト
 │   └── template/.claude/     # ユーザーの .claude/ にコピーされる雛形
-└── codex/                    # Codex 版（@agent-aiko/codex）
-    ├── README.md             # Codex 版の詳細
-    ├── package.json          # TypeScript パッケージ
-    ├── scripts/install.sh    # Codex 版 installer
-    ├── src/                  # CodexClient / AikoRuntime / aiko-shell 等
-    └── test/                 # 単体・統合テスト
+├── codex/                    # Codex 版（@agent-aiko/codex）
+│   ├── README.md             # Codex 版の詳細
+│   ├── package.json          # TypeScript パッケージ
+│   ├── scripts/install.sh    # Codex 版 installer
+│   ├── src/                  # CodexClient / AikoRuntime / aiko-shell 等
+│   └── test/                 # 単体・統合テスト
+└── pets/
+    └── aiko/                 # Codex custom pet アセット
 ```
 
 ---
