@@ -1,14 +1,7 @@
 {
   "ok": true,
   "errors": [],
-  "warnings": [
-    "row 0 intentionally leaves cols 6-7 transparent",
-    "row 3 intentionally leaves cols 4-7 transparent",
-    "row 4 intentionally leaves cols 5-7 transparent",
-    "row 6 intentionally leaves cols 6-7 transparent",
-    "row 7 intentionally leaves cols 6-7 transparent",
-    "row 8 intentionally leaves cols 6-7 transparent"
-  ],
+  "warnings": [],
   "atlas": {
     "width": 1536,
     "height": 1872,
@@ -24,7 +17,7 @@
       "row": 0,
       "target_state": "idle",
       "source_state": "idle",
-      "used_columns": 6,
+      "used_columns": 8,
       "mirrored": false,
       "source_frame_indexes": [
         0,
@@ -32,9 +25,13 @@
         2,
         3,
         0,
-        1
+        1,
+        2,
+        3
       ],
       "y_offsets": [
+        0,
+        0,
         0,
         0,
         0,
@@ -99,107 +96,46 @@
     },
     {
       "row": 3,
-      "target_state": "waving",
-      "source_state": "happy",
-      "used_columns": 4,
+      "target_state": "thinking",
+      "source_state": "thinking",
+      "used_columns": 8,
       "mirrored": false,
       "source_frame_indexes": [
         0,
+        1,
+        2,
+        3,
         0,
-        0,
-        0
+        1,
+        2,
+        3
       ],
       "y_offsets": [
         0,
-        -2,
-        -4,
-        -2
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0
       ]
     },
     {
       "row": 4,
-      "target_state": "jumping",
-      "source_state": "happy",
-      "used_columns": 5,
-      "mirrored": false,
-      "source_frame_indexes": [
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "y_offsets": [
-        0,
-        -8,
-        -16,
-        -8,
-        0
-      ]
-    },
-    {
-      "row": 5,
-      "target_state": "failed",
-      "source_state": "failed",
+      "target_state": "working",
+      "source_state": "thinking",
       "used_columns": 8,
       "mirrored": false,
       "source_frame_indexes": [
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "y_offsets": [
-        0,
+        1,
         1,
         2,
-        1,
-        0,
-        1,
         2,
-        1
-      ]
-    },
-    {
-      "row": 6,
-      "target_state": "waiting",
-      "source_state": "idle",
-      "used_columns": 6,
-      "mirrored": false,
-      "source_frame_indexes": [
-        0,
-        1,
-        0,
-        1,
-        0,
-        1
-      ],
-      "y_offsets": [
-        0,
-        1,
-        0,
-        1,
-        0,
-        1
-      ]
-    },
-    {
-      "row": 7,
-      "target_state": "running",
-      "source_state": "thinking",
-      "used_columns": 6,
-      "mirrored": false,
-      "source_frame_indexes": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
+        3,
+        3
       ],
       "y_offsets": [
         0,
@@ -207,32 +143,119 @@
         0,
         -1,
         0,
+        1,
+        0,
+        -1
+      ]
+    },
+    {
+      "row": 5,
+      "target_state": "success",
+      "source_state": "happy",
+      "used_columns": 8,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1,
+        2,
+        3
+      ],
+      "y_offsets": [
+        0,
+        -4,
+        -8,
+        -4,
+        0,
+        -4,
+        -8,
+        -4
+      ]
+    },
+    {
+      "row": 6,
+      "target_state": "error",
+      "source_state": "failed",
+      "used_columns": 8,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1,
+        2,
+        3
+      ],
+      "y_offsets": [
+        0,
+        1,
+        2,
+        1,
+        0,
+        1,
+        2,
+        1
+      ]
+    },
+    {
+      "row": 7,
+      "target_state": "sleeping",
+      "source_state": "sleeping",
+      "used_columns": 8,
+      "mirrored": false,
+      "source_frame_indexes": [
+        0,
+        1,
+        2,
+        3,
+        0,
+        1,
+        2,
+        3
+      ],
+      "y_offsets": [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
         1
       ]
     },
     {
       "row": 8,
-      "target_state": "review",
-      "source_state": "thinking",
-      "used_columns": 6,
+      "target_state": "alert",
+      "source_state": "idle",
+      "used_columns": 8,
       "mirrored": false,
       "source_frame_indexes": [
         0,
+        1,
         0,
-        0,
-        0,
-        0,
-        0
+        1,
+        2,
+        3,
+        2,
+        3
       ],
       "y_offsets": [
         0,
+        -2,
+        -4,
+        -2,
         0,
-        1,
-        0,
-        0,
-        1
+        -2,
+        -4,
+        -2
       ]
     }
   ],
-  "stability_policy": "Rows with repeated frame 0 intentionally avoid detached effects in the original source art."
+  "stability_policy": "All rows contain 8 visible frames because Codex App may advance every row across all 8 columns."
 }

@@ -9,7 +9,7 @@ This is an unofficial custom pet package for Codex-compatible local setups. It i
 Current Codex custom pet package files are generated here:
 
 - `pet.json`
-- `final/spritesheet.webp`
+- `spritesheet.webp`
 
 Install target:
 
@@ -28,9 +28,11 @@ python3 scripts/build_codex_pet_package.py
 The current builder prioritizes stability over expressive motion:
 
 - It composes `final/spritesheet.webp` from the higher-resolution `master/` frames, not the older 64px atlas.
+- It writes the installable `spritesheet.webp` next to `pet.json`, matching `pet.json`'s `spritesheetPath`.
 - It removes the off-white source background and normalizes transparent pixels.
 - It validates the generated WebP by reading it back from disk.
 - It avoids source frames with detached sparkles, thought bubbles, light bulbs, and other floating effects that can become noisy in the Codex pet overlay.
+- It fills all 8 columns in every row so App playback never advances into transparent cells.
 
 QA outputs:
 
@@ -39,19 +41,19 @@ QA outputs:
 
 Local-only QA previews are written to `qa/previews/` and are ignored by git.
 
-The compatibility package maps the earlier six Aiko states into the current Codex 9-row atlas contract:
+The package maps the earlier six Aiko source states into the current 9-row atlas contract:
 
 | Codex row | Source state |
 | --- | --- |
 | `idle` | `idle` |
 | `running-right` | `walking` |
 | `running-left` | mirrored `walking` |
-| `waving` | `happy` |
-| `jumping` | `happy` |
-| `failed` | `failed` |
-| `waiting` | `idle` |
-| `running` | `thinking` |
-| `review` | `thinking` |
+| `thinking` | `thinking` |
+| `working` | `thinking` |
+| `success` | `happy` |
+| `error` | `failed` |
+| `sleeping` | `sleeping` |
+| `alert` | `idle` |
 
 The package is structurally valid, but some rows are semantic approximations until dedicated Aiko pose rows are generated.
 
@@ -63,7 +65,8 @@ They are kept locally for reference and recovery, but they are ignored by git an
 ## Files
 
 - `pet.json`: Codex custom pet metadata.
-- `final/spritesheet.webp`: Codex custom pet spritesheet to install.
+- `spritesheet.webp`: Codex custom pet spritesheet to install.
+- `final/spritesheet.webp`: generated WebP copy kept with the inspection outputs.
 - `master/`: source frames used by `scripts/build_codex_pet_package.py`.
 - `qa/contact-sheet.png`: generated visual QA sheet.
 - `qa/validation.json`: generated validation result.
@@ -77,7 +80,7 @@ Ignored local work areas:
 - `qa/previews/`: generated preview GIFs.
 - `final/spritesheet.png`: generated PNG copy used for inspection.
 
-## Animations
+## Source Animations
 
 - `idle`
 - `walking`
@@ -86,7 +89,7 @@ Ignored local work areas:
 - `failed`
 - `thinking`
 
-Each animation has 4 frames.
+Each source animation has 4 frames. The package builder expands them to 8 visible frames per Codex row.
 
 ## State Rules
 
