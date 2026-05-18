@@ -54,7 +54,10 @@ aiko    # ~/.local/bin/aiko を PATH に通してから
 
 ### Codex custom pet
 
-Aiko の非公式 custom pet アセットは [`pets/aiko/`](pets/aiko/) にあります。配布対象は `pet.json` と `spritesheet.webp` です。
+![Aiko Codex custom pet sample](pets/aiko/pets-aiko-sample.png)
+
+Aiko の非公式 custom pet アセットは [`pets/aiko/`](pets/aiko/) に実装済みです。配布対象は `pet.json` と `spritesheet.webp` です。
+この実装は [`20260518-codex-custom-pet-implementation-design.md`](https://github.com/masa-san-jp/logs-with-llm/blob/main/logs/20260518-codex-custom-pet-implementation-design.md) の構成に沿って、Codex custom pet パッケージとして配置できる形にしています。
 
 ---
 
