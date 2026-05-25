@@ -24,6 +24,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Check ANTHROPIC_API_KEY
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY is NOT set. Job will skip."
+          else
+            echo "ANTHROPIC_API_KEY is set (length=${#ANTHROPIC_API_KEY})"
+          fi
+
       - name: Install dependencies
         run: pip install -r .github/scripts/requirements.txt
 
