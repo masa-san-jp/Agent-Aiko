@@ -18,8 +18,8 @@ images/
 /pets/*/source/
 /pets/*/qa/previews/
 /pets/*/final/*.png
-/pets/*/scripts/__pycache__/
-/pets/*/**/*.pyc
+__pycache__/
+**/*.pyc
 
 # === Aiko ランタイム実データ（雛形 .example のみコミット） ===
 **/session-state/auto.jsonl
