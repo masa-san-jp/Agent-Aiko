@@ -57,7 +57,7 @@ def generate_sns_drafts(pr_title: str, pr_body: str) -> str:
 - 親しみやすいトーンで
 """
     message = client.messages.create(
-        model="claude-opus-4-7",
+        model="claude-haiku-4-5",
         max_tokens=1024,
         system=[
             {
