@@ -2,8 +2,9 @@
 """PR マージ時に SNS 投稿案を生成し、PR コメントとして投稿する。"""
 import json
 import os
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 
 import anthropic
 
@@ -11,6 +12,9 @@ SYSTEM_PROMPT = (
     "あなたは「Agent-Aiko」プロジェクトの広報担当者です。"
     "マージされたプルリクエストの内容を元に、SNS 投稿案を日本語で作成してください。"
 )
+
+# PR 本文の最大送信文字数（公開リポジトリだが過大なペイロードを避ける）
+_BODY_MAX_CHARS = 2000
 
 
 def post_github_comment(repo: str, pr_number: str, body: str, token: str) -> None:
@@ -24,16 +28,26 @@ def post_github_comment(repo: str, pr_number: str, body: str, token: str) -> Non
             "Content-Type": "application/json",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "agent-aiko-sns-bot/1.0",
         },
     )
-    with urllib.request.urlopen(req) as resp:
-        if resp.status not in (200, 201):
-            raise RuntimeError(f"GitHub API error: {resp.status}")
+    try:
+        with urllib.request.urlopen(req) as resp:
+            if resp.status not in (200, 201):
+                raise RuntimeError(f"GitHub API error: {resp.status}")
+    except urllib.error.HTTPError as exc:
+        body_text = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"GitHub API error {exc.code}: {body_text}") from exc
 
 
 def generate_sns_drafts(pr_title: str, pr_body: str) -> str:
     client = anthropic.Anthropic()
-    pr_body_text = pr_body.strip() or "(本文なし)"
+    pr_body_text = pr_body.strip()
+    if not pr_body_text:
+        pr_body_text = "(本文なし)"
+    elif len(pr_body_text) > _BODY_MAX_CHARS:
+        pr_body_text = pr_body_text[:_BODY_MAX_CHARS] + "\n…（以下省略）"
+
     user_content = f"""以下の PR がマージされました。SNS 投稿案を生成してください。
 
 ## PR タイトル
@@ -68,10 +82,17 @@ def generate_sns_drafts(pr_title: str, pr_body: str) -> str:
         ],
         messages=[{"role": "user", "content": user_content}],
     )
-    return message.content[0].text
+    return "\n".join(
+        block.text for block in message.content if block.type == "text"
+    )
 
 
 def main() -> None:
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        print("ANTHROPIC_API_KEY が設定されていません。スキップします。")
+        sys.exit(0)
+
     pr_title = os.environ["PR_TITLE"]
     pr_body = os.environ.get("PR_BODY", "")
     pr_number = os.environ["PR_NUMBER"]
