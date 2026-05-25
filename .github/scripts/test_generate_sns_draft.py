@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""generate_sns_draft.py のユニットテスト（外部 API 呼び出しはすべてモック）"""
+"""generate_sns_draft.py のユニットテスト（外部 API 呼び出しはすべてモック）
+SNS ワークフロー動作確認用トリガー: 2026-05-25
+"""
 import os
 import sys
 import unittest
