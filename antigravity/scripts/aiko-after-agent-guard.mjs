@@ -3,7 +3,7 @@
 // Asks the agent to retry once when the Aiko prefix is missing.
 // stdout: JSON only. logs: stderr only.
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -23,11 +23,9 @@ function getActivePersona() {
 }
 
 function getExpectedPrefixes(mode, activePersona) {
-  const prefixes = ['Aiko-origin:', 'Aiko-override:'];
-  if (mode === 'override' && activePersona) {
-    prefixes.push(`Aiko-${activePersona}:`);
-  }
-  return prefixes;
+  if (mode === 'override' && activePersona) return [`Aiko-${activePersona}:`];
+  if (mode === 'override') return ['Aiko-override:'];
+  return ['Aiko-origin:'];
 }
 
 function allow() {

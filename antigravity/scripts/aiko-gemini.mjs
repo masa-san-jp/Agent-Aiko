@@ -3,7 +3,7 @@
 // Node.js 20+ / ESM / no external dependencies
 
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { homedir } from 'os';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
@@ -27,10 +27,9 @@ function readFileSafe(path, fallback = '') {
   }
 }
 
-function writeFileSafe(path, content) {
-  const dir = path.substring(0, path.lastIndexOf('/'));
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(path, content, 'utf8');
+function writeFileSafe(filePath, content) {
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content, 'utf8');
 }
 
 function isInitialized() {
@@ -208,6 +207,7 @@ function cmdMode(args) {
     console.error('mode は origin または override を指定してください。');
     process.exit(1);
   }
+  if (arg === 'origin') writeFileSafe(join(AIKO_HOME, 'active-persona'), '');
   writeFileSafe(join(AIKO_HOME, 'mode'), arg);
   appendOverrideHistory('mode', arg);
   console.log(`mode を ${arg} に変更しました。`);
@@ -215,6 +215,7 @@ function cmdMode(args) {
 
 function cmdOrigin() {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
+  writeFileSafe(join(AIKO_HOME, 'active-persona'), '');
   writeFileSafe(join(AIKO_HOME, 'mode'), 'origin');
   appendOverrideHistory('mode', 'origin');
   console.log('mode を origin に変更しました。');
@@ -291,6 +292,7 @@ function cmdSelect(args) {
     process.exit(1);
   }
   if (name === 'origin') {
+    writeFileSafe(join(AIKO_HOME, 'active-persona'), '');
     writeFileSafe(join(AIKO_HOME, 'mode'), 'origin');
     console.log('mode を origin に変更しました。');
     return;

@@ -90,7 +90,7 @@ antigravity/
 ├── README.md
 ├── gemini-extension.json      # Gemini CLI extension manifest
 ├── GEMINI.md                  # context ファイル（CLAUDE.md 相当）
-├── commands/                  # 13個の /aiko-* スラッシュコマンド（TOML）
+├── commands/                  # 15個の /aiko-* スラッシュコマンド（TOML）
 ├── hooks/
 │   └── hooks.json             # SessionStart / BeforeTool / AfterAgent hooks
 ├── scripts/

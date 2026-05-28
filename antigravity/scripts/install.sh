@@ -188,6 +188,9 @@ echo "--- Linking Gemini CLI extension ---"
 mkdir -p "$(dirname "${GEMINI_EXT_DIR}")"
 if [[ -L "${GEMINI_EXT_DIR}" ]]; then
   rm "${GEMINI_EXT_DIR}"
+elif [[ -d "${GEMINI_EXT_DIR}" ]]; then
+  echo "WARNING: ${GEMINI_EXT_DIR} は既存ディレクトリです。バックアップします。"
+  mv "${GEMINI_EXT_DIR}" "${GEMINI_EXT_DIR}.bak.$(date +%s)"
 fi
 ln -s "${EXT_DIR}" "${GEMINI_EXT_DIR}"
 echo "✓ extension linked: ${GEMINI_EXT_DIR} -> ${EXT_DIR}"

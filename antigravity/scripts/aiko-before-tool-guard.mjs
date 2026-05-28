@@ -3,7 +3,6 @@
 // Blocks direct edits to Agent-Aiko protected files.
 // stdout: JSON only. logs: stderr only.
 
-import { readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -65,11 +64,11 @@ function checkShellCommand(cmd) {
   for (const re of SHELL_INVARIANTS_DENY) {
     if (re.test(cmd)) return true;
   }
-  // Check expanded form against absolute AIKO_HOME paths
-  for (const p of ABS_PROTECTED_ALWAYS) {
-    if (expanded.includes(p)) return true;
-  }
   if (SHELL_DESTRUCTIVE_OPS.test(expanded)) {
+    // Block destructive operations against origin persona and INVARIANTS
+    for (const p of ABS_PROTECTED_ALWAYS) {
+      if (expanded.includes(p)) return true;
+    }
     for (const termRe of SHELL_PROTECTED_TERMS) {
       if (termRe.test(expanded)) return true;
     }
