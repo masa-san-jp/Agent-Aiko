@@ -11,7 +11,8 @@
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 BOOT_SCRIPT="$SCRIPT_DIR/aiko-boot.sh"
 INSTANCE_DIR=$(cd "$SCRIPT_DIR/../.." && pwd)
-SERVICE_NAME="aiko"
+_proj=$(basename "$INSTANCE_DIR" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g;s/^-//;s/-$//')
+SERVICE_NAME="aiko-${_proj}"
 SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 
 _require_systemd() {
