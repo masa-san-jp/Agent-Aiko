@@ -176,7 +176,7 @@ echo "▶ Aiko を起動します (mode: ${MODE})..."
 while true; do
   _run_claude
   EXIT_CODE=$?
-  _telegram_notify "🔄 Aiko セッション終了 (exit: ${EXIT_CODE})。再起動します..."
+  [ "$MODE" = "telegram" ] && _telegram_notify "🔄 Aiko セッション終了 (exit: ${EXIT_CODE})。再起動します..."
   echo "◀ セッション終了 (exit: ${EXIT_CODE})"
   echo "  ${RESTART_DELAY}秒後に再起動します... (Ctrl+C で停止)"
   sleep "$RESTART_DELAY"

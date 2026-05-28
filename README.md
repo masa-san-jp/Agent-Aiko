@@ -97,7 +97,8 @@ Claude Code 版にはさらに以下のコマンドがあります：
 ```bash
 bash .claude/scripts/aiko-boot.sh --daemon          # デーモンモード（全 OS）
 bash .claude/scripts/aiko-boot.sh --daemon --telegram
-bash .claude/scripts/aiko-boot.sh --status / --stop
+bash .claude/scripts/aiko-boot.sh --status
+bash .claude/scripts/aiko-boot.sh --stop
 
 bash .claude/scripts/aiko-service.sh install        # systemd サービス登録（Linux）
 bash .claude/scripts/aiko-service.sh install --telegram
