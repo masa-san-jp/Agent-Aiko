@@ -150,6 +150,63 @@ claude-code/
 
 ---
 
+## 10. Telegram ボットモード（常駐稼働）
+
+Aiko を Telegram ボットとして常時稼働させることができます。
+
+### 事前準備
+
+1. BotFather で /newbot を実行しトークンを取得
+2. ボットとチャットを開始し chat_id を取得
+3. 環境変数を設定:
+   ```
+   export AIKO_TELEGRAM_BOT_TOKEN="your_token"
+   export AIKO_TELEGRAM_CHAT_ID="your_chat_id"
+   ```
+
+### 起動
+
+```bash
+bash .claude/scripts/aiko-boot.sh             # 通常モード
+bash .claude/scripts/aiko-boot.sh --telegram  # Telegram ボットモード
+```
+
+### セキュリティ注記
+
+Telegram ボットモードは `--dangerously-skip-permissions` を使用します。
+信頼できるプロジェクトディレクトリ内でのみ使用してください。パブリックグループへの展開は推奨しません。
+
+---
+
+## 11. 常駐稼働（デーモン / systemd）
+
+### デーモンモード（OS 非依存）
+
+```bash
+bash .claude/scripts/aiko-boot.sh --daemon
+bash .claude/scripts/aiko-boot.sh --daemon --telegram
+bash .claude/scripts/aiko-boot.sh --status
+bash .claude/scripts/aiko-boot.sh --stop
+```
+
+ログ: `~/.aiko/aiko.log`（`AIKO_LOG_FILE` で変更可）
+
+### systemd サービス（Linux 推奨）
+
+```bash
+bash .claude/scripts/aiko-service.sh install
+bash .claude/scripts/aiko-service.sh install --telegram
+bash .claude/scripts/aiko-service.sh start
+bash .claude/scripts/aiko-service.sh stop
+bash .claude/scripts/aiko-service.sh status
+bash .claude/scripts/aiko-service.sh log
+bash .claude/scripts/aiko-service.sh uninstall
+```
+
+詳細は `/aiko-service` コマンドで確認できます。
+
+---
+
 ## 設計メモ
 
 開発用の設計メモや検証ログは非公開の `Agent-Lab/` に統合済みです。
