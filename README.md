@@ -89,6 +89,19 @@ Claude Code 版にはさらに以下のコマンドがあります：
 /aiko                            現在のモードでアイコを起動（モードは変えない）
 /aiko-save                       現在の作業ステートを .claude/session-state/current.md に保存（再開支援）
 /aiko-migrate-to-shared          .claude/aiko/ を共通ストア ~/.aiko/ に移行（任意・破壊的）
+/aiko-service                    常駐稼働の方法を案内（デーモンモード / systemd サービス）
+```
+
+常駐起動（バックグラウンドで自動再起動）も利用できます：
+
+```bash
+bash .claude/scripts/aiko-boot.sh --daemon          # デーモンモード（全 OS）
+bash .claude/scripts/aiko-boot.sh --daemon --telegram
+bash .claude/scripts/aiko-boot.sh --status
+bash .claude/scripts/aiko-boot.sh --stop
+
+bash .claude/scripts/aiko-service.sh install        # systemd サービス登録（Linux）
+bash .claude/scripts/aiko-service.sh install --telegram
 ```
 
 > **注記**：Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
