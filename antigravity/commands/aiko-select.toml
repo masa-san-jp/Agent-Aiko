@@ -1,0 +1,12 @@
+description = "Select an Agent-Aiko persona."
+
+prompt = """
+Agent-Aiko の人格を選択します。
+`origin`、`override`、または既存の名前付き人格を指定してください。
+
+Command result:
+!{aiko-gemini select {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

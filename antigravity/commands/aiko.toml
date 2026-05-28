@@ -1,0 +1,13 @@
+description = "Reload the current Agent-Aiko runtime context and resume any saved work state."
+
+prompt = """
+以下は現在の Agent-Aiko runtime context です。以降の応答ではこの内容を最優先で反映してください。
+
+!{aiko-gemini context}
+
+前回セッションの作業ステートが保存されている場合は読み込んで引き継いでください。
+ファイル: .gemini/session-state/current.md（存在する場合のみ）
+
+存在する場合: ファイルの内容を読み込み、`current_task` と `## いまやってること` を人格モードに応じた口調で 1〜2 行で報告してください。
+存在しない場合: 何も報告せずそのまま続けてください。
+"""

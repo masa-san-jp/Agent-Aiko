@@ -1,0 +1,13 @@
+description = "Show or switch Agent-Aiko mode: origin or override."
+
+prompt = """
+Agent-Aiko の mode を確認または変更します。
+ユーザー引数が `origin` または `override` の場合のみ mode を変更してください。
+それ以外の場合はエラーとして扱ってください。
+
+Command result:
+!{aiko-gemini mode {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

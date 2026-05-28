@@ -1,0 +1,12 @@
+description = "Create and select a new named Agent-Aiko persona."
+
+prompt = """
+Agent-Aiko の新しい名前付き人格を作成し、選択します。
+名前は slug として扱われます（英数字・ハイフン・アンダースコア、32文字以内）。
+
+Command result:
+!{aiko-gemini new {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""
