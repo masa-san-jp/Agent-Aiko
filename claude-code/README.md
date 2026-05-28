@@ -199,7 +199,12 @@ AIKO_TELEGRAM_BOT_TOKEN=your_token
 AIKO_TELEGRAM_CHAT_ID=your_chat_id
 ```
 
-編集後は `bash .claude/scripts/aiko-service.sh start` で起動します。
+編集後はサービスを再起動して環境変数を反映させてください:
+
+```bash
+bash .claude/scripts/aiko-service.sh stop
+bash .claude/scripts/aiko-service.sh start
+```
 
 ### セキュリティ注記
 
