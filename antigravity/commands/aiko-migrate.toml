@@ -1,0 +1,37 @@
+description = "Migrate project-local .claude/aiko/ to the shared store ~/.aiko/."
+
+prompt = """
+Claude Code 版の `.claude/aiko/` を共通ストア `~/.aiko/` に移行します。
+Antigravity 版は `~/.aiko/` を直接使用するため、一度だけ必要な操作です。
+
+まず現在の状態を確認してください（ファイルを Read して報告）:
+- `~/.aiko/` が既に存在するか → `~/.aiko/mode` の有無で確認
+- `.claude/aiko/` が存在するか
+
+**移行手順をユーザーに案内してください（スクリプトは実行しません）:**
+
+1. `~/.aiko/` を初期化（未初期化の場合）:
+   ```bash
+   bash ~/.gemini/extensions/agent-aiko/scripts/install.sh --skip-gemini-check
+   ```
+
+2. `.claude/aiko/` の内容を `~/.aiko/` に手動でコピー:
+   ```bash
+   # persona ファイルのコピー（origin は上書きしない）
+   cp -n .claude/aiko/persona/override/persona.md ~/.aiko/persona/override/persona.md
+   cp -rn .claude/aiko/persona/overrides/ ~/.aiko/persona/overrides/
+   # mode と active-persona
+   cp .claude/aiko/mode ~/.aiko/mode
+   cp .claude/aiko/active-persona ~/.aiko/active-persona
+   ```
+
+3. 移行後の確認:
+   ```
+   /aiko-status
+   ```
+
+`~/.aiko/` が既に存在する場合は、上書きコピーになることをユーザーに伝えてから `cp -n` を `cp -f` に変えるよう案内してください。
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

@@ -1,0 +1,13 @@
+description = "Show reset instructions, or reset with 'confirm' argument."
+
+prompt = """
+Agent-Aiko の persona を origin にリセットします。
+引数なしの場合は現在の状態と確認手順を表示します。
+`confirm` を引数に渡すと実際にリセットします（例: /aiko-reset confirm）。
+
+Command result:
+!{aiko-gemini reset {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

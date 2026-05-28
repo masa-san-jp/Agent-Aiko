@@ -1,0 +1,13 @@
+description = "Switch to or update Agent-Aiko override mode. (alias of /aiko-override)"
+
+prompt = """
+Agent-Aiko の override mode を有効化または更新します。
+ユーザー引数がある場合は、INVARIANTS に違反しない範囲で override persona に反映します。
+違反している場合は、反映できない理由を明示してください。
+
+Command result:
+!{aiko-gemini override {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

@@ -1,0 +1,11 @@
+description = "Switch Agent-Aiko to origin mode. (alias of /aiko-origin)"
+
+prompt = """
+Agent-Aiko を origin mode に切り替えます。
+
+Command result:
+!{aiko-gemini origin}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

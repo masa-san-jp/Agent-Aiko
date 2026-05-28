@@ -1,0 +1,8 @@
+description = "Export current or specified Agent-Aiko persona for sharing."
+
+prompt = """
+Agent-Aiko の対象人格を共有用に export します。
+ユーザー情報が含まれていないことを確認し、下記をそのまま提示してください。
+
+!{aiko-gemini export {{args}}}
+"""

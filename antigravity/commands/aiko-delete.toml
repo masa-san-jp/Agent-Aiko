@@ -1,0 +1,13 @@
+description = "Show delete instructions, or delete active persona with 'confirm' argument."
+
+prompt = """
+現在の名前付き Agent-Aiko persona を削除します。
+引数なしの場合は現在の状態と確認手順を表示します。
+`confirm` を引数に渡すと実際に削除します（例: /aiko-delete confirm）。
+
+Command result:
+!{aiko-gemini delete {{args}}}
+
+Updated runtime context:
+!{aiko-gemini context}
+"""

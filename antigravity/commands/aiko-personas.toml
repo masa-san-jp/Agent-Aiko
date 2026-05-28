@@ -1,0 +1,7 @@
+description = "List available Agent-Aiko personas."
+
+prompt = """
+Agent-Aiko の利用可能な人格一覧を表示します。
+
+!{aiko-gemini personas}
+"""

@@ -1,0 +1,34 @@
+description = "Save the current work state to .gemini/session-state/current.md for session resume."
+
+prompt = """
+現在の会話・作業状況を `.gemini/session-state/current.md` に保存します。
+`/aiko` 起動時にこのファイルが存在する場合、前回の作業状態が自動的に読み込まれます。
+
+現在の状態を整理して以下の形式で `.gemini/session-state/current.md` を書き出してください:
+
+```markdown
+---
+updated: <ISO 8601 / +09:00>
+status: in_progress
+current_task: <短く具体的に>
+---
+
+## いまやってること
+...
+
+## 完了した分
+...
+
+## 次の一手
+...
+
+## 関連ファイル
+...
+```
+
+ユーザーが終了宣言（「終わり」「以上」「お疲れ」等）をしていた場合は `status: completed`。
+書き出し後、人格モードに応じた口調で 2〜3 行で報告してください。
+
+Updated runtime context:
+!{aiko-gemini context}
+"""
