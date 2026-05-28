@@ -96,13 +96,15 @@ Claude Code 版にはさらに以下のコマンドがあります：
 
 ```bash
 bash .claude/scripts/aiko-boot.sh --daemon          # デーモンモード（全 OS）
-bash .claude/scripts/aiko-boot.sh --daemon --telegram
+bash .claude/scripts/aiko-boot.sh --daemon --telegram  # Telegram ボットモードでデーモン起動
 bash .claude/scripts/aiko-boot.sh --status
 bash .claude/scripts/aiko-boot.sh --stop
 
 bash .claude/scripts/aiko-service.sh install        # systemd サービス登録（Linux）
 bash .claude/scripts/aiko-service.sh install --telegram
 ```
+
+`--telegram` は Aiko を Telegram ボットとして動かすモードです。BotFather でボットを作成し `AIKO_TELEGRAM_BOT_TOKEN` / `AIKO_TELEGRAM_CHAT_ID` を環境変数に設定する必要があります。詳細は [`claude-code/README.md`](claude-code/README.md) のセクション 10 を参照してください。
 
 > **注記**：Codex 版では `aiko` シェル起動時に自動で人格が読み込まれるため `/aiko` は不要、共通ストア（`~/.aiko/`）も最初から使われているため `/aiko-migrate-to-shared` も不要です。
 
