@@ -1,3 +1,8 @@
+---
+name: aiko-service
+description: Aiko の常駐起動方法（デーモンモード / systemd サービス）を案内する。Use when the user types "/aiko-service".
+---
+
 # /aiko-service
 
 Aiko の常駐起動方法（デーモンモード / systemd サービス）について案内します。

@@ -64,10 +64,24 @@ case "$COMMAND" in
       exit 1
     fi
     mkdir -p "$HOME/.config/systemd/user"
+    mkdir -p "$HOME/.aiko"
     case "${AIKO_RESTART_DELAY:-}" in
       ''|*[!0-9]*) _restart_sec=5 ;;
       *) _restart_sec=$AIKO_RESTART_DELAY ;;
     esac
+    TELEGRAM_ENV_FILE="$HOME/.aiko/telegram.env"
+    if [ -n "$TELEGRAM_FLAG" ]; then
+      if [ -z "${AIKO_TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${AIKO_TELEGRAM_CHAT_ID:-}" ]; then
+        echo "⚠ AIKO_TELEGRAM_BOT_TOKEN / AIKO_TELEGRAM_CHAT_ID が未設定です"
+        echo "  install 前に export で設定するか、後で $TELEGRAM_ENV_FILE を直接編集してください"
+        echo "  編集後は: bash $SCRIPT_DIR/$(basename "$0") start"
+      fi
+      printf 'AIKO_TELEGRAM_BOT_TOKEN=%s\nAIKO_TELEGRAM_CHAT_ID=%s\n' \
+        "${AIKO_TELEGRAM_BOT_TOKEN:-}" "${AIKO_TELEGRAM_CHAT_ID:-}" > "$TELEGRAM_ENV_FILE"
+      chmod 600 "$TELEGRAM_ENV_FILE"
+    fi
+    _env_file_line=""
+    [ -n "$TELEGRAM_FLAG" ] && _env_file_line="EnvironmentFile=-$TELEGRAM_ENV_FILE"
     cat > "$SERVICE_FILE" << EOF
 [Unit]
 Description=Aiko Claude Code Agent
@@ -76,6 +90,7 @@ Description=Aiko Claude Code Agent
 WorkingDirectory="$INSTANCE_DIR"
 ExecStart="$BOOT_SCRIPT"$TELEGRAM_FLAG
 Environment=AIKO_RESTART_DELAY=$_restart_sec
+${_env_file_line}
 Restart=on-failure
 RestartSec=$_restart_sec
 StandardOutput=journal
