@@ -28,6 +28,36 @@ Aiko-override: やっほー！何する？
 
 ---
 
+## Antigravity CLI について
+
+[Antigravity](https://github.com/yamadashy/antigravity-cli) は、Gemini CLI と同じ extension 仕様を持つオープンソースの AI CLI です。  
+本 extension は Gemini CLI・Antigravity CLI の**両方で動作**します。
+
+| | Gemini CLI | Antigravity CLI |
+|---|---|---|
+| 起動コマンド | `gemini` | `antigravity`（または `ag`）|
+| extension の場所 | `~/.gemini/extensions/` | `~/.antigravity/extensions/`（または Gemini と共用） |
+| hook 互換 | ✓ | ✓ |
+| `/aiko-*` コマンド互換 | ✓ | ✓ |
+
+### Antigravity CLI でのインストール
+
+```bash
+bash antigravity/scripts/install.sh --skip-gemini-check
+```
+
+インストーラーは `~/.gemini/extensions/agent-aiko` に symlink を作成します。  
+Antigravity CLI が別のディレクトリを参照している場合は、追加でリンクを作成してください：
+
+```bash
+mkdir -p ~/.antigravity/extensions
+ln -s ~/.gemini/extensions/agent-aiko ~/.antigravity/extensions/agent-aiko
+```
+
+起動後は Gemini CLI と同じコマンド（`/aiko`、`/aiko-mode` など）が使えます。
+
+---
+
 ## 前提
 
 | 要件 | バージョン |
