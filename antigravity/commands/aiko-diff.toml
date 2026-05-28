@@ -1,0 +1,10 @@
+description = "Show diff between Aiko origin and current or specified persona."
+
+prompt = """
+Agent-Aiko の origin と対象人格の差分を表示し、要点を短く説明してください。
+
+Diff:
+```diff
+!{aiko-gemini diff {{args}}}
+```
+"""

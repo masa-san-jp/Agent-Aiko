@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agent-aiko-session-context",
+            "type": "command",
+            "command": "node $HOME/.gemini/extensions/agent-aiko/scripts/aiko-session-context.mjs",
+            "timeout": 5000,
+            "description": "Inject Agent-Aiko runtime context from ~/.aiko."
+          }
+        ]
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace|run_shell_command",
+        "hooks": [
+          {
+            "name": "agent-aiko-before-tool-guard",
+            "type": "command",
+            "command": "node $HOME/.gemini/extensions/agent-aiko/scripts/aiko-before-tool-guard.mjs",
+            "timeout": 5000,
+            "description": "Block direct edits to Agent-Aiko protected files."
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "name": "agent-aiko-after-agent-guard",
+            "type": "command",
+            "command": "node $HOME/.gemini/extensions/agent-aiko/scripts/aiko-after-agent-guard.mjs",
+            "timeout": 5000,
+            "description": "Ask the agent to retry once when the Aiko prefix is missing."
+          }
+        ]
+      }
+    ]
+  }
+}
