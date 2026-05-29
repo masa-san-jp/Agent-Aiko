@@ -28,6 +28,25 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s .github/scripts -p "test_*.py" -v
 
+  antigravity:
+    name: antigravity / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test
+        run: node --test antigravity/test/*.test.mjs
+
   codex:
     name: codex / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
