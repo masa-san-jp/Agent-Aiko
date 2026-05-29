@@ -30,31 +30,25 @@ Aiko-override: やっほー！何する？
 
 ## Antigravity CLI について
 
-[Antigravity](https://github.com/yamadashy/antigravity-cli) は、Gemini CLI と同じ extension 仕様を持つオープンソースの AI CLI です。  
-本 extension は Gemini CLI・Antigravity CLI の**両方で動作**します。
+本 extension は Gemini CLI の extension 仕様に基づいて実装されています。  
+同じ仕様を持つ CLI であれば動作する見込みです。
 
-| | Gemini CLI | Antigravity CLI |
-|---|---|---|
-| 起動コマンド | `gemini` | `antigravity`（または `ag`）|
-| extension の場所 | `~/.gemini/extensions/` | `~/.antigravity/extensions/`（または Gemini と共用） |
-| hook 互換 | ✓ | ✓ |
-| `/aiko-*` コマンド互換 | ✓ | ✓ |
+> **注意**: hook の実行コマンドは `$HOME/.gemini/extensions/agent-aiko/...` にハードコードされています（`hooks/hooks.json`）。  
+> Gemini CLI 以外の CLI で extension の場所が異なる場合は、`hooks/hooks.json` 内のパスを手動で書き換えてください。
 
-### Antigravity CLI でのインストール
+### Gemini CLI 以外での使い方
 
 ```bash
+# 1. インストール（Gemini CLI チェックをスキップ）
 bash antigravity/scripts/install.sh --skip-gemini-check
+
+# 2. CLI の extension ディレクトリに symlink を追加
+mkdir -p ~/.your-cli/extensions
+ln -s ~/.gemini/extensions/agent-aiko ~/.your-cli/extensions/agent-aiko
+
+# 3. hooks/hooks.json のパスを実際のパスに合わせて書き換える
+#    "command": "node $HOME/.gemini/extensions/..." → 実際のパスに変更
 ```
-
-インストーラーは `~/.gemini/extensions/agent-aiko` に symlink を作成します。  
-Antigravity CLI が別のディレクトリを参照している場合は、追加でリンクを作成してください：
-
-```bash
-mkdir -p ~/.antigravity/extensions
-ln -s ~/.gemini/extensions/agent-aiko ~/.antigravity/extensions/agent-aiko
-```
-
-起動後は Gemini CLI と同じコマンド（`/aiko`、`/aiko-mode` など）が使えます。
 
 ---
 
