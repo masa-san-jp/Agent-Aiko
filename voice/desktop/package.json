@@ -1,0 +1,24 @@
+{
+  "name": "voice-desktop",
+  "version": "0.1.0",
+  "description": "音声読み上げ デスクトップアバター",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "jp.masa-san.voice-desktop",
+    "productName": "Voice Desktop",
+    "mac": {
+      "category": "public.app-category.utilities"
+    }
+  }
+}

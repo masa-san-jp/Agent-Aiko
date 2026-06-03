@@ -1,0 +1,68 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 220px;
+  height: 320px;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+#avatar-container {
+  position: relative;
+  width: 220px;
+  height: 320px;
+}
+
+#avatar-img {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: auto;
+  image-rendering: pixelated;
+  transition: opacity 0.15s ease;
+}
+
+#mouth-canvas {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+#speech-bubble {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1.5px solid #ccc;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+  color: #333;
+  word-break: break-all;
+  max-height: 100px;
+  overflow: hidden;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+#speech-bubble.hidden {
+  display: none;
+}
+
+/* 感情別オーバーレイ */
+#avatar-img.happy    { filter: brightness(1.05) saturate(1.1); }
+#avatar-img.apologetic { filter: brightness(0.92) saturate(0.9); }
+#avatar-img.excited  { filter: brightness(1.1) saturate(1.2); }
+#avatar-img.thinking { filter: brightness(0.97); }
