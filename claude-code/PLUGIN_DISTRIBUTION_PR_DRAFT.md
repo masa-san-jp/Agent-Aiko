@@ -2,7 +2,7 @@
 
 ## Summary
 
-This PR switches Agent-Aiko's Claude Code distribution design from direct `.claude/` ownership to a plugin-first layout.
+This PR proposes switching Agent-Aiko's Claude Code distribution design from direct `.claude/` ownership to a plugin-first layout.
 
 The goal is to make the distributed installer safe for end users without requiring manual edits to existing project files.
 
