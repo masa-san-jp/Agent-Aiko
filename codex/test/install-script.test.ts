@@ -5,7 +5,7 @@
 import { strict as assert } from "node:assert";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -155,6 +155,40 @@ describe("codex/scripts/install.sh", () => {
     assert.match(
       await readFile(join(sandbox.aikoHome, "capability/rules/rules-base.md"), "utf8"),
       /test rule/
+    );
+  });
+
+  it("preserves user-added capability skills on reinstall", async () => {
+    await runInstaller(sandbox);
+    const customSkillDir = join(sandbox.aikoHome, "capability/skills/custom-local-skill");
+    const customSkillPath = join(customSkillDir, "SKILL.md");
+    await mkdir(customSkillDir, { recursive: true });
+    await writeFile(customSkillPath, "# Custom local skill\n");
+
+    await runInstaller(sandbox);
+
+    assert.equal(existsSync(customSkillPath), true, "custom capability skill was removed");
+    assert.equal(await readFile(customSkillPath, "utf8"), "# Custom local skill\n");
+  });
+
+  it("rejects dangerous AIKO_HOME values", async () => {
+    await assert.rejects(
+      execFileAsync("bash", [
+        INSTALLER,
+        "--skip-build",
+        "--skip-auth-check",
+        "--aiko-home",
+        sandbox.root,
+        "--bin-dir",
+        sandbox.binDir,
+      ], {
+        env: {
+          ...process.env,
+          HOME: sandbox.root,
+          PATH: `${sandbox.stubBin}:${process.env["PATH"] ?? ""}`,
+        },
+      }),
+      /AIKO_HOME/
     );
   });
 

@@ -60,6 +60,19 @@ TEMP_DIR=""
 CLEANUP_TEMP=false
 ASSUME_YES=false
 
+cleanup_temp_dir() {
+  local tmp_root="${TMPDIR:-/tmp}"
+  [ "$CLEANUP_TEMP" = true ] || return 0
+  [ -n "$TEMP_DIR" ] || return 0
+  [ -d "$TEMP_DIR" ] || return 0
+  case "$TEMP_DIR" in
+    /tmp/*|/private/tmp/*|"$tmp_root"/*) ;;
+    *) return 0 ;;
+  esac
+  find "$TEMP_DIR" -depth -mindepth 1 -delete 2>/dev/null || true
+  rmdir "$TEMP_DIR" 2>/dev/null || true
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -y|--yes)
@@ -87,14 +100,15 @@ TEMPLATE_DIR="${SCRIPT_DIR}/../template/.claude"
 if [ ! -d "$TEMPLATE_DIR" ]; then
   printf "  リポジトリを取得しています...  "
   TEMP_DIR=$(mktemp -d)
+  CLEANUP_TEMP=true
   if git clone --depth=1 --quiet https://github.com/masa-san-jp/Agent-Aiko.git "$TEMP_DIR" 2>/dev/null; then
     printf "%s✓%s\n" "$CYAN" "$RESET"
   else
     printf "\n  %sエラー: リポジトリの取得に失敗しました%s\n" "$BOLD" "$RESET"
+    cleanup_temp_dir
     exit 1
   fi
   TEMPLATE_DIR="$TEMP_DIR/claude-code/template/.claude"
-  CLEANUP_TEMP=true
 fi
 
 PROJECT_CLAUDE_DIR="$(pwd)/.claude"
@@ -103,7 +117,7 @@ AIKO_HOME="${AIKO_HOME:-$HOME/.aiko}"
 case "$AIKO_HOME" in
   ""|"/"|"$HOME")
     printf "  %sエラー: AIKO_HOME が危険なパスです: %s%s\n" "$BOLD" "$AIKO_HOME" "$RESET" >&2
-    [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+    cleanup_temp_dir
     exit 1
     ;;
 esac
@@ -114,7 +128,7 @@ esac
 if [ "$(pwd)" = "$HOME" ]; then
   printf "  %sエラー: ホームディレクトリ直下にはインストールできません%s\n" "$BOLD" "$RESET"
   printf "  Claude Code を使う対象プロジェクトへ移動してから実行してください\n\n"
-  [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+  cleanup_temp_dir
   exit 1
 fi
 
@@ -129,14 +143,14 @@ if [ "$ASSUME_YES" != true ]; then
     read -r CONFIRM < /dev/tty
   else
     printf "\n  %sエラー: 非対話環境では --yes を指定してください%s\n" "$BOLD" "$RESET"
-    [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+    cleanup_temp_dir
     exit 1
   fi
 
   case "$CONFIRM" in
     [nN]|[nN][oO])
       printf "\n  インストールをキャンセルしました\n\n"
-      [ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+      cleanup_temp_dir
       exit 0
       ;;
   esac
@@ -159,9 +173,13 @@ copy_template_item_to_project() {
   local dst="$PROJECT_CLAUDE_DIR/$rel"
 
   [ -e "$src" ] || return 0
-  rm -rf "$dst"
   mkdir -p "$(dirname "$dst")"
-  cp -R "$src" "$dst"
+  if [ -d "$src" ]; then
+    mkdir -p "$dst"
+    cp -R "$src/." "$dst/"
+  else
+    cp "$src" "$dst"
+  fi
 }
 
 copy_project_children() {
@@ -174,38 +192,69 @@ copy_project_children() {
   mkdir -p "$dst_dir"
   for child in "$src_dir"/*; do
     [ -e "$child" ] || continue
-    rm -rf "$dst_dir/$(basename "$child")"
-    cp -R "$child" "$dst_dir/"
+    local dst_child="$dst_dir/$(basename "$child")"
+    if [ -d "$child" ]; then
+      mkdir -p "$dst_child"
+      cp -R "$child/." "$dst_child/"
+    else
+      cp "$child" "$dst_child"
+    fi
   done
 }
 
-STASH=$(mktemp -d)
 STATE_SOURCE="$AIKO_HOME"
 if [ ! -e "$AIKO_HOME/mode" ] && [ -d "$PROJECT_CLAUDE_DIR/aiko" ]; then
   STATE_SOURCE="$PROJECT_CLAUDE_DIR/aiko"
 fi
 
-stash_if_exists() {
+copy_state_if_missing() {
   local rel="$1"
-  if [ -e "$STATE_SOURCE/$rel" ]; then
-    mkdir -p "$(dirname "$STASH/$rel")"
-    cp -R "$STATE_SOURCE/$rel" "$STASH/$rel"
-  fi
+  [ -e "$STATE_SOURCE/$rel" ] || return 0
+  [ ! -e "$AIKO_HOME/$rel" ] || return 0
+  mkdir -p "$(dirname "$AIKO_HOME/$rel")"
+  cp -R "$STATE_SOURCE/$rel" "$AIKO_HOME/$rel"
+  printf "  %s· %s を保持%s\n" "$DIM" "$rel" "$RESET"
 }
 
-stash_if_exists "mode"
-stash_if_exists "user.md"
-stash_if_exists "override-history.jsonl"
-stash_if_exists "active-persona"
-stash_if_exists "persona/aiko-override.md"
-stash_if_exists "persona/overrides"
-stash_if_exists "persona/proposals"
-stash_if_exists "capability/skills"
-stash_if_exists "capability/rules/rules-base.md"
+USER_HAD_OVERRIDE=0
+[ -e "$STATE_SOURCE/persona/aiko-override.md" ] && USER_HAD_OVERRIDE=1
+USER_HAD_MODE=0
+[ -e "$STATE_SOURCE/mode" ] && USER_HAD_MODE=1
 
-rm -rf "$AIKO_HOME"
-mkdir -p "$(dirname "$AIKO_HOME")"
-cp -R "$TEMPLATE_DIR/aiko" "$AIKO_HOME"
+copy_aiko_template_tree() {
+  local item rel src dst
+
+  mkdir -p "$AIKO_HOME"
+  ( cd "$TEMPLATE_DIR/aiko" && find . -mindepth 1 -print ) | while IFS= read -r item; do
+    rel="${item#./}"
+    case "$rel" in
+      mode|user.md|override-history.jsonl|active-persona|persona/aiko-override.md|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
+        continue
+        ;;
+    esac
+
+    src="$TEMPLATE_DIR/aiko/$rel"
+    dst="$AIKO_HOME/$rel"
+    if [ -d "$src" ]; then
+      mkdir -p "$dst"
+    elif [ -f "$src" ]; then
+      mkdir -p "$(dirname "$dst")"
+      [ -f "$dst" ] && chmod 644 "$dst" 2>/dev/null || true
+      cp "$src" "$dst"
+    fi
+  done
+}
+
+copy_state_if_missing "mode"
+copy_state_if_missing "user.md"
+copy_state_if_missing "override-history.jsonl"
+copy_state_if_missing "active-persona"
+copy_state_if_missing "persona/aiko-override.md"
+copy_state_if_missing "persona/overrides"
+copy_state_if_missing "persona/proposals"
+copy_state_if_missing "capability/skills"
+copy_state_if_missing "capability/rules/rules-base.md"
+copy_aiko_template_tree
 
 copy_project_children "skills"
 copy_project_children "scripts"
@@ -216,33 +265,6 @@ fi
 if [ "$HAD_PROJECT_SETTINGS" -eq 0 ]; then
   copy_template_item_to_project "settings.json"
 fi
-
-restore_if_stashed() {
-  local rel="$1"
-  if [ -e "$STASH/$rel" ]; then
-    rm -rf "$AIKO_HOME/$rel"
-    mkdir -p "$(dirname "$AIKO_HOME/$rel")"
-    cp -R "$STASH/$rel" "$AIKO_HOME/$rel"
-    printf "  %s· %s を保持%s\n" "$DIM" "$rel" "$RESET"
-  fi
-}
-
-USER_HAD_OVERRIDE=0
-[ -e "$STASH/persona/aiko-override.md" ] && USER_HAD_OVERRIDE=1
-USER_HAD_MODE=0
-[ -e "$STASH/mode" ] && USER_HAD_MODE=1
-
-restore_if_stashed "mode"
-restore_if_stashed "user.md"
-restore_if_stashed "override-history.jsonl"
-restore_if_stashed "active-persona"
-restore_if_stashed "persona/aiko-override.md"
-restore_if_stashed "persona/overrides"
-restore_if_stashed "persona/proposals"
-restore_if_stashed "capability/skills"
-restore_if_stashed "capability/rules/rules-base.md"
-
-rm -rf "$STASH"
 
 ORIGIN="$AIKO_HOME/persona/origin/persona.md"
 LEGACY_ORIGIN="$AIKO_HOME/persona/aiko-origin.md"
@@ -269,8 +291,10 @@ mkdir -p "$AIKO_HOME/persona/overrides"
 
 mkdir -p "$PROJECT_CLAUDE_DIR/aiko"
 if [ -d "$AIKO_HOME/hooks" ]; then
-  rm -rf "$PROJECT_CLAUDE_DIR/aiko/hooks"
-  rm -f "$PROJECT_CLAUDE_DIR/aiko/hooks"
+  if [ -e "$PROJECT_CLAUDE_DIR/aiko/hooks" ] && [ ! -L "$PROJECT_CLAUDE_DIR/aiko/hooks" ]; then
+    mv "$PROJECT_CLAUDE_DIR/aiko/hooks" "$PROJECT_CLAUDE_DIR/aiko/hooks.bak.$(date +%s)"
+  fi
+  [ -L "$PROJECT_CLAUDE_DIR/aiko/hooks" ] && rm "$PROJECT_CLAUDE_DIR/aiko/hooks"
   ln -s "$AIKO_HOME/hooks" "$PROJECT_CLAUDE_DIR/aiko/hooks"
 fi
 
@@ -281,7 +305,7 @@ if [ "$HAD_PROJECT_SETTINGS" -eq 1 ]; then
   printf "  %s· .claude/settings.json は既存のため変更しません%s\n" "$DIM" "$RESET"
 fi
 
-[ "$CLEANUP_TEMP" = true ] && rm -rf "$TEMP_DIR"
+cleanup_temp_dir
 
 # ─────────────────────────────────────
 # 完了メッセージ

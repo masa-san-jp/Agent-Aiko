@@ -82,6 +82,13 @@ warn()  { printf "  %s!%s %s\n" "$YELLOW" "$RESET" "$*"; }
 fail()  { printf "  %s✗%s %s\n" "$RED" "$RESET" "$*" >&2; }
 step()  { printf "%s%s%s\n" "$BOLD" "$*" "$RESET"; }
 
+case "$AIKO_HOME" in
+  ""|"/"|"$HOME")
+    fail "AIKO_HOME が危険なパスです: ${AIKO_HOME}"
+    exit 1
+    ;;
+esac
+
 # ─────────────────────────────────────
 # 1/6 Node.js
 # ─────────────────────────────────────
@@ -192,12 +199,20 @@ fi
 copy_overwrite "$TEMPLATE_AIKO_DIR/persona/aiko-origin.md" "$AIKO_HOME/persona/aiko-origin.md"
 copy_overwrite "$TEMPLATE_AIKO_DIR/persona/INVARIANTS.md"  "$AIKO_HOME/persona/INVARIANTS.md"
 
-# capability/skills/ も template が真ソースなので上書き（個別ユーザースキルは
-# spec §5.4 で別パス想定なので一旦シンプルに replace）
+# capability/skills/ は配布テンプレート配下の項目だけを更新し、
+# ユーザーが追加したスキルディレクトリは残す。
 if [ -d "$TEMPLATE_AIKO_DIR/capability/skills" ]; then
-  rm -rf "$AIKO_HOME/capability/skills"
-  mkdir -p "$AIKO_HOME/capability"
-  cp -R "$TEMPLATE_AIKO_DIR/capability/skills" "$AIKO_HOME/capability/skills"
+  mkdir -p "$AIKO_HOME/capability/skills"
+  for skill_src in "$TEMPLATE_AIKO_DIR/capability/skills"/*; do
+    [ -e "$skill_src" ] || continue
+    skill_dest="$AIKO_HOME/capability/skills/$(basename "$skill_src")"
+    if [ -d "$skill_src" ]; then
+      mkdir -p "$skill_dest"
+      cp -R "$skill_src/." "$skill_dest/"
+    else
+      cp "$skill_src" "$skill_dest"
+    fi
+  done
 fi
 
 # capability/rules/rules-base.md は ユーザーデータなので「無ければ作る」のみ
