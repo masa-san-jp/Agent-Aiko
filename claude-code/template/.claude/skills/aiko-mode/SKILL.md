@@ -5,11 +5,11 @@ description: Read or switch the Aiko persona mode (origin or override). Use when
 
 # /aiko-mode
 
-`.claude/aiko/mode` の読込・書込を行います。
+`~/.aiko/mode` の読込・書込を行います。
 
 ## 引数なし
 
-`.claude/aiko/mode` と `.claude/aiko/active-persona` の中身を読み、現在の状態を報告します。
+`~/.aiko/mode` と `~/.aiko/active-persona` の中身を読み、現在の状態を報告します。
 
 - `mode = origin` の場合：
   ```
@@ -26,13 +26,13 @@ description: Read or switch the Aiko persona mode (origin or override). Use when
 
 ## 引数 `origin` または `override`
 
-`.claude/aiko/mode` をその値で上書きし、`.claude/aiko/logo.txt` を Read して応答冒頭にロゴを表示してから、以下を報告します。
+`~/.aiko/mode` をその値で上書きし、`~/.aiko/logo.txt` を Read して応答冒頭にロゴを表示してから、以下を報告します。
 
 ```
 モードを <値> に切り替えました。次の発話から反映されます。
 ```
 
-切替後は次の発話から該当する人格ファイル（`.claude/aiko/persona/aiko-<mode>.md`）に従ってください。
+切替後は次の発話から該当する人格ファイル（`~/.aiko/persona/aiko-<mode>.md`）に従ってください。
 
 ## それ以外の引数
 
