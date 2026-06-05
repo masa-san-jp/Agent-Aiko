@@ -1,7 +1,7 @@
-# Agent-team/voice — 音声読み上げ共通インフラ
+# voice — 音声読み上げインフラ
 
-Claude Code の Stop イベントで応答テキストを自動的に TTS 読み上げする共通機能。
-Aiko を含む任意のエージェントから利用できる汎用インフラ。
+Claude Code の Stop イベントで応答テキストを自動的に TTS 読み上げする機能。
+Agent-Aiko に同梱された汎用 TTS インフラ。
 
 ## ディレクトリ構成
 
@@ -49,7 +49,7 @@ echo "avatar" > ~/.claude/voice/engine   # 使用エンジン
 ## アバターアプリの起動
 
 ```bash
-cd Agent-team/voice/desktop
+cd voice/desktop
 npm install
 npm start
 ```
@@ -84,8 +84,7 @@ npm start
 }
 ```
 
-Aiko（`agents/aiko/`）は `.aiko/settings.json` で登録済み。
-全エージェント共通は `agents/.claude/settings.json` で登録済み。
+`.aiko/settings.json` で登録済み（このリポジトリに同梱）。
 
 ## 感情別アバター画像
 

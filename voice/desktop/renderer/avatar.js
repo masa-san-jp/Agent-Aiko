@@ -20,6 +20,7 @@ let audioCtx = null
 let mouthAnimId = null
 let bubbleTimer = null
 let speakGeneration = 0
+let currentSource = null
 
 function getAudioContext() {
   if (!audioCtx) audioCtx = new AudioContext()
@@ -92,6 +93,10 @@ function stopMouthAnim() {
 
 async function fetchAndPlayTTS(text, emotion, useLipsync = true) {
   const myGen = ++speakGeneration
+  if (currentSource) {
+    try { currentSource.stop() } catch (_) {}
+    currentSource = null
+  }
   stopMouthAnim()
 
   try {
@@ -118,9 +123,11 @@ async function fetchAndPlayTTS(text, emotion, useLipsync = true) {
     source.connect(localAnalyser)
 
     if (useLipsync) startMouthAnim(localAnalyser)
+    currentSource = source
     source.start()
 
     source.onended = () => {
+      if (currentSource === source) currentSource = null
       if (myGen !== speakGeneration) return
       stopMouthAnim()
       localAnalyser.disconnect()
@@ -128,6 +135,7 @@ async function fetchAndPlayTTS(text, emotion, useLipsync = true) {
       bubbleTimer = setTimeout(hideBubble, 2000)
     }
   } catch (err) {
+    currentSource = null
     if (myGen !== speakGeneration) return
     console.error('[voice-desktop] TTS エラー:', err.message)
     stopMouthAnim()

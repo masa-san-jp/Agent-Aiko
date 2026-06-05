@@ -8,7 +8,7 @@
 #   AIKO_IRODORI_URL   (デフォルト: http://localhost:8000)
 #   AIKO_IRODORI_VOICE (デフォルト: aiko。Speaker Inversion で学習したアイコ専用音声)
 #
-# 有効化: echo "irodori" > .claude/aiko/voice/engine
+# 有効化: echo "irodori" > ~/.claude/voice/engine
 #
 # --- D3 後期: Speaker Inversion セットアップ手順 ---
 # 1. アイコの参照音声（10〜30秒程度のクリーン音声）を用意する
