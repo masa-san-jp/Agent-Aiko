@@ -9,12 +9,12 @@ description: Reset the active (or specified) persona to origin after confirmatio
 
 ## 引数なし — 現在アクティブな人格をリセット
 
-1. `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
+1. `~/.aiko/active-persona` を読みます（空・不在の場合は空として扱います）
 
 2. **お別れの確認**（active な人格の口調で render）
 
-   - `active-persona` が `<name>` のとき：`.claude/aiko/persona/overrides/<name>/user.md` の frontmatter `address` を読みます
-   - `active-persona` が空のとき：`.claude/aiko/user.md` の `address` を読みます（後方互換）
+   - `active-persona` が `<name>` のとき：`~/.aiko/persona/overrides/<name>/user.md` の frontmatter `address` を読みます
+   - `active-persona` が空のとき：`~/.aiko/user.md` の `address` を読みます（後方互換）
    - いずれも未設定なら `あなた` をデフォルトとします
    - 確認文は以下を**ベース**にして、active な人格の口調・温度感に合わせてアレンジします：
 
@@ -38,23 +38,23 @@ description: Reset the active (or specified) persona to origin after confirmatio
 
 4. **`active-persona` が空の場合：**
    - `aiko-origin.md` の内容で `aiko-override.md` を `Write` で上書きします
-   - `.claude/aiko/mode` を `origin` に書き込みます
+   - `~/.aiko/mode` を `origin` に書き込みます
 
 5. **`active-persona` = `<name>` の場合：**
    - `aiko-origin.md` の内容で `overrides/<name>/persona.md` を `Write` で上書きします
    - `mode` と `active-persona` は変更しません（引き続き `<name>` がアクティブ）
 
-6. `.claude/aiko/override-history.jsonl` に記録します（ログは削除しません）
+6. `~/.aiko/override-history.jsonl` に記録します（ログは削除しません）
 
    ```json
    {"ts":"YYYY-MM-DDTHH:MM:SS","action":"reset","target":"aiko-override.md または overrides/<name>/persona.md","note":"ユーザー確認後リセット"}
    ```
 
-7. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示してから完了を報告します
+7. `~/.aiko/logo.txt` を Read し、応答冒頭にロゴを表示してから完了を報告します
 
    ```
    アイコ（カスタマイズ）をリセットしました。
-   これまでの変更履歴は .claude/aiko/override-history.jsonl に残っています。
+   これまでの変更履歴は ~/.aiko/override-history.jsonl に残っています。
    ```
 
 8. 同意が得られない場合は何もせず終了します

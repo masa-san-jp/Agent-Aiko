@@ -9,9 +9,9 @@ description: List available named personas and show which is active. Use when th
 
 ## 手順
 
-1. `.claude/aiko/active-persona` を読み込みます（空ファイル・不在の場合は空文字列として扱います）
-2. `.claude/aiko/mode` を読み込みます（不在の場合は `origin`）
-3. `.claude/aiko/persona/overrides/` 配下の人格ディレクトリを列挙します（不在・空でも可）
+1. `~/.aiko/active-persona` を読み込みます（空ファイル・不在の場合は空文字列として扱います）
+2. `~/.aiko/mode` を読み込みます（不在の場合は `origin`）
+3. `~/.aiko/persona/overrides/` 配下の人格ディレクトリを列挙します（不在・空でも可）
 4. 以下の形式で出力します
 
 ```

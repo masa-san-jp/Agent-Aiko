@@ -1,11 +1,11 @@
 ---
 name: aiko-migrate-to-shared
-description: Migrate this project's `.claude/aiko/` to the shared store `~/.aiko/` so the same Aiko persona can be used by Codex 版. Use when the user types "/aiko-migrate-to-shared", "/aiko-migrate-to-shared --dry-run", or "/aiko-migrate-to-shared --overwrite". Destructive operation — always run dry-run first and explicitly confirm.
+description: Migrate a legacy project-local `.claude/aiko/` store to the shared store `~/.aiko/`. Use when the user types "/aiko-migrate-to-shared", "/aiko-migrate-to-shared --dry-run", or "/aiko-migrate-to-shared --overwrite". Destructive operation — always run dry-run first and explicitly confirm.
 ---
 
 # /aiko-migrate-to-shared
 
-このプロジェクトの `${PWD}/.claude/aiko/` を共通ストア `~/.aiko/` に移行し、移行後は `${PWD}/.claude/aiko/` を `~/.aiko/` への symlink に置き換えます。Codex 版（`aiko` シェル）と同じ人格データを共有したいユーザー向けの **任意操作** です。
+旧導入環境向けに、このプロジェクトの `${PWD}/.claude/aiko/` を共通ストア `~/.aiko/` に移行し、移行後は `${PWD}/.claude/aiko/` を `~/.aiko/` への symlink に置き換えます。現在の installer は最初から `~/.aiko/` を使うため、新規導入では通常不要です。
 
 設計仕様書 §9.2 に対応する実装で、本体は `.claude/scripts/migrate-to-shared.sh`（installer 経由でユーザー環境に配布されます）。
 
