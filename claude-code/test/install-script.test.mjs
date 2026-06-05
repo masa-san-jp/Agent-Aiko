@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -81,6 +81,33 @@ describe("claude-code/scripts/install.sh", () => {
     assert.equal(existsSync(join(projectDir, ".claude", "CLAUDE.md")), true);
     assert.equal(existsSync(join(projectDir, ".claude", "settings.json")), true);
     assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
+  });
+
+  it("backs up project template path type mismatches instead of aborting", async () => {
+    const projectDir = join(sandbox.root, "project");
+    await mkdir(join(projectDir, ".claude", "skills"), { recursive: true });
+    await mkdir(join(projectDir, ".claude", "session-state", "current.md.example"), {
+      recursive: true,
+    });
+    await writeFile(join(projectDir, ".claude", "skills", "aiko"), "old file\n");
+    await writeFile(
+      join(projectDir, ".claude", "session-state", "current.md.example", "file"),
+      "old directory content\n"
+    );
+
+    runInstaller({ cwd: projectDir, home: sandbox.root });
+
+    assert.equal(existsSync(join(projectDir, ".claude", "skills", "aiko", "SKILL.md")), true);
+    assert.equal(existsSync(join(projectDir, ".claude", "session-state", "current.md.example")), true);
+
+    const skillEntries = await readdir(join(projectDir, ".claude", "skills"));
+    assert.equal(skillEntries.some((name) => /^aiko\.bak\./.test(name)), true);
+
+    const sessionEntries = await readdir(join(projectDir, ".claude", "session-state"));
+    assert.equal(
+      sessionEntries.some((name) => /^current\.md\.example\.bak\./.test(name)),
+      true
+    );
   });
 
   it("migrates mutable legacy .claude/aiko data into ~/.aiko", async () => {
