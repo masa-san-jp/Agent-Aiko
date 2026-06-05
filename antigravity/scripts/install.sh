@@ -17,8 +17,14 @@ HELP=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --aiko-home)   AIKO_HOME="$2"; shift 2 ;;
-    --bin-dir)     BIN_DIR="$2";   shift 2 ;;
+    --aiko-home)
+      [[ $# -ge 2 ]] || { echo "ERROR: --aiko-home requires a path" >&2; exit 1; }
+      AIKO_HOME="$2"; shift 2
+      ;;
+    --bin-dir)
+      [[ $# -ge 2 ]] || { echo "ERROR: --bin-dir requires a path" >&2; exit 1; }
+      BIN_DIR="$2"; shift 2
+      ;;
     --skip-gemini-check) SKIP_GEMINI_CHECK=true; shift ;;
     --link-only)   LINK_ONLY=true; shift ;;
     --help|-h)     HELP=true; shift ;;
@@ -39,6 +45,13 @@ Options:
 EOF
   exit 0
 fi
+
+case "$AIKO_HOME" in
+  ""|"/"|"$HOME")
+    echo "ERROR: AIKO_HOME is a dangerous path: ${AIKO_HOME}" >&2
+    exit 1
+    ;;
+esac
 
 echo "=== Agent-Aiko installer (Antigravity / Gemini CLI) ==="
 echo "AIKO_HOME : ${AIKO_HOME}"
