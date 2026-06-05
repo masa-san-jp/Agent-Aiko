@@ -9,14 +9,14 @@ description: Show a unified diff between origin/persona.md and the active (or sp
 
 ## 引数なし
 
-1. `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
+1. `~/.aiko/active-persona` を読みます（空・不在の場合は空として扱います）
 2. 比較対象を決定します
    - `active-persona` が空 → `aiko-override.md`
    - `active-persona` = `<name>` → `overrides/<name>/persona.md`
 3. `Bash` で以下を実行します
 
    ```
-   diff -u .claude/aiko/persona/origin/persona.md .claude/aiko/persona/<対象ファイル> || true
+   diff -u ~/.aiko/persona/origin/persona.md ~/.aiko/persona/<対象ファイル> || true
    ```
 
 4. 出力が空の場合：
@@ -37,7 +37,7 @@ description: Show a unified diff between origin/persona.md and the active (or sp
 2. `Bash` で以下を実行します
 
    ```
-   diff -u .claude/aiko/persona/origin/persona.md .claude/aiko/persona/overrides/<name>/persona.md || true
+   diff -u ~/.aiko/persona/origin/persona.md ~/.aiko/persona/overrides/<name>/persona.md || true
    ```
 
 3. 差分を表示します（引数なし時と同様）

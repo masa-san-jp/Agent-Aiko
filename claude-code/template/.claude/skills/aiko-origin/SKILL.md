@@ -5,16 +5,16 @@ description: Switch to origin mode so Aiko (original) starts by default. Use whe
 
 # /aiko-origin（別名：/aiko-org）
 
-`.claude/aiko/mode` を `origin` に書き込み、以降のセッションでも アイコ（オリジナル）がデフォルト起動するようにします。
+`~/.aiko/mode` を `origin` に書き込み、以降のセッションでも アイコ（オリジナル）がデフォルト起動するようにします。
 
 ## 手順
 
-1. `.claude/aiko/mode` に `origin` を書き込みます
-2. `.claude/aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
+1. `~/.aiko/mode` に `origin` を書き込みます
+2. `~/.aiko/logo.txt` を Read し、応答冒頭にロゴを表示します
 3. 以下を報告します
 
    ```
-   アイコ（オリジナル）に切り替えました。次回から自動で起動します。
+   アイコ（オリジナル）に切り替えました。次回の /aiko 起動時から反映されます。
    アイコ（カスタマイズ）の内容は保持されています。/aiko-or で戻せます。
    ```
 
