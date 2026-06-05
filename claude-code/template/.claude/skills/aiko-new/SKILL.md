@@ -29,25 +29,25 @@ description: Create a new named persona and activate it. Use when the user types
      エラー：「<name>」はすでに存在します。/aiko-select <name> で切り替えられます。
      ```
 
-2. `.claude/aiko/persona/overrides/<name>/` ディレクトリを作成します
+2. `~/.aiko/persona/overrides/<name>/` ディレクトリを作成します
 
-3. `.claude/aiko/persona/origin/persona.md` の内容を `overrides/<name>/persona.md` に `Write` でコピーします
+3. `~/.aiko/persona/origin/persona.md` の内容を `overrides/<name>/persona.md` に `Write` でコピーします
 
 4. `overrides/<name>/user.md` を `name:` / `address:` の雛形で作成します
 
 5. 必要に応じて `overrides/<name>/README.md` を作成します
 
-6. `.claude/aiko/active-persona` を `<name>` で `Write` します（末尾改行あり）
+6. `~/.aiko/active-persona` を `<name>` で `Write` します（末尾改行あり）
 
-7. `.claude/aiko/mode` を `override` で `Write` します（末尾改行あり）
+7. `~/.aiko/mode` を `override` で `Write` します（末尾改行あり）
 
-8. `.claude/aiko/override-history.jsonl` に追記します
+8. `~/.aiko/override-history.jsonl` に追記します
 
    ```json
    {"ts":"YYYY-MM-DDTHH:MM:SS","action":"new-persona","name":"<name>","base":"origin","summary":"新しい人格 <name> を作成"}
    ```
 
-9. `.claude/aiko/logo.txt` を Read して応答冒頭にロゴを表示します
+9. `~/.aiko/logo.txt` を Read して応答冒頭にロゴを表示します
 
 10. 完了を報告します
 

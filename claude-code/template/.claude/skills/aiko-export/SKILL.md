@@ -9,7 +9,7 @@ description: Export the full content of the active (or specified) persona. Use w
 
 ## 引数なし — 現在アクティブな人格をエクスポート
 
-1. `.claude/aiko/active-persona` を読みます（空・不在の場合は空として扱います）
+1. `~/.aiko/active-persona` を読みます（空・不在の場合は空として扱います）
 2. 対象ファイルを決定します
    - `active-persona` が空 → `aiko-override.md`
    - `active-persona` = `<name>` → `overrides/<name>/persona.md`

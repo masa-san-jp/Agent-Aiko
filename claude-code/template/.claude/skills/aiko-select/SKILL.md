@@ -20,16 +20,16 @@ description: Switch to a named persona (or back to origin/override default). Use
 1. 引数を確認します
 
 2. **`origin` の場合：**
-   - `.claude/aiko/mode` を `origin` に書き込みます
-   - `.claude/aiko/active-persona` を空にします（`Write` で空文字列）
+   - `~/.aiko/mode` を `origin` に書き込みます
+   - `~/.aiko/active-persona` を空にします（`Write` で空文字列）
    - ロゴを表示して報告します
      ```
      アイコ（オリジナル）に切り替えました。プレフィックスは Aiko-origin: です。
      ```
 
 3. **`override` または引数なしの場合：**
-   - `.claude/aiko/mode` を `override` に書き込みます
-   - `.claude/aiko/active-persona` を空にします
+   - `~/.aiko/mode` を `override` に書き込みます
+   - `~/.aiko/active-persona` を空にします
    - ロゴを表示して報告します
      ```
      アイコ（カスタマイズ）に切り替えました。プレフィックスは Aiko-override: です。
@@ -37,7 +37,7 @@ description: Switch to a named persona (or back to origin/override default). Use
 
 4. **その他の `<slug>` の場合：**
 
-   タイポ・大文字小文字の揺れがあっても**なんとなく察して**解決します。`.claude/aiko/persona/overrides/` 配下で `persona.md` を含むディレクトリ名を候補集合として、以下を上から判定し、最初にヒットしたものを採用します。
+   タイポ・大文字小文字の揺れがあっても**なんとなく察して**解決します。`~/.aiko/persona/overrides/` 配下で `persona.md` を含むディレクトリ名を候補集合として、以下を上から判定し、最初にヒットしたものを採用します。
 
    | 段階 | 判定 | 例 | 動作 |
    |------|------|----|------|
@@ -72,8 +72,8 @@ description: Switch to a named persona (or back to origin/override default). Use
 
    解決後の切替動作：
 
-   - `.claude/aiko/mode` を `override` に書き込みます
-   - `.claude/aiko/active-persona` を `<slug>` に書き込みます（末尾改行あり）
+   - `~/.aiko/mode` を `override` に書き込みます
+   - `~/.aiko/active-persona` を `<slug>` に書き込みます（末尾改行あり）
    - ロゴを表示して報告します
      ```
      人格「<slug>」に切り替えました。プレフィックスは Aiko-<slug>: です。

@@ -11,8 +11,8 @@ description: Propose new capability skills or rules based on observed user reque
 
 | 種類 | 反映先 | 形式 |
 |------|--------|------|
-| 新しい作業領域・道具・繰り返しタスク | `.claude/aiko/capability/skills/<name>/SKILL.md` | スキル定義 |
-| 一般的な運用ルール（常に〇〇する） | `.claude/aiko/capability/rules/rules-base.md` | 箇条書き 1 行 |
+| 新しい作業領域・道具・繰り返しタスク | `~/.aiko/capability/skills/<name>/SKILL.md` | スキル定義 |
+| 一般的な運用ルール（常に〇〇する） | `~/.aiko/capability/rules/rules-base.md` | 箇条書き 1 行 |
 
 ## 手順
 
