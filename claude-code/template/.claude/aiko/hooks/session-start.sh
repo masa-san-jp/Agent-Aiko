@@ -16,7 +16,7 @@ MODE=$(tr -d '[:space:]' < "$MODE_FILE")
 if [ -f "$USER_FILE" ]; then
   NAME=$(grep -A1 "^## 名前" "$USER_FILE" | grep "^name:" | sed 's/^name:[[:space:]]*//')
   if [ -z "$NAME" ]; then
-    echo "[aiko] ユーザー名が未設定です。セッション開始時にユーザーへ名前を尋ね、~/.aiko/user.md の name フィールドに記録してください。"
+    echo "[aiko] ユーザー名が未設定です。セッション開始時にユーザーへ名前を尋ね、${AIKO_HOME}/user.md の name フィールドに記録してください。"
   fi
 fi
 

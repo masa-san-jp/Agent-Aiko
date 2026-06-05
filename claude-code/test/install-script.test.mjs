@@ -1,12 +1,13 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, lstatSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
-const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..", "..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const INSTALLER = join(REPO_ROOT, "claude-code", "scripts", "install.sh");
 
 async function makeSandbox() {
@@ -68,6 +69,18 @@ describe("claude-code/scripts/install.sh", () => {
     assert.equal(await readFile(join(projectDir, ".claude", "CLAUDE.md"), "utf8"), customClaude);
     assert.equal(existsSync(join(sandbox.root, ".aiko", "mode")), true);
     assert.equal(existsSync(join(projectDir, ".claude", "skills", "aiko", "SKILL.md")), true);
+    assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
+  });
+
+  it("creates CLAUDE.md and settings.json when they are absent", async () => {
+    const projectDir = join(sandbox.root, "project");
+    await mkdir(projectDir, { recursive: true });
+
+    runInstaller({ cwd: projectDir, home: sandbox.root });
+
+    assert.equal(existsSync(join(projectDir, ".claude", "CLAUDE.md")), true);
+    assert.equal(existsSync(join(projectDir, ".claude", "settings.json")), true);
+    assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
   });
 
   it("migrates mutable legacy .claude/aiko data into ~/.aiko", async () => {
