@@ -5,7 +5,7 @@
 # macOS: say コマンドを使用（AIKO_VOICE_NAME / AIKO_VOICE_RATE 有効）
 # Linux/WSL: VOICEVOX Engine が起動中なら voicevox.sh、未起動なら exit 1
 #
-# 有効化: echo "auto" > .claude/aiko/voice/engine
+# 有効化: echo "auto" > ~/.claude/voice/engine
 
 ENGINES_DIR="$(cd "$(dirname "$0")" && pwd 2>/dev/null)" || exit 1
 

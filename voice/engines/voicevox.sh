@@ -8,7 +8,7 @@
 #   AIKO_VOICEVOX_SPEAKER (デフォルト: 2 = 四国めたん ノーマル)
 #
 # セットアップ: https://voicevox.hiroshiba.jp/ から Engine をダウンロード・起動
-# 有効化: echo "voicevox" > .claude/aiko/voice/engine
+# 有効化: echo "voicevox" > ~/.claude/voice/engine
 #
 # --- 話者選定ガイド（D1: オーナーが試聴して AIKO_VOICEVOX_SPEAKER を決定）---
 # 試聴コマンド（Engine 起動後に実行）:
