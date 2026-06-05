@@ -345,7 +345,7 @@ fi
 # ─────────────────────────────────────
 # voice モード — ~/.aiko/voice/ にインストール
 # ─────────────────────────────────────
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
+REPO_ROOT="$(cd "$TEMPLATE_DIR/../../.." 2>/dev/null && pwd)"
 VOICE_SRC="$REPO_ROOT/voice"
 VOICE_DST="$AIKO_HOME/voice"
 if [ -d "$VOICE_SRC/hooks" ] && [ -d "$VOICE_SRC/engines" ]; then
