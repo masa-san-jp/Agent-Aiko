@@ -146,6 +146,11 @@ echo ""
 # ─────────────────────────────────────
 # インストール実行
 # ─────────────────────────────────────
+HAD_PROJECT_CLAUDE_MD=0
+[ -e "$PROJECT_CLAUDE_DIR/CLAUDE.md" ] && HAD_PROJECT_CLAUDE_MD=1
+HAD_PROJECT_SETTINGS=0
+[ -e "$PROJECT_CLAUDE_DIR/settings.json" ] && HAD_PROJECT_SETTINGS=1
+
 mkdir -p "$PROJECT_CLAUDE_DIR" "$AIKO_HOME"
 
 copy_template_item_to_project() {
@@ -205,6 +210,12 @@ cp -R "$TEMPLATE_DIR/aiko" "$AIKO_HOME"
 copy_project_children "skills"
 copy_project_children "scripts"
 copy_template_item_to_project "session-state/current.md.example"
+if [ "$HAD_PROJECT_CLAUDE_MD" -eq 0 ]; then
+  copy_template_item_to_project "CLAUDE.md"
+fi
+if [ "$HAD_PROJECT_SETTINGS" -eq 0 ]; then
+  copy_template_item_to_project "settings.json"
+fi
 
 restore_if_stashed() {
   local rel="$1"
@@ -256,10 +267,17 @@ find "$AIKO_HOME/hooks" -type f -name '*.sh' -exec chmod +x {} +
 
 mkdir -p "$AIKO_HOME/persona/overrides"
 
-if [ -e "$PROJECT_CLAUDE_DIR/CLAUDE.md" ]; then
+mkdir -p "$PROJECT_CLAUDE_DIR/aiko"
+if [ -d "$AIKO_HOME/hooks" ]; then
+  rm -rf "$PROJECT_CLAUDE_DIR/aiko/hooks"
+  rm -f "$PROJECT_CLAUDE_DIR/aiko/hooks"
+  ln -s "$AIKO_HOME/hooks" "$PROJECT_CLAUDE_DIR/aiko/hooks"
+fi
+
+if [ "$HAD_PROJECT_CLAUDE_MD" -eq 1 ]; then
   printf "  %s· .claude/CLAUDE.md は既存のため変更しません%s\n" "$DIM" "$RESET"
 fi
-if [ -e "$PROJECT_CLAUDE_DIR/settings.json" ]; then
+if [ "$HAD_PROJECT_SETTINGS" -eq 1 ]; then
   printf "  %s· .claude/settings.json は既存のため変更しません%s\n" "$DIM" "$RESET"
 fi
 
