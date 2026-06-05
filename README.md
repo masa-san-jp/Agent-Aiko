@@ -103,7 +103,31 @@ Claude Code 版にはさらに以下のコマンドがあります：
 /aiko-save                       現在の作業ステートを .claude/session-state/current.md に保存（再開支援）
 /aiko-migrate-to-shared          旧 .claude/aiko/ を共通ストア ~/.aiko/ に移行（旧導入環境向け・任意）
 /aiko-service                    常駐稼働の方法を案内（デーモンモード / systemd サービス）
+/voice [on|off|status|<engine>]  Claude の応答を音声読み上げ（TTS）するモードを制御する
 ```
+
+### 音声読み上げ（voice モード）
+
+install.sh 実行後すぐに使えます。
+
+```bash
+/voice on       # 音声モード ON（macOS では say コマンドで即動作）
+/voice off      # 音声モード OFF
+/voice status   # 現在の状態とエンジンを確認
+/voice voicevox # エンジンを VOICEVOX に切替（VOICEVOX Engine が必要）
+/voice irodori  # エンジンを Irodori-TTS-Server に切替
+/voice avatar   # デスクトップアバター表示と連動した読み上げ
+```
+
+| エンジン | 追加インストール | 対応 OS |
+|---------|---------------|---------|
+| `say`（デフォルト） | 不要 | macOS |
+| `auto` | 不要 | macOS / Linux（OS を自動判定） |
+| `voicevox` | VOICEVOX Engine | macOS / Linux / WSL |
+| `irodori` | Irodori-TTS-Server | macOS / Linux |
+| `avatar` | Electron アバターアプリ | macOS / Linux |
+
+設定は `~/.claude/voice/` に保存されます（プロジェクトをまたいで有効）。
 
 常駐起動（バックグラウンドで自動再起動）も利用できます：
 
@@ -181,6 +205,11 @@ Agent-Aiko/
 │   ├── scripts/install.sh    # Claude Code 版 installer の実体
 │   ├── plugin/               # Claude Code Plugin マニフェスト
 │   └── template/.claude/     # Claude Code 版の配布元テンプレート
+├── voice/                    # 音声読み上げ（TTS）モジュール（install.sh で ~/.aiko/voice/ に展開）
+│   ├── README.md             # voice モードの詳細
+│   ├── hooks/stop.sh         # Claude Code Stop hook（応答完了時に TTS 発火）
+│   ├── engines/              # TTS エンジン別スクリプト（say / auto / voicevox / irodori / avatar）
+│   └── desktop/              # Electron デスクトップアバターアプリ（avatar エンジン用）
 ├── codex/                    # Codex 版（@agent-aiko/codex）
 │   ├── README.md             # Codex 版の詳細
 │   ├── package.json          # TypeScript パッケージ
