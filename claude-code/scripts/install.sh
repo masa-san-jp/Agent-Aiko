@@ -167,6 +167,40 @@ HAD_PROJECT_SETTINGS=0
 
 mkdir -p "$PROJECT_CLAUDE_DIR" "$AIKO_HOME"
 
+path_exists() {
+  [ -e "$1" ] || [ -L "$1" ]
+}
+
+backup_existing_path() {
+  local dst="$1"
+  local backup="${dst}.bak.$(date +%s)"
+
+  while path_exists "$backup"; do
+    backup="${dst}.bak.$(date +%s).$RANDOM"
+  done
+  mv "$dst" "$backup"
+  printf "  %s· %s を %s に退避%s\n" "$DIM" "$dst" "$backup" "$RESET"
+}
+
+prepare_destination_for_template() {
+  local src="$1"
+  local dst="$2"
+
+  path_exists "$dst" || return 0
+
+  if [ -d "$src" ]; then
+    if [ ! -d "$dst" ]; then
+      backup_existing_path "$dst"
+    else
+      chmod -R u+w "$dst" 2>/dev/null || true
+    fi
+  elif [ -d "$dst" ]; then
+    backup_existing_path "$dst"
+  elif [ -f "$dst" ]; then
+    chmod 644 "$dst" 2>/dev/null || true
+  fi
+}
+
 copy_template_item_to_project() {
   local rel="$1"
   local src="$TEMPLATE_DIR/$rel"
@@ -174,6 +208,7 @@ copy_template_item_to_project() {
 
   [ -e "$src" ] || return 0
   mkdir -p "$(dirname "$dst")"
+  prepare_destination_for_template "$src" "$dst"
   if [ -d "$src" ]; then
     mkdir -p "$dst"
     cp -R "$src/." "$dst/"
@@ -193,6 +228,7 @@ copy_project_children() {
   for child in "$src_dir"/*; do
     [ -e "$child" ] || continue
     local dst_child="$dst_dir/$(basename "$child")"
+    prepare_destination_for_template "$child" "$dst_child"
     if [ -d "$child" ]; then
       mkdir -p "$dst_child"
       cp -R "$child/." "$dst_child/"
@@ -236,10 +272,11 @@ copy_aiko_template_tree() {
     src="$TEMPLATE_DIR/aiko/$rel"
     dst="$AIKO_HOME/$rel"
     if [ -d "$src" ]; then
+      prepare_destination_for_template "$src" "$dst"
       mkdir -p "$dst"
     elif [ -f "$src" ]; then
       mkdir -p "$(dirname "$dst")"
-      [ -f "$dst" ] && chmod 644 "$dst" 2>/dev/null || true
+      prepare_destination_for_template "$src" "$dst"
       cp "$src" "$dst"
     fi
   done
