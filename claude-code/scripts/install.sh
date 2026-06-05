@@ -342,6 +342,24 @@ if [ "$HAD_PROJECT_SETTINGS" -eq 1 ]; then
   printf "  %s· .claude/settings.json は既存のため変更しません%s\n" "$DIM" "$RESET"
 fi
 
+# ─────────────────────────────────────
+# voice モード — ~/.aiko/voice/ にインストール
+# ─────────────────────────────────────
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
+VOICE_SRC="$REPO_ROOT/voice"
+VOICE_DST="$AIKO_HOME/voice"
+if [ -d "$VOICE_SRC/hooks" ] && [ -d "$VOICE_SRC/engines" ]; then
+  mkdir -p "$VOICE_DST/hooks" "$VOICE_DST/engines"
+  cp "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
+  chmod +x "$VOICE_DST/hooks/stop.sh"
+  for engine in say.sh auto.sh voicevox.sh irodori.sh avatar.sh; do
+    [ -f "$VOICE_SRC/engines/$engine" ] || continue
+    cp "$VOICE_SRC/engines/$engine" "$VOICE_DST/engines/$engine"
+    chmod +x "$VOICE_DST/engines/$engine"
+  done
+  printf "  %s· voice モードを %s に配置%s\n" "$DIM" "$VOICE_DST" "$RESET"
+fi
+
 cleanup_temp_dir
 
 # ─────────────────────────────────────

@@ -47,7 +47,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash voice/hooks/stop.sh"
+            "command": "bash $HOME/.aiko/voice/hooks/stop.sh"
           }
         ]
       }
