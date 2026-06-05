@@ -96,12 +96,14 @@ Stop hook の登録は `settings.json` の `hooks.Stop` で行う（初回セッ
 
 ## セットアップ（初回のみ）
 
-Stop hook の登録が必要。プロジェクトの `.claude/settings.json` または `~/.claude/settings.json` に追加:
+install.sh 実行時に自動で `~/.aiko/voice/` へ配置されます。Stop hook はインストール済み `.claude/settings.json` に含まれています。
+
+手動で追加する場合は `.claude/settings.json` に以下を記述してください:
 
 ```json
 {
   "hooks": {
-    "Stop": [{ "hooks": [{ "type": "command", "command": "bash voice/hooks/stop.sh" }] }]
+    "Stop": [{ "hooks": [{ "type": "command", "command": "bash $HOME/.aiko/voice/hooks/stop.sh" }] }]
   }
 }
 ```
