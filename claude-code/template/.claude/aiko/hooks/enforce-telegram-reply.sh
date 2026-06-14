@@ -26,6 +26,10 @@ SESSION=$(printf '%s' "$INPUT" | jq -r '.session_id // "default"' 2>/dev/null ||
 [ -z "$TRANSCRIPT" ] && exit 0
 [ -f "$TRANSCRIPT" ] || exit 0
 
+# Sanitize: SESSION is interpolated into /tmp filenames; never allow path
+# separators or traversal (a malicious/odd session_id must not escape /tmp).
+SESSION=$(printf '%s' "$SESSION" | tr -cd 'A-Za-z0-9_-' | cut -c1-64)
+[ -z "$SESSION" ] && SESSION="default"
 COUNTER="/tmp/tg-reply-guard-${SESSION}.count"
 ALERT="/tmp/tg-reply-guard-${SESSION}.alert"
 : > "$ALERT" 2>/dev/null || true
@@ -51,7 +55,7 @@ CHATFILE = alert_path + ".chat"
 def emit_chat(text):
     # Portability: resolve the alert destination from the inbound message itself
     # (no hardcoded chat id), so the self-report works in any environment.
-    m = re.search(r'chat_id="?(\d+)"?', text or "")
+    m = re.search(r'chat_id="?(-?\d+)"?', text or "")
     if m:
         try:
             with open(CHATFILE, "w", encoding="utf-8") as f:

@@ -4,7 +4,7 @@ Aiko が Telegram channel 経由で動作するときの行動規則の索引。
 
 ## 読み込みトリガー
 
-ユーザーメッセージに Telegram envelope（`<channel source="telegram" ...>`）が含まれている場合、このディレクトリのルールが適用される。envelope が無い（ターミナル直入力）場合は適用しない。
+ユーザーメッセージに Telegram envelope（`<channel source="telegram" ...>`）が含まれている場合、このディレクトリのルールが適用される。また、当該セッションで一度 Telegram モードに入った後は、以降のターミナル直入力ターンでもモードを維持する（[voice-switching.md](./voice-switching.md) 参照）。Telegram を一度も経由していないセッションには適用しない。
 
 Telegram envelope を含むメッセージを今セッションで初めて受け取った瞬間にこの INDEX.md を読む。個別ルールは必要に応じて INDEX のポインタから Read する（全部一気に読まない）。ただし [notify-and-operability.md](./notify-and-operability.md) は最上位の不可侵ルールなので、envelope 検出時点で前提として保持する。
 
