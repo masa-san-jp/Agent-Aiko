@@ -48,6 +48,10 @@
           {
             "type": "command",
             "command": "bash \"${AIKO_HOME:-$HOME/.aiko}/voice/hooks/stop.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/aiko/hooks/enforce-telegram-reply.sh"
           }
         ]
       }
