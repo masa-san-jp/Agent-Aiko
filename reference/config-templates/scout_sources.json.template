@@ -1,0 +1,188 @@
+{
+  "_comment": "scout メタエージェントが参照可能な外部ドメインのホワイトリスト。配置先: <ORG_REPO>/Agent-team/skills/scout_sources.json。tier 1 official のみ無条件に追加可、tier 2-3 は独立 tier 1-2 ソース最低 2 件の裏付けが必須。tier 4 community は単独引用不可。詳細は meta-agents/scout.md G11 参照。",
+  "version": "1.0",
+  "last_full_review": "YYYY-MM-DD",
+  "next_full_review": "YYYY-MM-DD",
+
+  "tier_definitions": {
+    "1_official": {
+      "applicability_max": "high",
+      "criteria": "ベンダー本人による一次資料"
+    },
+    "2_vendor_or_research": {
+      "applicability_max": "med",
+      "criteria": "ベンダー公式ブログまたは査読プロセスあり"
+    },
+    "3_curated_oss": {
+      "applicability_max": "med",
+      "criteria": "GitHub Star >= 500 かつ 直近90日 commit あり かつ メンテナ明示"
+    },
+    "4_community": {
+      "applicability_max": "low",
+      "criteria": "上記未満。単独引用不可。tier 1-2 裏付け必須"
+    }
+  },
+
+  "denylist_phrases": [
+    "hack",
+    "魔法の",
+    "知らないと損",
+    "裏技",
+    "secret",
+    "trick",
+    "の真実",
+    "バズる",
+    "神プロンプト",
+    "weird trick",
+    "絶対",
+    "必ず",
+    "倍速"
+  ],
+
+  "filter_rules": [
+    "ドメインが active sources に無い → reject",
+    "一次出典（仕様書・コミット・公式リリースノート）リンクなし → reject",
+    "denylist_phrases にヒット → reject",
+    "単一ブログ / 単一 X / 単一 Reddit のみ → reject",
+    "最終更新が365日以上前 → reject",
+    "著者・メンテナ特定不能（tier 4 のみ厳格） → reject"
+  ],
+
+  "sources": [
+    {
+      "id": "anthropic-docs",
+      "domain": "docs.anthropic.com",
+      "tier": "1_official",
+      "criteria_met": [
+        "Anthropic 公式一次資料",
+        "継続更新"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "Claude / Agent SDK / API ドキュメント"
+    },
+    {
+      "id": "anthropic-www",
+      "domain": "www.anthropic.com",
+      "tier": "1_official",
+      "criteria_met": [
+        "Anthropic 公式コーポレート",
+        "継続更新"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "公式ブログ・リサーチ発表"
+    },
+    {
+      "id": "anthropic-github",
+      "domain": "github.com/anthropics",
+      "tier": "1_official",
+      "criteria_met": [
+        "Anthropic 公式 OSS リポジトリ群"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "anthropic-cookbook / claude-code 等"
+    },
+    {
+      "id": "mcp-spec",
+      "domain": "github.com/modelcontextprotocol",
+      "tier": "1_official",
+      "criteria_met": [
+        "MCP 仕様の公式 Org"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "MCP 仕様・公式サーバ実装"
+    },
+    {
+      "id": "claude-code",
+      "domain": "claude.com/code",
+      "tier": "1_official",
+      "criteria_met": [
+        "Claude Code 公式ページ"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "Claude Code 公式ドキュメント"
+    },
+
+    {
+      "_comment_tier_2_example": "tier 2 のサンプル。査読論文または信頼できるベンダー公式ブログ。実環境では <ORG_NAME> が選定したものに置き換える",
+      "id": "arxiv-cs-cl",
+      "domain": "arxiv.org",
+      "tier": "2_vendor_or_research",
+      "criteria_met": [
+        "プレプリントだが学術コミュニティで広く参照される一次資料"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "AI / NLP 系の一次論文。tier 2 のため applicability は med まで"
+    },
+
+    {
+      "_comment_tier_3_example": "tier 3 のサンプル。Star >= 500 かつ 直近90日 commit あり かつ メンテナ明示が必須。実環境では実在のリポを選定。月初審査で要件喪失すれば probation に降格",
+      "id": "example-curated-oss",
+      "domain": "github.com/<example-org>/<example-repo>",
+      "tier": "3_curated_oss",
+      "criteria_met": [
+        "Star >= 500（YYYY-MM-DD 時点で N ★）",
+        "直近90日 commit あり",
+        "メンテナ明示（CODEOWNERS or README）"
+      ],
+      "added": "YYYY-MM-DD",
+      "added_by": "owner",
+      "last_reviewed": "YYYY-MM-DD",
+      "last_cited": null,
+      "citation_count": 0,
+      "status": "active",
+      "notes": "（実在の curated OSS に置き換える。例: 信頼できる Agent SDK ラッパー・MCP クライアント等）"
+    }
+  ],
+
+  "proposed_sources": [
+    {
+      "_comment": "scout が新規発見したドメイン候補。tier 1 はオーナー直接追加のみ、tier 2-3 は独立 tier 1-2 ソース最低 2 件の裏付け必須",
+      "id": "P-YYYY-Www-001",
+      "domain": "<example.com>",
+      "tier_proposed": "2_vendor_or_research",
+      "evidence_urls": [],
+      "proposed_at": "YYYY-MM-DD",
+      "status": "pending"
+    }
+  ],
+
+  "rejected_candidates": [
+    {
+      "_comment": "却下されたドメイン候補（再提案防止）。30 日経過すると janitor が revoked_source_cleanup として整理候補に検出する",
+      "id": "X-YYYY-Www-001",
+      "domain": "<rejected.example.com>",
+      "reason": "tier 4 community で単独引用不可、裏付け不足",
+      "rejected_at": "YYYY-MM-DD"
+    }
+  ]
+}
