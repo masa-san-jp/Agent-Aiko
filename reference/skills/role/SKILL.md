@@ -3,7 +3,7 @@ name: role
 description: "TRIGGER: ユーザーが /role <name> を入力した場合、または「<ロール名>に切り替えて」「<ロール名>として作業」のような明示的なロール切替要求を発した場合。正本は capability manifest。legacy roles/<name>/rules.json は削除前互換の redirect stub としてのみ扱う。SKIP: 単一ターンの委譲は /agent-call、ロール非依存の質問。"
 ---
 
-# /role &lt;name&gt;
+# /role
 
 capability manifest を解決してロールのコンテキストを現在のセッションに注入する **role-switch resolver** の参考実装。パス・ロール名は各組織の構成に合わせて調整して使う。このスキルは**エージェント本体（人格 base）は切り替えない**。ロールの manifest・operating model・required_skills・required_tools を注入するだけ。正本は capability manifest であり、legacy な `roles/<name>/rules.json` は削除前互換の redirect stub としてのみ扱う。
 
