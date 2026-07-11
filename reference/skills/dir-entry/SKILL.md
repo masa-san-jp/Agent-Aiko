@@ -3,7 +3,7 @@ name: dir-entry
 description: "TRIGGER: 作業ディレクトリの入り口に「AI エージェント用 INDEX.md」と「人間用 README.md」を整備したい場合。ユーザーが /dir-entry [path] を入力、または「INDEX と README 作って」「作業ディレクトリの入り口ファイルを整備」「AI 用 index と人間用 readme を作って」と依頼したとき。SKIP: 既存 README を機械的に上書きしたいだけの場合・入り口ファイルを増やしたくない単発ディレクトリ・INDEX/README 以外のドキュメント生成。"
 ---
 
-# /dir-entry [path]
+# /dir-entry
 
 任意の作業ディレクトリの入り口に、**AI エージェントが最初に読む INDEX.md** と **人間が最初に読む README.md** を生成・更新する共通スキル。既存 README.md は保持し、不足を補う形で更新する。
 
