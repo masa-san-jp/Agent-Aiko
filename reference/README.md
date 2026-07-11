@@ -36,8 +36,8 @@
 
 5. **作業フロー・抽出・プレビューの補助スキル（任意採用）**
    `strategic-breakdown`（目的分解）/ `task`（残タスク管理）/ `pr-review-merge` / `pre-send-check-3point` / `dir-entry` の作業フロー、
-   `extract-text` / `gslides-read`（ドキュメント抽出）、`live-preview` / `tailnet-expose`（別端末プレビュー）、`role` / `routine` など。
-   必要なものだけ取り込めます。
+   `extract-text` / `gslides-read`（ドキュメント抽出）、`live-preview` / `tailnet-expose`（別端末プレビュー）。
+   必要なものだけ取り込めます（`role` / `routine` 等を含む一覧は `skills/README.md` 参照）。
 
 ---
 

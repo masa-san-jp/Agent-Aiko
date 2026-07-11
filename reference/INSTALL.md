@@ -605,7 +605,7 @@ bash "$REFERENCE_ROOT/_scripts/check-placeholders.sh" --receiver --target "$ORG_
 配置済み：
 - ルール 8 個 → $CLAUDE_RULES_DIR（project-local or global、Section 0-1 で確定したスコープ）
 - メタエージェント 4 個 → Agent-team/.claude/agents/
-- スキル 8 個 → Agent-team/agents/.claude/skills/
+- スキル（skills/ 配下の全ディレクトリ。基盤＋任意採用の補助スキル）→ Agent-team/agents/.claude/skills/
 - ワークフローテンプレート 6 個 → Agent-team/skills/
 - 設定ファイル → Agent-team/{AGENTS.md, spec.json}
 - 業務エージェントテンプレ → Agent-team/agents/<各エージェント>/
