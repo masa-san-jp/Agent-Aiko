@@ -63,21 +63,14 @@ SCRIPT={{ORG_REPO_PATH}}/Agent-team/tools/peer-inbox/peer-inbox.sh
 
 ## メッセージ保管場所
 
-`{{ORG_REPO_PATH}}/Agent-team/tools/peer-inbox/inbox/<peer>/` 配下に JSON ファイルとして保管。`.gitignore` 対象（ローカル限定）。
+`$PEER_INBOX_ROOT/<peer>/inbox.jsonl`（既定 `~/.peer-inbox/`）に **JSONL**（1 行 1 メッセージ）で追記。既定はリポ外のため通常 `.gitignore` 不要（リポ配下に置く運用にした場合のみ、そのパスを gitignore する）。
 
-ファイル形式：
+1 行のエントリ形式：
 ```json
-{
-  "id": "msg-2026-05-10-001",
-  "from": "<sender>",
-  "to": "<recipient>",
-  "ts": "2026-05-10T14:30:00+0900",
-  "type": "review|done|parallel|send",
-  "subject": "...",
-  "body": "...",
-  "read": false
-}
+{"ts": "2026-05-10T14:30:00+09:00", "from": "<sender>", "to": "<recipient>", "message": "レビュー依頼: ...", "read": false}
 ```
+
+`review` / `done` / `parallel` は `message` の先頭に `レビュー依頼: ` / `完了通知: ` / `並行作業依頼: ` を付けて送るだけで、スキーマは `send` と同一。
 
 ## 実装ヒント
 
@@ -86,10 +79,10 @@ SCRIPT={{ORG_REPO_PATH}}/Agent-team/tools/peer-inbox/peer-inbox.sh
 ```bash
 case "$1" in
   send|review|done|parallel)
-    # 受信側ディレクトリに JSON ファイルを atomic write
+    # 受信側の inbox.jsonl に 1 行 JSON (JSONL) を追記
     ;;
   check)
-    # 自分の inbox 配下を read=false で grep して列挙
+    # 自分の inbox.jsonl を read=false 優先で列挙
     ;;
   mark-read)
     # 指定ファイル（or 全件）の read を true に書き換え

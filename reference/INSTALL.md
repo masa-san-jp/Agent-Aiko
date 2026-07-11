@@ -455,8 +455,8 @@ Agent-team/agents/*/done/
 # agent-call cache
 Agent-team/tools/agent-call/.cache/
 
-# peer-inbox messages
-Agent-team/tools/peer-inbox/inbox/
+# peer-inbox は ~/.peer-inbox/ に置くため通常 gitignore 不要
+# （リポ配下に置く運用にした場合は PEER_INBOX_ROOT のパスを追加）
 
 # Local workspace
 local-workspace/

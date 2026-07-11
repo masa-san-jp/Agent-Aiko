@@ -16,7 +16,7 @@
 1. `local-workspace/logs/{{AGENT_NAME}}/_recent.jsonl` の直近エントリ
 2. `agents/{{AGENT_NAME}}/rules.json`
 3. `agents/{{AGENT_NAME}}/skills/` および `Agent-team/skills/`
-4. `local-workspace/input/` の未処理ファイル
+4. `agents/{{AGENT_NAME}}/input/` の未処理ファイル
 
 ## 追加で読むファイル
 
