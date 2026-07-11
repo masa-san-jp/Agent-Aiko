@@ -1,0 +1,67 @@
+# AGENTS.md — チーム運用ガイド（テンプレート）
+
+`{{ORG_REPO_PATH}}/Agent-team/AGENTS.md` として配置。
+このファイルは Claude Code が業務エージェント・メタエージェントの全体像を把握するためのインデックスです。
+
+---
+
+## ファイル参照ルール
+
+| 用途 | 読むファイル |
+|---|---|
+| 進行中タスク確認 | `tasks/active.json` |
+| 直近ログ確認 | `logs/_recent.jsonl` |
+| 過去サマリー | `logs/_summary.jsonl` |
+| 仕様確認 | `spec.json` |
+| エージェント設定 | `agents/{name}/CLAUDE.md` |
+| 日次レビュー findings | `logs/reviews/YYYY-Www-{reviewer\|scout\|lab\|janitor}.jsonl` |
+| 中央メタエージェント定義 | `.claude/agents/{reviewer,scout,lab,janitor}.md` |
+| ホワイトリファレンスリスト | `skills/scout_sources.json` |
+
+## チーム選択ガイド
+
+**各組織で記述してください**。例：
+
+| タスク内容 | 担当チーム |
+|----------|----------|
+| {ドメイン 1} | `<agent-1>` |
+| {ドメイン 2} | `<agent-2>` |
+| {ドメイン 3} | `<agent-3>` |
+
+## 禁止事項
+
+- `logs/archive/` の一括読み込み
+- `backlog.json` 全件読み込み（`active.json` を使う）
+- {組織独自の禁止事項を追加}
+
+## ログ書き込みルール
+
+- `logs/current.jsonl` に 1 行 JSON で追記
+- スキーマ: `{"ts":"YYYY-MM-DD","agent":"名前","task":"...","status":"...","summary":"...","issues":[],"decisions":[]}`
+
+## 日次スクリプト
+
+```bash
+python skills/compress_logs.py --recent-only
+python skills/sync_tasks.py
+```
+
+（これらのスクリプトは各組織で実装してください。最小機能：current.jsonl から _recent.jsonl への直近 N 件抽出、_summary.jsonl 月次集約。）
+
+## 中央メタエージェントの日次レビューサイクル
+
+| サブエージェント | 起動 | 役割 | 起動プロンプト |
+|---|---|---|---|
+| reviewer | 日次（月初は健全性メトリクス併発） | 標準化・整合・再発防止 | `skills/review_prompt.md` |
+| scout（軽量・差分） | 日次 | 社外ベストプラクティス観測（ETag 差分） | `skills/scout_prompt.md MODE=daily_diff` |
+| scout（フル踏査） | 週 1（土） | 全 active sources 総当たり | `skills/scout_prompt.md MODE=weekly_full` |
+| scout（月次審査） | 月 1 | ホワイトリスト全件再評価 | `skills/scout_prompt.md MODE=monthly_audit` |
+| lab | 日次 | 社内スキル横展開・新スキル提案 | `skills/lab_prompt.md` |
+| janitor（light） | 日次 | クリーニング観測（4 カテゴリ） | `skills/janitor_prompt.md MODE=light` |
+| janitor（full） | 週 1（金） | 削除提案を含む 10 カテゴリ | `skills/janitor_prompt.md MODE=full` |
+
+レビュー結果はすべて `logs/reviews/` に JSONL で蓄積し、`pending_updates[]`（rules.json）／`source:"review"|"scout"|"lab"|"janitor"`（backlog.json）／`dev-logs.md` 週次サマリーの 3 経路で活用される。物理削除は禁止、すべて提案止まりでオーナー承認を要する。
+
+## メタエージェント自動起動
+
+セッション開始時、`Agent-team/logs/reviews/.pending/` に marker が存在する場合は `/run-meta-pending` スキルを実行してください。詳細手順は `agents/.claude/skills/run-meta-pending/SKILL.md` を参照。`/meta` で手動起動した場合も同じ末尾処理（last-run 更新・marker 削除）が必要です。
