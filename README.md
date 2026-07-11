@@ -192,6 +192,19 @@ Agent-Aiko では、`origin` や通常の `override` とは別に、名前付き
 
 ---
 
+## 付録：マルチエージェント運用基盤（`reference/`）
+
+Aiko 人格システムとは独立した**業務ドメイン非依存の運用基盤パック**を [`reference/`](reference/) に同梱しています。アーカイブされた `Agent-Teams` リポジトリから移植したもので、組織で Claude Code を複数メンバー × 複数エージェントで運用するための「設計思想 + 参考実装」パッケージです。
+
+- **グローバル規約**（coding-style / git-workflow / testing / security ほか 8 種）
+- **メタエージェント 4 種**（Reviewer / Scout / Lab / Janitor）— 日次でリポジトリを分析し標準化のズレ・不要物を提案
+- **多エージェント運用スキル**（agent-call / delegate-suggest / peer-inbox / codex ほか）
+- **ワークフロー・設定テンプレート**と**実装スクリプト**
+
+Aiko 人格システムとは直接の依存関係はありません。導入方法・設計思想は [`reference/README.md`](reference/README.md) を起点に参照してください。
+
+---
+
 ## ディレクトリ構成
 
 ```
@@ -224,8 +237,16 @@ Agent-Aiko/
 │   ├── hooks/                # SessionStart / BeforeTool / AfterAgent
 │   ├── scripts/              # install.sh ＋ aiko-gemini.mjs ＋ hooks 実装
 │   └── test/                 # Node.js built-in test runner 用テスト
-└── pets/
-    └── aiko/                 # Codex custom pet アセット
+├── pets/
+│   └── aiko/                 # Codex custom pet アセット
+└── reference/                # 付録：マルチエージェント運用基盤パック（Agent-Teams から移植）
+    ├── rules/                # グローバル規約 8 ファイル
+    ├── meta-agents/          # Reviewer / Scout / Lab / Janitor
+    ├── skills/               # 多エージェント運用スキル
+    ├── workflow-templates/   # レビュー・計画・引き継ぎテンプレ
+    ├── config-templates/     # AGENTS.md / spec.json ほか
+    ├── tools/                # agent-call.sh / peer-inbox.sh / meta-check.sh
+    └── ARCHITECTURE.md ほか  # 設計思想・導入手順ドキュメント
 ```
 
 ---

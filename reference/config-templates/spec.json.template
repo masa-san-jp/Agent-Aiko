@@ -1,0 +1,115 @@
+{
+  "project": "{{ORG_REPO_NAME}}",
+  "version": "1.0",
+  "goals": [
+    "{{ORG_NAME}} の業務全体を支援するエージェントチームの運用",
+    "{ドメイン目標 1}・{ドメイン目標 2} の軸で事業を支える"
+  ],
+  "constraints": [
+    "営業日のみ実行",
+    "git に agents/*/input・output・done は追加しない（※ ただし agents/*/input/schema.json と agents/*/output/schema.json は例外としてコミット可）"
+  ],
+  "common_principles": [
+    "悪いニュースほど即時共有：問題は発見した瞬間にオーナーへ報告する",
+    "投資対効果は両面評価：「得られる利益」と「防げる損失」の両面で評価する",
+    "目標への徹底コミット：自らの目標に執着し、達成まで諦めない"
+  ],
+  "agents": [
+    {
+      "name": "{{AGENT_1_NAME}}",
+      "purpose": "{{AGENT_1_PURPOSE}}",
+      "tools": ["Read", "Write", "Edit", "Bash"]
+    },
+    {
+      "name": "{{AGENT_2_NAME}}",
+      "purpose": "{{AGENT_2_PURPOSE}}",
+      "tools": ["Read", "Write", "Edit", "Bash"]
+    },
+    {
+      "name": "reviewer",
+      "purpose": "業務エージェント横断の標準化・整合・再発防止（日次レビュー）",
+      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "kind": "meta"
+    },
+    {
+      "name": "scout",
+      "purpose": "社外ベストプラクティス観測・自チーム適用提案（ホワイトリスト経由のみ）",
+      "tools": ["Read", "Grep", "Glob", "Bash", "WebSearch", "WebFetch"],
+      "kind": "meta"
+    },
+    {
+      "name": "lab",
+      "purpose": "社内スキル横展開・新スキル切り出し・実験設計",
+      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "kind": "meta"
+    },
+    {
+      "name": "janitor",
+      "purpose": "リポジトリのクリーニング（観測・整理提案・削除提案・督促）。物理削除は禁止",
+      "tools": ["Read", "Grep", "Glob", "Bash"],
+      "kind": "meta"
+    }
+  ],
+  "data_flows": [
+    {
+      "from": "{{AGENT_1_NAME}}",
+      "to": "{{AGENT_2_NAME}}",
+      "data": "{データ説明}（agents/{{AGENT_2_NAME}}/input/）"
+    },
+    {
+      "from": "all",
+      "to": "reviewer",
+      "data": "logs/_recent.jsonl, agents/*/rules.json, agents/*/schema/*, AGENTS.md, spec.json（読み取り専用）"
+    },
+    {
+      "from": "external_whitelist",
+      "to": "scout",
+      "data": "skills/scout_sources.json の active なドメイン（WebFetch/WebSearch）。リスト外は不可"
+    },
+    {
+      "from": "all",
+      "to": "lab",
+      "data": "logs/_recent.jsonl, logs/_summary.jsonl, skills/, agents/*/skills/（読み取り専用）"
+    },
+    {
+      "from": "all",
+      "to": "janitor",
+      "data": "リポジトリ全体（読み取り専用）。削除実行は禁止、提案のみ"
+    }
+  ],
+  "directory_conventions": {
+    "input": "他エージェントまたはオーナーからの指示・依頼ファイル",
+    "output": "処理結果・成果物",
+    "done": "処理完了済みの input ファイル（アーカイブ）",
+    "reviews": "自己レビュー・相互レビュー・月次集約の記録（git 管理対象）"
+  },
+  "review_cadence": {
+    "self_review": {
+      "frequency": "weekly",
+      "day": "Friday",
+      "skill": "skills/self_review.md",
+      "output_dir": "reviews/self/{agent}/"
+    },
+    "peer_review": {
+      "frequency": "biweekly",
+      "day": "Friday",
+      "skill": "skills/peer_review.md",
+      "output_dir": "reviews/peer/",
+      "week_selector": "ISO_week_number_mod_N",
+      "note": "N エージェントの全ペアを N-1 週で網羅する設計。各週で複数ペアが相互レビュー（双方向）。",
+      "peer_rotation": {
+        "_comment": "各組織のエージェント数に応じて W1〜WN のローテーション表を作成してください",
+        "W1": [
+          {"reviewer": "{{AGENT_1_NAME}}", "reviewee": "{{AGENT_2_NAME}}"},
+          {"reviewer": "{{AGENT_2_NAME}}", "reviewee": "{{AGENT_1_NAME}}"}
+        ]
+      }
+    },
+    "monthly_summary": {
+      "frequency": "monthly",
+      "day": "first business day",
+      "output_dir": "reviews/monthly/",
+      "monthly_rotation": ["{{AGENT_1_NAME}}", "{{AGENT_2_NAME}}"]
+    }
+  }
+}
