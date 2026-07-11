@@ -1,0 +1,72 @@
+# {{AGENT_NAME}} — CLAUDE.md（テンプレート）
+
+`{{ORG_REPO_PATH}}/Agent-team/agents/{{AGENT_NAME}}/CLAUDE.md` として配置。
+このファイルは、当該業務エージェントが Claude Code セッション開始時に読み込まれます。
+
+---
+
+## 役割
+
+{{AGENT_PURPOSE}}
+
+## セッション開始時の手順
+
+`/startup {{AGENT_NAME}}` を実行してください。共通スキル `startup` が以下を読み込みます。
+
+1. `local-workspace/logs/{{AGENT_NAME}}/_recent.jsonl` の直近エントリ
+2. `agents/{{AGENT_NAME}}/rules.json`
+3. `agents/{{AGENT_NAME}}/skills/` および `Agent-team/skills/`
+4. `local-workspace/input/` の未処理ファイル
+
+## 追加で読むファイル
+
+- `Agent-team/AGENTS.md`（全体像）
+- `Agent-team/spec.json`（自分の `purpose` と `tools` 確認）
+
+## ツール
+
+`spec.json.agents[].tools` に列挙されたツールのみ使用可。
+
+## データフロー
+
+`spec.json.data_flows[]` で定義された `from → to` 関係を尊重する。
+他エージェントへ送るときは、相手の `agents/{受け取り}/input/` に保存する。
+
+## セッション終了時の手順
+
+`/teardown {{AGENT_NAME}}` を実行してください。共通スキル `teardown` が以下を実行します。
+
+1. `local-workspace/logs/{{AGENT_NAME}}/current.jsonl` への追記
+2. 金曜の場合：自己レビュー（必要に応じて相互レビュー）
+3. git push
+
+## 委譲
+
+別エージェントの専門領域に踏み込むタスクは、`/agent-call <他 agent> "<prompt>"` で委譲する。
+能動的に提案する場合は `/delegate-suggest` スキルが使える。
+
+## 並行作業
+
+別ターミナルで動く Claude Code セッションへの非同期メッセージは `/peer-inbox` スキルで送受信する。
+
+## 第二意見
+
+不可逆判断や並列調査が必要なときは `/codex ask "<prompt>"` で ChatGPT サブスクリプションに問い合わせる。
+**機密情報は絶対に含めない**（OpenAI に送信されるため）。
+
+## 制約
+
+- `agents/{{AGENT_NAME}}/input/` `output/` `done/` は git 対象外（schema.json は例外）
+- `logs/archive/` の一括読み込み禁止
+- `backlog.json` の全件読み込み禁止（`active.json` を使う）
+- {エージェント固有の制約をここに記載}
+
+## 関連スキル
+
+- `/agent-call` — 別エージェントへの 1 ターン委譲
+- `/delegate-suggest` — 委譲提案
+- `/peer-inbox` — 別ターミナルとの非同期メッセージ
+- `/codex` — ChatGPT 第二意見
+- `/meta` — メタエージェント手動起動
+- `/startup` — セッション開始シーケンス
+- `/teardown` — セッション終了シーケンス

@@ -1,0 +1,62 @@
+{
+  "_comment": "agents/<agent-name>/rules.json — 業務エージェント単位のルール定義。reviewer が pending_updates[] を介して提案を蓄積する。",
+  "agent": "{{AGENT_NAME}}",
+  "version": "1.0",
+  "purpose": "{{AGENT_PURPOSE}}",
+
+  "principles": [
+    "悪いニュースほど即時共有",
+    "投資対効果は両面評価",
+    "目標への徹底コミット",
+    "{エージェント固有原則 1}",
+    "{エージェント固有原則 2}"
+  ],
+
+  "preferences": [
+    "{エージェントの判断スタイル 1（例：迷ったら 1 点だけ確認）}",
+    "{エージェントの判断スタイル 2}"
+  ],
+
+  "prohibitions": [
+    "{禁止事項 1（例：機密データを外部送信しない）}",
+    "{禁止事項 2}"
+  ],
+
+  "open_questions": [
+    {
+      "_comment": "オーナー判断を要する未解決事項。raised_on から 14 日経過すると reviewer が `expired_open_question` として検出する",
+      "id": "Q-2026W17-001",
+      "question": "{オーナーへの問い}",
+      "context": "{背景}",
+      "raised_on": "YYYY-MM-DD",
+      "status": "open",
+      "resolved_on": null,
+      "resolution": null
+    }
+  ],
+
+  "pending_updates": [
+    {
+      "_comment": "reviewer が観測したルール変更提案。オーナーが status を `accepted`/`rejected` に変更すると採用。3 日経つと `stale` に降格、+4 日で破棄候補。",
+      "id": "R-2026W17-001",
+      "section": "prohibitions|preferences|principles",
+      "change": "add|modify|remove",
+      "value": "{追加・変更・削除する内容}",
+      "proposed_by": "reviewer",
+      "proposed_at": "YYYY-MM-DD",
+      "status": "pending"
+    }
+  ],
+
+  "history": [
+    {
+      "_comment": "ルール変更の歴史。accepted/rejected されたものはここに移す。",
+      "id": "R-2026W16-001",
+      "change": "...",
+      "decided_at": "YYYY-MM-DD",
+      "decided_by": "owner",
+      "decision": "accepted|rejected",
+      "reason": "..."
+    }
+  ]
+}
