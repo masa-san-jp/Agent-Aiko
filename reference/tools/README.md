@@ -83,6 +83,22 @@
 
 これらは各組織のリポジトリ規約・ファイル構造に依存するため、汎用版を提供せず仕様のみ示します。
 
+### 作業フロー・抽出・プレビュー系スキルが参照するツール
+
+`skills/` の一部スキルは以下のツールを参照しますが、本パッケージには**同梱していません**
+（tools 最小限の方針。各スキルの `SKILL.md` に挙動仕様を内包）。必要なものだけ各組織で用意し、
+`{{ORG_REPO_PATH}}/Agent-team/tools/<name>/` に配置してください。
+
+| ツール | 参照スキル | 仕様の所在 |
+|-------|-----------|-----------|
+| `pdf-extract` | extract-text | `skills/extract-text/SKILL.md` |
+| `gws-read` | extract-text | `skills/extract-text/SKILL.md` |
+| `gslides-read` | extract-text / gslides-read | `skills/gslides-read/SKILL.md` |
+| `live-preview` | live-preview | `skills/live-preview/SKILL.md` |
+| `tailnet-expose` | tailnet-expose / live-preview | `skills/tailnet-expose/SKILL.md` |
+| `role-resolve` | role | `skills/role/SKILL.md` |
+| `agent-sync` | log-push / sync | `skills/log-push/SKILL.md` |
+
 ---
 
 ## SessionStart hook の登録
