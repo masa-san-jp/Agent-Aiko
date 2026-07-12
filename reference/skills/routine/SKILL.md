@@ -17,10 +17,10 @@ description: "TRIGGER: ユーザーが /routine, /routine status, /routine meta 
 | コマンド | 何をするか | 外部への影響 |
 |---|---|---|
 | `/routine` / `/routine status` | メタエージェントの最終実行時刻と、登録済み定期ジョブの状態を表示 | 読み取りのみ |
-| `/routine meta <role\|all>` | メタエージェント（`reviewer` / `scout` / `lab` / `janitor` / `all`）を手動実行 | ログと last-run を更新 |
+| `/routine meta <role>` | メタエージェント（`reviewer` / `scout` / `lab` / `janitor` / `all`）を手動実行 | ログと last-run を更新 |
 | `/routine <job> [mode]` | 組織固有の定期ジョブを手動実行（`<job>` は自分で定義） | ジョブ次第（下記の注意参照） |
 
-引数なしの `/routine` は `/routine status` と同じ。
+引数なしの `/routine` は `/routine status` と同じ。第 1 引数の `status` と `meta` は**予約語**なので、`<job>` 名には使えない（衝突を避けるため別名を付ける）。
 
 ## `/routine status`
 

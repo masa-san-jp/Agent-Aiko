@@ -23,7 +23,7 @@ capability manifest を解決して、そのロールのコンテキストを現
    エージェント固有のロールを持つ構成では `{{ORG_REPO_PATH}}/Agent-team/agents/<agent>/capability/manifest.json` を優先してよい（探索先は自組織の配置に合わせる）
 2. purpose は manifest の `purpose`、または manifest が指す operating-model ドキュメントから取る
 3. 各 `required_skills` エントリを解決する：`skills/<entry>.md` / `skills/<entry>.py` / `skills/<entry>/SKILL.md` の順で最初に一致したもの
-4. `required_tools` を `{{ORG_REPO_PATH}}/Agent-team/tools/<name>/` 配下で解決する
+4. `required_tools` を `{{ORG_REPO_PATH}}/Agent-team/tools/<tool>/` 配下で解決する（`<tool>` はツール名。ロール名 `<name>` とは別のプレースホルダ）
 5. `communication` / `common_principles` / `decision_criteria` / `prohibitions` / `imported_capabilities` はコンテキストとして扱う
 6. 切替イベントを `{{ORG_REPO_PATH}}/Agent-team/logs/role-events/<role>/YYYY-MM-DD.jsonl` に 1 行追記する
 
@@ -44,7 +44,7 @@ required_skills:
   - <skill1>: <SKILL.md description の先頭 80 文字>
   - <skill2>: ...
 required_tools:
-  - <tool1>: <tools/<name>/README.md の先頭 80 文字（あれば）>
+  - <tool1>: <tools/<tool>/README.md の先頭 80 文字（あれば）>
 ```
 
 ## 切替報告（ユーザー向け）
