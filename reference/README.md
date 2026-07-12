@@ -32,7 +32,12 @@
    - `codex`: ChatGPT サブスクリプション経由の第二意見・並列調査
 
 4. **セッション運用の標準化**
-   `startup` / `teardown` / `log-push` / `sync` で、全メンバーが同じリズムで作業できます。
+   `startup` / `teardown` / `log-push` / `sync` / `agent-map` で、全メンバーが同じリズムで作業できます。
+
+5. **作業フロー・抽出・プレビューの補助スキル（任意採用）**
+   `strategic-breakdown`（目的分解）/ `task`（残タスク管理）/ `pr-review-merge` / `pre-send-check-3point` / `dir-entry` の作業フロー、
+   `extract-text` / `gslides-read`（ドキュメント抽出）、`live-preview` / `tailnet-expose`（別端末プレビュー）。
+   必要なものだけ取り込めます（`role` / `routine` 等を含む一覧は `skills/README.md` 参照）。
 
 ---
 
@@ -74,16 +79,30 @@ reference/
 │   ├── lab.md
 │   └── janitor.md
 │
-├── skills/                     ← 多エージェント運用スキル
-│   ├── README.md
-│   ├── agent-call/SKILL.md
-│   ├── delegate-suggest/SKILL.md
-│   ├── peer-inbox/SKILL.md
-│   ├── codex/SKILL.md
-│   ├── meta/SKILL.md
-│   ├── run-meta-pending/SKILL.md
-│   ├── startup/SKILL.md
-│   └── teardown/SKILL.md
+├── skills/                     ← 多エージェント運用スキル（任意採用・全 22）
+│   ├── README.md               ← カテゴリ別インデックス
+│   ├── agent-call/SKILL.md         │ 委譲・協調
+│   ├── delegate-suggest/SKILL.md   │
+│   ├── peer-inbox/SKILL.md         │
+│   ├── codex/SKILL.md              │
+│   ├── role/SKILL.md               │
+│   ├── meta/SKILL.md               │ メタ運用
+│   ├── run-meta-pending/SKILL.md   │
+│   ├── routine/SKILL.md            │
+│   ├── startup/SKILL.md            │ セッション・ライフサイクル
+│   ├── teardown/SKILL.md           │
+│   ├── log-push/SKILL.md           │
+│   ├── sync/SKILL.md               │
+│   ├── agent-map/SKILL.md          │
+│   ├── strategic-breakdown/SKILL.md│ 思考・作業フロー
+│   ├── pr-review-merge/SKILL.md    │
+│   ├── pre-send-check-3point/SKILL.md │
+│   ├── task/SKILL.md               │
+│   ├── dir-entry/SKILL.md          │
+│   ├── extract-text/SKILL.md       │ コンテンツ抽出
+│   ├── gslides-read/SKILL.md       │
+│   ├── live-preview/SKILL.md       │ プレビュー・共有
+│   └── tailnet-expose/SKILL.md     │
 │
 ├── workflow-templates/         ← 業務テンプレート
 │   ├── README.md

@@ -72,7 +72,9 @@
 
 **エージェントが使う道具**。複数エージェントから共通利用できます。
 
-このパッケージでは「**多エージェント運用の基盤スキル**」のみ含めています。
+このパッケージには「**多エージェント運用の基盤スキル**」と、任意採用の「**補助スキル**」を含めています。
+
+**基盤スキル**（多エージェント運用の中核）:
 
 | スキル | 用途 |
 |--------|------|
@@ -80,10 +82,22 @@
 | `delegate-suggest` | 自分の専門外を検知して委譲提案 |
 | `peer-inbox` | 別ターミナルで動く Claude Code への非同期メッセージ |
 | `codex` | ChatGPT サブスクリプション経由の第二意見 |
+| `role` | capability manifest ベースのロール解決・切替 |
 | `meta` | メタエージェントの手動起動 |
 | `run-meta-pending` | 自動起動の検知と消化 |
-| `startup` | エージェント起動の標準シーケンス |
-| `teardown` | エージェント終了の標準シーケンス |
+| `routine` | 記録された定期実行タスクの確認・実行 |
+| `startup` / `teardown` | エージェント起動・終了の標準シーケンス |
+| `log-push` / `sync` / `agent-map` | ログ記録・同期・構成 MAP 再生成 |
+
+**補助スキル**（作業フロー・抽出・プレビュー。必要なものだけ採用）:
+
+| スキル | 用途 |
+|--------|------|
+| `strategic-breakdown` / `pr-review-merge` / `pre-send-check-3point` / `task` / `dir-entry` | 思考・作業フロー |
+| `extract-text` / `gslides-read` | ドキュメント抽出 |
+| `live-preview` / `tailnet-expose` | 別端末プレビュー |
+
+一覧と TRIGGER 例は `skills/README.md` を参照。
 
 **配置先**: `Agent-team/agents/.claude/skills/{name}/SKILL.md`
 
