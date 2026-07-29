@@ -315,4 +315,389 @@ Binding失敗
 
 将来要件：
 
-- 配布�
+- 配布バージョンを固定したい
+- 利用可能な人格バージョンを制御したい
+- ユーザーデータを組織の管理範囲内に置きたい
+- 監査ログと利用ポリシーを適用したい
+
+---
+
+# 5. ユーザー体験設計
+
+## 5.1 初回導入
+
+### 推奨コマンド
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install-aiko-mcp.sh | bash
+```
+
+インストーラーは、直接mainブランチの実装を実行してはならない。スクリプトは次のみ行う。
+
+1. GitHub Releases APIから最新のstable releaseを解決
+2. OSとCPUアーキテクチャに対応する成果物を選択
+3. 成果物とSHA-256チェックサムをダウンロード
+4. チェックサムを検証
+5. 一時ディレクトリへ展開
+6. `aiko` CLIをユーザー領域へ配置
+7. `aiko install`を実行
+8. インストール結果を表示
+
+より安全な代替手段として次も提供する。
+
+```bash
+git clone https://github.com/masa-san-jp/Agent-Aiko.git
+cd Agent-Aiko
+git checkout <release-tag>
+bash scripts/install-aiko-mcp.sh
+```
+
+将来、npm配布を行う場合は次も提供する。
+
+```bash
+npx @agent-aiko/cli@latest install
+```
+
+## 5.2 初回セットアップ
+
+インストール後にウィザードを開始する。
+
+```text
+Aiko-MCP setup
+
+検出されたクライアント:
+✓ Claude Code
+✓ Codex
+○ Gemini CLI（未検出）
+
+Aikoを登録するクライアント:
+[x] Claude Code
+[x] Codex
+
+ユーザー情報の保存場所:
+~/.config/aiko/users/default/
+
+呼び名:
+> Masa
+
+既存のAgent-Aiko設定:
+✓ ~/.aiko/ を検出
+→ 移行する
+
+設定を適用します。
+```
+
+入力必須項目は最小限にする。
+
+必須：
+
+- 使用するクライアント
+- ユーザープロファイルID
+
+任意：
+
+- 呼び名
+- 自動更新チャネル
+- 匿名利用統計
+- 既存Agent-Aikoデータの移行
+
+## 5.3 日常利用
+
+利用者は通常のクライアントをそのまま起動する。
+
+```bash
+claude
+codex
+gemini
+```
+
+Adapterが透過的に次を行う。
+
+```text
+1. Aiko-MCPの存在確認
+2. Persona Packageの検証
+3. User Profileの解決
+4. Tool／Skill Manifestの収集
+5. Runtime Profileの生成
+6. system/developer級指示への注入
+7. Aiko-MCP接続確認
+8. セッション開始
+```
+
+利用者が毎回`/aiko`を入力する方式は標準としない。
+
+## 5.4 状態確認
+
+```bash
+aiko status
+```
+
+出力例：
+
+```text
+Aiko-MCP 1.4.2
+Persona: aiko@3.2.0
+User: default
+Binding: healthy
+Protocol: MCP 2026-07-28
+Adapters:
+  Claude Code  ready  Level 2
+  Codex        ready  Level 2
+  Gemini CLI   not installed
+Last profile hash: sha256:9f...
+Update channel: stable
+```
+
+## 5.5 診断
+
+```bash
+aiko doctor
+```
+
+診断項目：
+
+- Node.jsバージョン
+- Aiko-MCP実行可能性
+- Persona Package署名・hash
+- user profileのスキーマ
+- MCP接続
+- 各クライアント設定
+- Adapterの整合性
+- 書き込み権限
+- 競合する旧設定
+- ツール・スキル検出
+- protocol compatibility
+- 最新版との差
+- 秘密情報の誤配置
+
+自動修復可能な項目は次で修復する。
+
+```bash
+aiko doctor --fix
+```
+
+修復前にバックアップを作る。
+
+## 5.6 更新
+
+```bash
+aiko update
+```
+
+標準動作：
+
+1. 新バージョン情報を取得
+2. Release Notesと破壊的変更の有無を表示
+3. 成果物をダウンロード
+4. checksum／署名を検証
+5. 現行設定をバックアップ
+6. 新版をside-by-side配置
+7. migration dry-run
+8. smoke test
+9. active versionを切替
+10. 失敗時は自動ロールバック
+
+自動更新は初期値OFFとする。更新通知のみ表示する。
+
+```bash
+aiko update --channel stable
+aiko update --channel beta
+aiko update --check
+```
+
+## 5.7 ロールバック
+
+```bash
+aiko rollback
+aiko rollback 1.3.4
+```
+
+ユーザー情報はロールバック対象に含めない。スキーマ移行を伴う場合は、旧g��互換スナップショットを作成する。
+
+## 5.8 アンインストール
+
+```bash
+aiko uninstall
+```
+
+確認項目：
+
+```text
+Aiko-MCP本体を削除します。
+ユーザープロファイルと関係性記憶は保持しますか？ [Y/n]
+各クライアントのAiko設定を削除しますか？ [Y/n]
+```
+
+標準ではユーザーデータを保持する。
+
+完全削除：
+
+```bash
+aiko uninstall --purge
+```
+
+---
+
+# 6. システムアーキテクチャ
+
+## 6.1 全体構造
+
+```text
+┌────────────────────────────────────────────────┐
+│ GitHub Repository / GitHub Releases          │
+│                                              │
+│ Persona Package / CLI / MCP / Adapters       │
+└───────────────────────┬───────────────────────┘
+                       │ install / update
+                       ▼
+┌──────────────────────────────────────────────┐
+│ User Environment                             │
+│                                              │
+│  ┌──────────────────────────────────────┐  │
+│  │ Aiko Core                              │  │
+│  │ Persona Registry / Compiler / Policy   │  │
+│  └───────────────────┬────────────────────┘  │
+│                      │                       │
+│  ┌───────────────────▼────────────────────┐  │
+│  │ Runtime Profile Binder                │  │
+│  └───────────┬───────────────┬───────────┘  │
+│              │               │              │
+│      User Context     Capability Registry   │
+│              │               │              │
+│              └───────┬───────┘              │
+│                      ▼                       │
+│  ┌────────────────────────────────────────┐  │
+│  │ Runtime Profile                       │  │
+│  └───────┬───────────────┬───────────────┘  │
+│          │               │                  │
+│  Claude Adapter   Codex Adapter   Gemini Adapter
+│          │               │                  │
+└─────────┼───────────────┼──────────────────┘
+           ▼               ▼
+      Claude Code        Codex             Gemini CLI
+```
+
+## 6.2 コンポーネント責務
+
+### Persona Registry
+
+保持内容：
+
+- Aiko Identity Core
+- Narrative
+- Behavioral Contract
+- Invariants
+- Persona metadata
+- Persona version
+- migration metadata
+- compatibility metadata
+
+### Persona Compiler
+
+入力：
+
+- Persona Package
+- User Relationship Profile
+- Runtime type
+- Model family
+- Capability Manifest
+- Task Context
+
+出力：
+
+- runtime-specific instructions
+- policy bundle
+- resource references
+- configuration hash
+- provenance
+
+### Runtime Profile Binder
+
+責務：
+
+- 全入力の取得
+- スキーマ検証
+- 参照解決
+- 最小権限化
+- 競合解消
+- 実行プロファイル生成
+- profile hash生成
+- fail-closed判定
+
+### User Context Provider
+
+責務：
+
+- user profile取得
+- preferred address取得
+- relationship profile取得
+- memory namespace参照
+- ユーザー許可に基づく最小情報の返却
+
+### Capability Registry
+
+責務：
+
+- Runtimeが提供する組込みツールの記録
+- MCPサーバー一覧
+- Skill一覧
+- 操作可能範囲
+- 権限レベル
+- データスコープ
+- availability
+- version
+
+### Runtime Adapter
+
+責務：
+
+- 各クライアント設定の生成
+- Aiko-MCP登録
+- 人格指示の注入
+- セッション再開時の整合性確認
+- コンテキスト圧縮後の再適用
+- クライアント固有差異の吸収
+
+### Response Validator
+
+責務：
+
+- 出力の形式的検証
+- 人格不変条項違反の検出
+- 呼び名の検証
+- 重大判断の整合性検証
+- 必要な場合の修正要求
+
+---
+
+# 7. 実行時バインディング仕様
+
+## 7.1 必須入力
+
+```yaml
+binding_request:
+  persona_ref:
+    id: aiko
+    version: 3.2.0
+
+  user_ref:
+    id: default
+
+  runtime:
+    id: claude-code
+    version: 2.x
+    model_family: claude
+
+  capabilities_ref:
+    source: runtime-discovery
+
+  task_context:
+    project_root: /home/user/project
+    task_type: software-development
+```
+
+## 7.2 User Profile
+
+```yaml
+schema_version: 1
+user_id: def
