@@ -11,10 +11,10 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w @agent-aiko/core && npm run build --workspaces --if-present",
-    "typecheck": "npm run build -w @agent-aiko/core && npm run typecheck --workspaces --if-present",
+    "build": "tsc -b",
+    "typecheck": "tsc -b && npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "clean": "npm run clean --workspaces --if-present"
+    "clean": "tsc -b --clean && npm run clean --workspaces --if-present"
   },
   "license": "MIT",
   "repository": {
