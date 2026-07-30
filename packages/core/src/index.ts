@@ -1,0 +1,18 @@
+// Aiko Core の公開面。設計書 §5.1 / §5.2。
+
+export {
+  PersonaResolutionError,
+  type PersonaRef,
+  type PersonaRepository,
+  type PersonaSnapshot,
+  type PersonaSource,
+} from "./persona-repository.js";
+
+export {
+  FileSystemPersonaRepository,
+  type FileSystemPersonaRepositoryOptions,
+} from "./filesystem-persona-repository.js";
+
+export { compile, type CompileInput, type CompiledInstructions, type UserContext } from "./compiler.js";
+
+export { sha256, hashObject } from "./hash.js";
