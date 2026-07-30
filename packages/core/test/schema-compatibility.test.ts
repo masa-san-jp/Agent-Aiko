@@ -59,3 +59,17 @@ test("current が不正なら判定自体を拒む", () => {
   assert.throws(() => checkSchemaVersion(1, 0), RangeError);
   assert.throws(() => checkSchemaVersion(1, 1.5), RangeError);
 });
+
+test("acceptableVersions を直接呼んでも current を検証する", () => {
+  // 公開関数なので、checkSchemaVersion 経由でない呼び出しでも同じ不変条件を守る
+  assert.throws(() => acceptableVersions(0), RangeError);
+  assert.throws(() => acceptableVersions(-1), RangeError);
+  assert.throws(() => acceptableVersions(1.5), RangeError);
+  assert.throws(() => acceptableVersions(Number.NaN), RangeError);
+});
+
+test("Infinity を渡しても固まらず即座に拒否する", () => {
+  // v += 1 が Infinity のままで終端しないため、検証が無いと無限ループになる
+  assert.throws(() => acceptableVersions(Number.POSITIVE_INFINITY), RangeError);
+  assert.throws(() => checkSchemaVersion(1, Number.POSITIVE_INFINITY), RangeError);
+});
