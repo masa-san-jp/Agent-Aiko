@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masa-san-jp/Agent-Aiko/schemas/runtime-profile.schema.json",
+  "title": "Runtime Profile",
+  "description": "Binder が合成した、今回の実行に適用する結果。設計書 §5.3 / §3.2 / §7.2。",
+  "$comment": "暫定。設計書 §5.3 は出力項目を列挙するのみで、instructions を本文として持つか参照で持つかを規定していない。ここでは 0600 のローカルファイル（§11.3）である前提で本文を持たせている（schemas/README.md）。",
+  "type": "object",
+  "required": ["schema_version", "profile_id", "profile_hash", "persona", "runtime", "instructions"],
+  "additionalProperties": false,
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "profile_id": {
+      "description": "§7.2 の runtime-profile://{profile_id}/summary で参照される識別子。",
+      "type": "string",
+      "pattern": "^[0-9a-zA-Z][0-9a-zA-Z_-]{0,63}$"
+    },
+    "profile_hash": {
+      "description": "合成結果のハッシュ。追跡可能性（§16）と検証失敗時の fail closed（§6.5）に使う。",
+      "$ref": "#/$defs/sha256"
+    },
+    "configuration_hash": { "$ref": "#/$defs/sha256" },
+    "persona": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "user_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+    "runtime": {
+      "type": "object",
+      "required": ["id", "consistency_level"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"]
+        },
+        "consistency_level": {
+          "description": "§2.1 の適合レベル。Antigravity CLI は system 級注入の手段が未確認のため現状 1（§8.5）。",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "injection_method": {
+          "description": "この実行で人格を注入した手段。§8.5 で実測した手段のみを値に持つ。",
+          "type": "string",
+          "enum": [
+            "claude-code:system-prompt-file",
+            "claude-code:append-system-prompt-file",
+            "codex:base-instructions",
+            "none"
+          ]
+        }
+      }
+    },
+    "instructions": {
+      "description": "Compiler が出力した、実行環境へ注入する指示本文（§5.2）。",
+      "type": "string",
+      "minLength": 1
+    },
+    "excluded_capabilities": {
+      "description": "利用不能で除外した能力。除外しても続行するが警告する（§6.5 末尾）。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    },
+    "provenance": {
+      "description": "この Profile が何から作られたか（§5.2）。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "description": "RFC 3339 の日時。format キーワードは追加依存を避けるため使わず pattern で検証する。",
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "binder_version": { "$ref": "#/$defs/version" },
+        "compiler_version": { "$ref": "#/$defs/version" },
+        "capability_manifest_hash": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
