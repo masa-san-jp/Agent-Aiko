@@ -17,6 +17,8 @@ Aiko Core。人格を読み出し、ユーザー・能力と合わせて実行�
 
 §14 の移行計画は Phase 1 を「現行ファイルを FileSystemPersonaRepository で読む」と定めている。manifest を持つ形式（`schemas/persona-package.schema.json`）へ移すのは Phase 2 以降。したがってこの実装は manifest を要求せず、既存の `mode` / `active-persona` / `persona/**` のレイアウトを読む。既存の `codex/src/aiko-persona-loader.ts` が扱っているものと同じ配置。
 
+旧フラット型（`persona/aiko-origin.md`・`persona/aiko-override.md`・`persona/overrides/<slug>.md`）も読む。ディレクトリ型を先に探し、無ければ旧型へ落ちる。既存 loader が対応していた配置を落とすと、まだ移行していないインストールが起動時に fail closed するため。名前付き人格は「ディレクトリ型 → 旧型」を使い切ってから既定 override へ落ちる（先に既定を見ると、旧型で置かれた指定人格が既定に食われて別人が立つ）。
+
 読み出し口を interface に切ってあるので、manifest 形式の実装は別クラスとして足せる。呼び出し側は変わらない。
 
 ## 設計上の判断

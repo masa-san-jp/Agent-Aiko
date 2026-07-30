@@ -135,6 +135,63 @@ test("人格本文が無ければ起動させない（§6.5 fail closed）", asy
   }
 });
 
+test("旧フラット型 persona/aiko-origin.md も読める（既存インストールを落とさない）", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    "persona/aiko-origin.md": "旧型の origin",
+    "INVARIANTS.md": "x",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.identityCore, "旧型の origin");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("旧フラット型 persona/aiko-override.md も読める", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    mode: "override\n",
+    "persona/aiko-override.md": "旧型の override",
+    "INVARIANTS.md": "x",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.identityCore, "旧型の override");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("旧フラット型の名前付き人格が既定 override に食われない", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    mode: "override\n",
+    "active-persona": "aiko-dev\n",
+    "persona/overrides/aiko-dev.md": "旧型の dev 人格",
+    "persona/override/persona.md": "既定 override",
+    "INVARIANTS.md": "x",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.identityCore, "旧型の dev 人格");
+  } finally {
+    await cleanup();
+  }
+});
+
+test("ディレクトリ型が旧フラット型より優先される", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    "persona/origin/persona.md": "新型",
+    "persona/aiko-origin.md": "旧型",
+    "INVARIANTS.md": "x",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.identityCore, "新型");
+  } finally {
+    await cleanup();
+  }
+});
+
 test("どこから読んだかを provenance 用に残す", async () => {
   const { home, cleanup } = await makeAikoHome({
     "persona/origin/persona.md": "p",
@@ -203,6 +260,28 @@ test("使えない能力は理由つきで明示する（§6.5 末尾）", () =>
     excluded: [{ id: "github", reason: "MCP サーバーが起動していない" }],
   });
   assert.ok(instructions.includes("- github: MCP サーバーが起動していない"));
+});
+
+test("使えない能力の並び順が違っても、指示文も hash も同じになる", () => {
+  const a = compile({
+    persona,
+    user: { id: "default" },
+    excluded: [
+      { id: "github", reason: "未起動" },
+      { id: "slack", reason: "未認証" },
+    ],
+  });
+  const b = compile({
+    persona,
+    user: { id: "default" },
+    excluded: [
+      { id: "slack", reason: "未認証" },
+      { id: "github", reason: "未起動" },
+    ],
+  });
+  assert.equal(a.instructions, b.instructions);
+  assert.equal(a.profileHash, b.profileHash);
+  assert.equal(a.configurationHash, b.configurationHash);
 });
 
 test("同じ入力からは同じ hash が出る", () => {
