@@ -52,7 +52,9 @@ Phase 0 は「Schema・一貫性レベル・互換性方針・Threat Model の�
 1. **人格本文の持ち方** — `persona-package` は本文をパッケージ内の相対パス＋SHA-256 への参照として持つ形にした。マニフェストに本文を直接埋め込む案もある。参照方式にすると本文を別ファイルとして人が読めるまま配布できる一方、ファイル数が増える。
 2. **`permission-manifest` の共通形式** — 設計書は Codex の sandbox / approval policy を反映するとだけ述べている。ここでは Codex の語彙（`read-only` / `workspace-write` / `danger-full-access`）を共通語彙として採用したが、Claude Code の permission mode との対応付けは決めていない。
 3. **`runtime-profile` が本文を持つか** — 現状は `instructions` として本文を持たせている（0600 のローカルファイル前提・§11.3）。参照だけを持たせる案もある。
-4. **互換性方針** — `schema_version` を整数の単調増加とし、`persona-package.compatibility.schema_versions` で受理可能な版を列挙する形にした。どの範囲まで旧版を受理し続けるか（1つ前まで／N ヶ月／無期限）は未決。
-5. **Threat Model** — 未着手。§11.4 が SHA-256・署名・SBOM を挙げているが、何を脅威と見なすかの明文化がない。
+4. ~~**互換性方針**~~ — **決定済み（マサさん確定 2026-07-30）**。受理するのは「現行版とその1つ前」まで。設計書 §10.3.1 に記載し、判定は `packages/core/src/schema-compatibility.ts` が持つ。
+5. **Threat Model** — 未着手。§11.4 が SHA-256・署名・SBOM を挙げているが、何を脅威と見なすかの明文化がない。Phase 5（配布・署名）までに用意する。
 
-1〜3 は暫定として実装を進められる。4 と 5 は Phase 1 に入る前に決める必要がある。
+1〜3 は暫定のまま Phase 2 を進められる。5 が要るのは Phase 5。
+
+当初この README は「4 と 5 は Phase 1 に入る前に決める必要がある」と書いていたが、実際には Phase 1（Aiko Core）は両方なしで実装できた。見積もりが厳しすぎたので訂正した。

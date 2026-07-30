@@ -16,3 +16,9 @@ export {
 export { compile, type CompileInput, type CompiledInstructions, type UserContext } from "./compiler.js";
 
 export { sha256, hashObject } from "./hash.js";
+
+export {
+  checkSchemaVersion,
+  acceptableVersions,
+  type CompatibilityVerdict,
+} from "./schema-compatibility.js";
