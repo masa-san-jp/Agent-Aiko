@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masa-san-jp/Agent-Aiko/schemas/capability-manifest.schema.json",
+  "title": "Capability Manifest",
+  "description": "実行環境で使える能力の目録。設計書 §6.3 / §5.5。認証情報の値は決して含めない（§3.3）。",
+  "type": "object",
+  "required": ["schema_version", "runtime_id"],
+  "additionalProperties": false,
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "availability": {
+      "type": "string",
+      "enum": ["ready", "unavailable", "unknown"]
+    },
+    "version": {
+      "description": "SemVer（§10.3）。",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "runtime_id": {
+      "description": "この目録を作った実行環境。Adapter（§8）と対応する。",
+      "type": "string",
+      "enum": ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"]
+    },
+    "built_in_tools": {
+      "description": "実行環境に組み込まれた道具。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/identifier" },
+          "operations": {
+            "description": "許す操作の範囲。最小権限化（§5.3）の入力になる。",
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "availability": { "$ref": "#/$defs/availability" }
+        }
+      }
+    },
+    "mcp_servers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/identifier" },
+          "availability": { "$ref": "#/$defs/availability" },
+          "operations": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "credential_provider": {
+            "description": "実際の認証情報を保持する主体。Aiko-MCP は値を持たない（§3.3）。",
+            "type": "string",
+            "enum": ["host", "os-keychain", "credential-broker", "mcp-server"]
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/identifier" },
+          "version": { "$ref": "#/$defs/version" },
+          "availability": { "$ref": "#/$defs/availability" }
+        }
+      }
+    },
+    "credentials": {
+      "description": "認証情報の扱い。values_included は false 以外を許さない（§3.3・§11.2）。",
+      "type": "object",
+      "required": ["handling", "values_included"],
+      "additionalProperties": false,
+      "properties": {
+        "handling": {
+          "type": "string",
+          "enum": ["host-managed"]
+        },
+        "values_included": {
+          "const": false
+        }
+      }
+    }
+  }
+}

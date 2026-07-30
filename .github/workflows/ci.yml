@@ -47,6 +47,33 @@ jobs:
       - name: Test
         run: node --test antigravity/test/*.test.mjs
 
+  schemas:
+    name: schemas / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    defaults:
+      run:
+        working-directory: schemas
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: schemas/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
   codex:
     name: codex / Node ${{ matrix.node }}
     runs-on: ubuntu-latest

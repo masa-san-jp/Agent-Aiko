@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masa-san-jp/Agent-Aiko/schemas/binding-request.schema.json",
+  "title": "Binding Request",
+  "description": "Runtime Profile Binder への入力。設計書 §6.1。これが解決できない場合は fail closed（§6.5）。",
+  "type": "object",
+  "required": ["persona_ref", "user_ref", "runtime"],
+  "additionalProperties": false,
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
+    }
+  },
+  "properties": {
+    "persona_ref": {
+      "description": "適用する人格。version を省略した場合は Persona Registry の現行版を解決する。",
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "user_ref": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"]
+        },
+        "model_family": {
+          "description": "Persona Compiler が出力を調整するための情報（§5.2）。文字単位の同一応答は保証しない（§2）。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "capabilities_ref": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "description": "runtime-discovery は Adapter が実行環境から収集する。file は既定の Capability Manifest を読む。",
+          "type": "string",
+          "enum": ["runtime-discovery", "file"]
+        },
+        "path": {
+          "description": "source=file のときの読み取り先。",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "task_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_root": {
+          "description": "絶対パス。Permission Manifest の範囲判定に使う。",
+          "type": "string",
+          "pattern": "^/"
+        },
+        "task_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    }
+  }
+}
