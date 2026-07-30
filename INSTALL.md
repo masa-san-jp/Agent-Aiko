@@ -1,21 +1,25 @@
-# Agent-Aiko 音声モード — インストール手順
+# Agent-Aiko 音声モード — セットアップ手順
 
-Agent-Lab で開発した音声モード機能を Agent-Aiko へ反映する手順。
+音声モード（Claude Code の応答を読み上げる機能）のセットアップと動作確認の手順。
 
-## コピー
+## 前提
+
+リポジトリを取得済みであること。まだの場合は README の「クイックスタート」に従う。
 
 ```bash
-cd ~/dev/Agent-Lab
-git pull
-
-cd ~/dev/Agent-Aiko
-cp -r ~/dev/Agent-Lab/deploy/agent-aiko/. .
-chmod +x .aiko/hooks/stop.sh
-chmod +x voice/hooks/stop.sh
-chmod +x voice/engines/*.sh
+git clone https://github.com/masa-san-jp/Agent-Aiko.git
+cd Agent-Aiko
 ```
 
-## 配置後のディレクトリ構成
+音声モードに必要な `voice/` と `.aiko/` はリポジトリに同梱されている。別リポジトリからのコピー作業は不要。
+
+zip / tarball でダウンロードした場合のみ、実行権限が失われるため付与する（`git clone` では不要）。
+
+```bash
+chmod +x .aiko/hooks/stop.sh voice/hooks/stop.sh voice/engines/*.sh
+```
+
+## ディレクトリ構成
 
 ```
 Agent-Aiko/
