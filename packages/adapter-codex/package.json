@@ -12,7 +12,10 @@
   "bin": {
     "aiko-codex-instructions": "dist/cli.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
@@ -21,7 +24,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@agent-aiko/core": "file:../core"
+    "@agent-aiko/core": "*"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
