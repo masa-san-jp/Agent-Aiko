@@ -23,9 +23,8 @@ export interface CompatibilityVerdict {
 /** schema_version が受理範囲かを判定する。
  *  current は判定する側（Binder / Adapter）が対応している最新の版。 */
 export function checkSchemaVersion(version: number, current: number): CompatibilityVerdict {
-  if (!Number.isInteger(current) || current < 1) {
-    throw new RangeError(`current は 1 以上の整数である必要があります: ${current}`);
-  }
+  // current の検証は acceptableVersions が持つ。2 箇所で同じ不変条件を書くと、
+  // 片方だけ直したときに公開関数の一方が素通りする。
   const acceptable = acceptableVersions(current);
   if (!Number.isInteger(version) || version < 1) {
     return {
@@ -58,8 +57,13 @@ export function checkSchemaVersion(version: number, current: number): Compatibil
   return { accepted: true, current, acceptable };
 }
 
-/** 現行版から受理できる版の一覧（昇順）。current=1 のときは [1] だけ。 */
+/** 現行版から受理できる版の一覧（昇順）。current=1 のときは [1] だけ。
+ *  公開関数なので不正な current はここで弾く。Infinity を渡されると
+ *  `v += 1` が Infinity のままで終端せず、呼び出し側が固まる。 */
 export function acceptableVersions(current: number): number[] {
+  if (!Number.isInteger(current) || current < 1) {
+    throw new RangeError(`current は 1 以上の整数である必要があります: ${current}`);
+  }
   const oldest = Math.max(1, current - (ACCEPTED_SPAN - 1));
   const versions: number[] = [];
   for (let v = oldest; v <= current; v += 1) versions.push(v);
