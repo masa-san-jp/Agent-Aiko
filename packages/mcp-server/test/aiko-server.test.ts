@@ -84,7 +84,7 @@ test("Tool: bind_runtime が Profile を作り、version と hash を返す（§
   const { client, close } = await connect();
   try {
     const result = await client.callTool({
-      name: "aiko_bind_runtime",
+      name: "aiko.bind_runtime",
       arguments: { runtime: "claude-code", injectionMethod: "claude-code:system-prompt-file" },
     });
     const body = parse(result);
@@ -102,7 +102,7 @@ test("Tool: bind_runtime は instructions 本文を既定で返さない", async
   try {
     const body = parse(
       await client.callTool({
-        name: "aiko_bind_runtime",
+        name: "aiko.bind_runtime",
         arguments: { runtime: "codex", injectionMethod: "codex:base-instructions" },
       }),
     );
@@ -117,7 +117,7 @@ test("Tool: 合成できないときは Profile を返さず理由を返す（fa
   try {
     // Level 2 のランタイムで注入手段を指定しない＝合成してはいけない組み合わせ
     const result = await client.callTool({
-      name: "aiko_bind_runtime",
+      name: "aiko.bind_runtime",
       arguments: { runtime: "claude-code" },
     });
     const body = parse(result);
@@ -132,7 +132,7 @@ test("Tool: 合成できないときは Profile を返さず理由を返す（fa
 test("Tool: get_runtime_profile は bind 前なら見つからないと返す", async () => {
   const { client, close } = await connect();
   try {
-    const body = parse(await client.callTool({ name: "aiko_get_runtime_profile", arguments: {} }));
+    const body = parse(await client.callTool({ name: "aiko.get_runtime_profile", arguments: {} }));
     assert.equal(body["found"], false);
   } finally {
     await close();
@@ -143,17 +143,17 @@ test("Tool: get_runtime_profile は要求されたときだけ instructions を�
   const { client, close } = await connect();
   try {
     await client.callTool({
-      name: "aiko_bind_runtime",
+      name: "aiko.bind_runtime",
       arguments: { runtime: "codex", injectionMethod: "codex:base-instructions" },
     });
     const withoutBody = parse(
-      await client.callTool({ name: "aiko_get_runtime_profile", arguments: {} }),
+      await client.callTool({ name: "aiko.get_runtime_profile", arguments: {} }),
     );
     assert.equal(withoutBody["instructions"], undefined);
 
     const withBody = parse(
       await client.callTool({
-        name: "aiko_get_runtime_profile",
+        name: "aiko.get_runtime_profile",
         arguments: { includeInstructions: true },
       }),
     );
@@ -168,7 +168,7 @@ test("Tool: report_capabilities は使えない能力を理由つきで返す", 
   try {
     const body = parse(
       await client.callTool({
-        name: "aiko_report_capabilities",
+        name: "aiko.report_capabilities",
         arguments: {
           capabilityManifest: {
             schema_version: 1,
@@ -192,7 +192,7 @@ test("Tool: 認証情報を含む Manifest は拒否する（§3.3）", async ()
   const { client, close } = await connect();
   try {
     const result = await client.callTool({
-      name: "aiko_report_capabilities",
+      name: "aiko.report_capabilities",
       arguments: {
         capabilityManifest: {
           schema_version: 1,
@@ -211,7 +211,7 @@ test("Tool: 認証情報を含む Manifest は拒否する（§3.3）", async ()
 test("Tool: health は人格を読めているかを返す", async () => {
   const { client, close } = await connect();
   try {
-    const body = parse(await client.callTool({ name: "aiko_health", arguments: {} }));
+    const body = parse(await client.callTool({ name: "aiko.health", arguments: {} }));
     assert.equal(body["status"], "ok");
     assert.equal(
       (body["persona"] as Record<string, unknown>)["invariantsPresent"],
@@ -225,7 +225,7 @@ test("Tool: health は人格を読めているかを返す", async () => {
 test("Tool: 人格を読めないとき health は ok を返さない", async () => {
   const { client, close } = await connect(failingRepo);
   try {
-    const result = await client.callTool({ name: "aiko_health", arguments: {} });
+    const result = await client.callTool({ name: "aiko.health", arguments: {} });
     const body = parse(result);
     assert.equal(body["status"], "persona-unavailable");
     assert.equal((result as { isError?: boolean }).isError, true);
@@ -240,6 +240,40 @@ test("Resource: bind 前の runtime-profile summary は空を明示する", asyn
     const res = await client.readResource({ uri: "runtime-profile://latest/summary" });
     const body = JSON.parse(resourceText(res.contents)) as Record<string, unknown>;
     assert.match(String(body["error"]), /bind/);
+  } finally {
+    await close();
+  }
+});
+
+test("Resource: bind が返した profile_id でそのまま参照できる（§7.2）", async () => {
+  const { client, close } = await connect();
+  try {
+    const bound = parse(
+      await client.callTool({
+        name: "aiko.bind_runtime",
+        arguments: { runtime: "codex", injectionMethod: "codex:base-instructions" },
+      }),
+    );
+    const profileId = String(bound["profile_id"]);
+    const res = await client.readResource({
+      uri: `runtime-profile://${profileId}/summary`,
+    });
+    const body = JSON.parse(resourceText(res.contents)) as Record<string, unknown>;
+    assert.equal(body["profile_id"], profileId);
+    assert.equal(body["profile_hash"], bound["profile_hash"]);
+    // 要約に本文は含めない
+    assert.equal(body["instructions"], undefined);
+  } finally {
+    await close();
+  }
+});
+
+test("Resource: 知らない profile_id は存在しないと明示する", async () => {
+  const { client, close } = await connect();
+  try {
+    const res = await client.readResource({ uri: "runtime-profile://deadbeef/summary" });
+    const body = JSON.parse(resourceText(res.contents)) as Record<string, unknown>;
+    assert.match(String(body["error"]), /deadbeef/);
   } finally {
     await close();
   }
