@@ -564,6 +564,23 @@ nightly main自動ビルド
 
 Distribution、MCP Server、Persona Package、Schema、Compiler、Adapterを個別にSemVer管理する。
 
+### 10.3.1 スキーマの互換性方針（マサさん確定 2026-07-30）
+
+各スキーマの`schema_version`は1から始まる整数で、後方非互換な変更のたびに1つ増やす。項目の追加など後方互換な変更では増やさない。
+
+**受理する範囲は「現行版とその1つ前」まで。** それより古い`schema_version`は読まずに拒否する（§6.5 の「必須スキーマ不正」に当たる扱い）。
+
+| 現行 | 受理 | 拒否 |
+|---|---|---|
+| 2 | 2, 1 | 0 以下 |
+| 3 | 3, 2 | 1 以下 |
+
+無期限に受理しない理由は、古い形式を読むコードが恒久的に残り、以後すべての変更がその分岐を抱え続けるため。1つ前まで受理するのは、更新が一段階遅れているだけの利用者を、更新のためだけに止めないため。
+
+拒否するときは、拒否した版・受理できる範囲・更新方法を示す。読めない事実だけを伝えて終わらない。
+
+対象は`schema_version`を持つファイル（User Profile・Capability Manifest・Permission Manifest・Persona Package・Runtime Profile）。Persona Package の`compatibility.schema_versions`は、そのパッケージが受理できる版を宣言するもので、この方針の下位に位置する（宣言が方針より広くても、方針の範囲を超えて受理しない）。
+
 ## 10.4 更新
 
 ```bash
@@ -699,6 +716,8 @@ aiko migrate rollback
 ## Phase 0：仕様固定
 
 Schema、一貫性レベル、互換性方針、Threat Modelを確定する。
+
+進捗（2026-07-30）: Schema 確定済（`schemas/` の6本・#48）。一貫性レベル確定済（§2.1・ランタイム別の到達可否は §8.5）。互換性方針 確定済（§10.3.1）。**Threat Model 未着手** — Phase 5（配布・署名）までに用意する。
 
 ## Phase 1：Aiko Core抽出
 
