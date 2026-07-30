@@ -34,13 +34,13 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
     const tools = await client.listTools();
     const names = tools.tools.map((t) => t.name).sort();
     assert.deepEqual(names, [
-      "aiko_bind_runtime",
-      "aiko_get_runtime_profile",
-      "aiko_health",
-      "aiko_report_capabilities",
+      "aiko.bind_runtime",
+      "aiko.get_runtime_profile",
+      "aiko.health",
+      "aiko.report_capabilities",
     ]);
 
-    const health = await client.callTool({ name: "aiko_health", arguments: {} });
+    const health = await client.callTool({ name: "aiko.health", arguments: {} });
     const content = (health as { content: Array<{ text: string }> }).content;
     const body = JSON.parse(String(content[0]?.text)) as Record<string, unknown>;
     assert.equal(body["status"], "ok");

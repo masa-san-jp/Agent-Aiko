@@ -7,7 +7,7 @@
 // Tool の結果には Persona version と hash を必ず載せる（§7.4）。載せないと、
 // クライアント側は自分が何版の人格で動いているかを追えない（§16 の追跡性）。
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
   CapabilityRegistry,
@@ -117,26 +117,45 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     },
   );
 
+  // §7.2 の runtime-profile://{profile_id}/summary。bind が返した profile_id を
+  // そのまま URI に入れて引ける必要がある。固定 URI にすると、返した id で参照
+  // できない＝プロトコル上は存在するのに使えない口になる。
+  // profile_id に "latest" を渡した場合だけ直近のものを指す。
   server.registerResource(
     "runtime-profile-summary",
-    `runtime-profile://latest/summary`,
+    new ResourceTemplate("runtime-profile://{profile_id}/summary", { list: undefined }),
     {
       title: "runtime profile summary",
-      description: "直近に合成した Runtime Profile の要約。instructions 本文は含まない",
+      description:
+        "合成済み Runtime Profile の要約。profile_id に latest を渡すと直近のもの。instructions 本文は含まない",
       mimeType: "application/json",
     },
-    async () => {
-      const profile = store.latest();
+    async (uri, variables) => {
+      const raw = variables["profile_id"];
+      const profileId = Array.isArray(raw) ? raw[0] : raw;
+      const profile =
+        profileId === undefined || profileId === "latest"
+          ? store.latest()
+          : store.get(profileId);
       const text = profile
         ? JSON.stringify(summarize(profile), null, 2)
-        : JSON.stringify({ error: "まだ bind されていません" }, null, 2);
-      return { contents: [{ uri: "runtime-profile://latest/summary", text }] };
+        : JSON.stringify(
+            {
+              error:
+                profileId === undefined || profileId === "latest"
+                  ? "まだ bind されていません"
+                  : `profile_id ${profileId} の Runtime Profile がありません`,
+            },
+            null,
+            2,
+          );
+      return { contents: [{ uri: uri.href, text }] };
     },
   );
 
   // --- Tools（§7.4）---
   server.registerTool(
-    "aiko_bind_runtime",
+    "aiko.bind_runtime",
     {
       title: "Runtime Profile を合成する",
       description:
@@ -176,7 +195,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
   );
 
   server.registerTool(
-    "aiko_get_runtime_profile",
+    "aiko.get_runtime_profile",
     {
       title: "合成済みの Runtime Profile を取得する",
       description:
@@ -200,7 +219,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
   );
 
   server.registerTool(
-    "aiko_report_capabilities",
+    "aiko.report_capabilities",
     {
       title: "Capability Manifest を解釈する",
       description:
@@ -217,7 +236,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
   );
 
   server.registerTool(
-    "aiko_health",
+    "aiko.health",
     {
       title: "サーバーと人格の状態を返す",
       description: "人格を読めているか、Profile をいくつ保持しているかを返す",
