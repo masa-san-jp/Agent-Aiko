@@ -32,3 +32,8 @@ __pycache__/
 /Agent-Lab/
 # 旧 dev-docs/ ネスト構造の再混入予防（dev-docs は ../Agent-Lab/Agent-team/agents/aiko/dev-docs/ へ統合済み）
 /dev-docs/
+
+# === npm workspace（packages/*）===
+# ルートで一括 install するため node_modules はルートに集まる。
+# 各パッケージ配下の .gitignore は残すが、ルートでも押さえる。
+node_modules/

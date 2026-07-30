@@ -47,16 +47,13 @@ jobs:
       - name: Test
         run: node --test antigravity/test/*.test.mjs
 
-  core:
-    name: core / Node ${{ matrix.node }}
+  packages:
+    name: packages / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         node: ['20', '22']
-    defaults:
-      run:
-        working-directory: packages/core
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,114 +63,23 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-          cache-dependency-path: packages/core/package-lock.json
+          cache-dependency-path: package-lock.json
 
+      # packages/* は npm workspace。ルートで一度入れれば相互参照が解決し、
+      # devDependencies も共有される。パッケージごとに入れていた頃は、
+      # file: 依存に devDependencies が入らず依存先が自分をビルドできないため、
+      # CI にビルド順序を手で書く必要があった。
       - name: Install dependencies
         run: npm ci
+
+      - name: Build
+        run: npm run build
 
       - name: Typecheck
         run: npm run typecheck
 
       - name: Test
         run: npm test
-
-  adapter-claude-code:
-    name: adapter-claude-code / Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ['20', '22']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-
-      # file:../core は symlink で張られ、リンクされたローカル依存には
-      # devDependencies が入らない。core は自分をビルドできないので先に済ませる。
-      - name: Build @agent-aiko/core
-        run: |
-          npm ci --prefix packages/core
-          npm run build --prefix packages/core
-
-      - name: Install dependencies
-        run: npm ci --prefix packages/adapter-claude-code
-
-      - name: Typecheck
-        run: npm run typecheck --prefix packages/adapter-claude-code
-
-      - name: Test
-        run: npm test --prefix packages/adapter-claude-code
-
-  adapter-codex:
-    name: adapter-codex / Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ['20', '22']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-
-      # file:../core は symlink で張られ、リンクされたローカル依存には
-      # devDependencies が入らない。core は自分をビルドできないので先に済ませる。
-      - name: Build @agent-aiko/core
-        run: |
-          npm ci --prefix packages/core
-          npm run build --prefix packages/core
-
-      - name: Install dependencies
-        run: npm ci --prefix packages/adapter-codex
-
-      - name: Typecheck
-        run: npm run typecheck --prefix packages/adapter-codex
-
-      - name: Test
-        run: npm test --prefix packages/adapter-codex
-
-  mcp-server:
-    name: mcp-server / Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: ['20', '22']
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-
-      # @agent-aiko/core は file:../core 依存で、npm はこれを symlink として張る。
-      # ローカル依存の devDependencies（typescript）は入らないため、core 自身の
-      # ビルドを先に済ませておく必要がある。順序を入れ替えると dist が無いまま
-      # 解決に失敗する。
-      - name: Build @agent-aiko/core
-        run: |
-          npm ci --prefix packages/core
-          npm run build --prefix packages/core
-
-      - name: Install dependencies
-        run: npm ci --prefix packages/mcp-server
-
-      - name: Typecheck
-        run: npm run typecheck --prefix packages/mcp-server
-
-      - name: Test
-        run: npm test --prefix packages/mcp-server
 
   schemas:
     name: schemas / Node ${{ matrix.node }}
