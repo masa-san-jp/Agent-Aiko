@@ -483,14 +483,16 @@ Tool結果にはPersona version、Policy version、hashを含める。
 - sandbox / approval policyをPermission Manifestへ反映
 - 既存Codex Runtimeを段階統合
 
-## 8.3 Gemini CLI
+## 8.3 Antigravity CLI（旧 Gemini CLI）
+
+Gemini CLIはAntigravity CLIへ移行した。本設計が前提にしていた設定ファイル名・コマンド定義形式・hooks定義・設定パスが変わっている可能性があり、その調査と`antigravity/`配下の表記統一は独立課題として分離した（#45）。
 
 - MCP設定へAiko-MCPを追加
-- `GEMINI.md`には薄いbootstrapのみを置く
+- コンテキストファイルには薄いbootstrapのみを置く
 - extensionsとの競合を検出
-- 既存Antigravity / Gemini実装から移行
+- 既存`antigravity/`実装から移行
 
-`GEMINI.md`はユーザー級のコンテキストであり、モデルが従う保証がない。system級注入の手段を確認できるまで、Gemini CLIはLevel 2の対象と見なさない（§8.5）。
+現行のコンテキストファイル（`GEMINI.md`）はユーザー級のコンテキストであり、モデルが従う保証がない。#45でsystem級注入の手段が判明するまで、このランタイムはLevel 2の対象と見なさない（§8.5）。本設計はClaude CodeとCodexの2ランタイムで先行する。
 
 ## 8.4 Generic MCP Host
 
@@ -504,10 +506,10 @@ Level 2（§2.1）とFail Closed（§3.4）は「エージェントループ開�
 |---|---|---|
 | Claude Code | `--system-prompt` / `--system-prompt-file` / `--append-system-prompt` / `--append-system-prompt-file` | **実測で確認済み**。`--setting-sources ''`（`CLAUDE.md`・settings を一切読まない状態）で`--system-prompt`のみを与え、指定した一人称と応答プレフィックスが適用されることを確認した。人格がsystem級注入だけで成立する |
 | Codex | `thread/start`の`baseInstructions` | 既存実装で実現済み（コードで確認）。ターン単位の上書き不可という性質はLevel 2に適合する。本設計としての実行検証は未実施 |
-| Gemini CLI | 不明（`GEMINI.md`はユーザー級） | **未検証**。検証環境にCLI未インストール。system級注入の手段が確認できていない |
+| Antigravity CLI（旧 Gemini CLI） | 不明（現行のコンテキストファイルはユーザー級） | **未検証**。検証環境にCLI未インストール。加えてGemini CLIからAntigravity CLIへの移行で仕様自体が変わっている可能性があり、調査は#45で行う |
 | Generic MCP Host | なし | §8.4のとおりLevel 2非対象 |
 
-Claude CodeとCodexについては前提が成立する。Gemini CLIはsystem級注入の手段が判明するまで、Level 1（起動時注入・保証なし）として扱う。
+Claude CodeとCodexについては前提が成立する。Antigravity CLIはsystem級注入の手段が判明するまで、Level 1（起動時注入・保証なし）として扱う。したがって本設計の§15以降はClaude CodeとCodexの2ランタイムを対象に進め、Antigravity CLIは#45の結果を待って合流させる。
 
 この検証を先に行ったのは、6種のスキーマを固めた後にAdapterで前提が崩れると、固めたスキーマを作り直すことになるため。
 
