@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masa-san-jp/Agent-Aiko/schemas/permission-manifest.schema.json",
+  "title": "Permission Manifest",
+  "description": "実行環境が課す権限・承認境界。設計書 §8.2 / §6.4。Boundary Consistency（§2）の根拠。",
+  "$comment": "暫定。設計書は Codex の sandbox / approval policy を反映すると述べるのみで、共通形式を規定していない。Claude Code 側の permission mode との対応付けは未確定（schemas/README.md）。",
+  "type": "object",
+  "required": ["schema_version", "runtime_id"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "runtime_id": {
+      "type": "string",
+      "enum": ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"]
+    },
+    "filesystem": {
+      "description": "読み書きを許す範囲。絶対パスのみ。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "readable_paths": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" }
+        },
+        "writable_paths": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "outbound": {
+          "description": "既定は denied。Fail Closed（§3.4）に合わせ、明示的に許可しない限り出さない。",
+          "type": "string",
+          "enum": ["denied", "allowlist", "allowed"],
+          "default": "denied"
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "approval": {
+      "description": "どの操作でユーザー承認を要求するか。不可逆操作は要求する側に倒す。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "type": "string",
+          "enum": ["never", "on-request", "on-failure", "untrusted", "always"]
+        },
+        "require_for": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["file-write", "file-delete", "shell", "network", "git-push", "external-send"]
+          }
+        }
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["read-only", "workspace-write", "danger-full-access"]
+        }
+      }
+    }
+  }
+}

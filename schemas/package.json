@@ -1,0 +1,23 @@
+{
+  "name": "@agent-aiko/schemas",
+  "version": "0.1.0",
+  "description": "Aiko-MCP のスキーマ定義（設計書 §6 / §7）と、その検証テスト",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1"
+  },
+  "dependencies": {},
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
+    "directory": "schemas"
+  }
+}
