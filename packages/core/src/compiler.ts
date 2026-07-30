@@ -67,7 +67,12 @@ export function compile(input: CompileInput): CompiledInstructions {
     );
   }
 
-  const excluded = input.excluded ?? [];
+  // 並べ替えてから描く。discovery が返す順は実行ごとに揺れるため、揃えないと
+  // 同じ構成なのに instructions と profileHash だけが変わる（configurationHash は
+  // 並べ替え済みなので一致したまま）＝同一構成が別物として記録される。
+  const excluded = [...(input.excluded ?? [])].sort((a, b) =>
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0,
+  );
   if (excluded.length > 0) {
     // 使えないものを黙って隠すと、あるつもりで呼んで失敗する。理由まで見せる。
     sections.push(
@@ -108,7 +113,7 @@ export function compile(input: CompileInput): CompiledInstructions {
       behavioralContract: sha256(input.persona.behavioralContract),
       user: input.user,
       capabilities: [...capabilities].sort(),
-      excluded: [...excluded].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+      excluded,
       outputPrefix: input.outputPrefix,
     }),
   };

@@ -43,7 +43,7 @@ export class FileSystemPersonaRepository implements PersonaRepository {
 
     const sources: PersonaSource[] = [];
     const identity = await this.#readFirst(
-      dirs.map((d) => join(d, "persona.md")),
+      this.#candidatePersonaFiles(mode, activePersona),
       ref,
       "identity-core",
     );
@@ -83,6 +83,29 @@ export class FileSystemPersonaRepository implements PersonaRepository {
     if (activePersona) dirs.push(join(personaRoot, "overrides", activePersona));
     dirs.push(join(personaRoot, "override"));
     return dirs;
+  }
+
+  /** 人格本文の候補を優先順に並べる。
+   *  ディレクトリ型（persona/origin/persona.md 等）を先に見て、見つからなければ旧
+   *  フラット型（persona/aiko-origin.md・persona/overrides/<slug>.md）へ落ちる。
+   *  旧型を落とすと、まだ移行していない既存インストールが起動時に fail closed する。
+   *  Phase 1 の要件は「現行のレイアウトをそのまま読む」なので、既存の loader が
+   *  対応していた配置はすべて読めなければならない。 */
+  #candidatePersonaFiles(mode: Mode, activePersona: string): string[] {
+    const personaRoot = join(this.#aikoHome, "persona");
+    if (mode !== "override") {
+      return [join(personaRoot, "origin", "persona.md"), join(personaRoot, "aiko-origin.md")];
+    }
+    const paths: string[] = [];
+    // 指定された人格を、ディレクトリ型・旧フラット型の順で先に使い切る。既定
+    // override を先に見ると、旧型で置かれた指定人格が既定に食われて別人が立つ。
+    if (activePersona) {
+      paths.push(join(personaRoot, "overrides", activePersona, "persona.md"));
+      paths.push(join(personaRoot, "overrides", `${activePersona}.md`));
+    }
+    paths.push(join(personaRoot, "override", "persona.md"));
+    paths.push(join(personaRoot, "aiko-override.md"));
+    return paths;
   }
 
   async #readMode(): Promise<Mode> {
