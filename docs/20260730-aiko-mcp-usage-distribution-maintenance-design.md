@@ -504,7 +504,7 @@ Level 2（§2.1）とFail Closed（§3.4）は「エージェントループ開�
 
 | ランタイム | 注入手段 | 検証状況 |
 |---|---|---|
-| Claude Code | `--system-prompt` / `--system-prompt-file` / `--append-system-prompt` / `--append-system-prompt-file` | **実測で確認済み**。`--setting-sources ''`（`CLAUDE.md`・settings を一切読まない状態）で`--system-prompt`のみを与え、指定した一人称と応答プレフィックスが適用されることを確認した。人格がsystem級注入だけで成立する |
+| Claude Code | `--system-prompt` / `--system-prompt-file` / `--append-system-prompt-file`（実測）<br>`--append-system-prompt`（未実測・上記の inline 版） | **実測で確認済み**。`--setting-sources ''`（`CLAUDE.md`・settings を一切読まない状態）で次の3通りを実行し、いずれも指定した一人称と応答プレフィックスが適用された。①`--system-prompt`（文字列）②`--system-prompt-file`（ファイル）③`①のファイル版 + --append-system-prompt-file`（併用時は両方が合成され、base の指示と append の指示が同時に効く）。人格がsystem級注入だけで成立する |
 | Codex | `thread/start`の`baseInstructions` | 既存実装で実現済み（コードで確認）。ターン単位の上書き不可という性質はLevel 2に適合する。本設計としての実行検証は未実施 |
 | Antigravity CLI（旧 Gemini CLI） | 不明（現行のコンテキストファイルはユーザー級） | **未検証**。検証環境にCLI未インストール。加えてGemini CLIからAntigravity CLIへの移行で仕様自体が変わっている可能性があり、調査は#45で行う |
 | Generic MCP Host | なし | §8.4のとおりLevel 2非対象 |
@@ -714,7 +714,7 @@ Resources、Prompts、Tools、MCP Inspector Testを実装する。
 
 ## Phase 4：正式Adapter
 
-Claude Code、Codex、Gemini CLIの順でLevel 2対応する。
+Claude Code、Codexの順でLevel 2対応する。Antigravity CLI（旧 Gemini CLI）はsystem級注入の手段が未確認のため本フェーズの対象に含めない（§8.3・§8.5）。#45で手段が判明した時点で本フェーズへ追加する。
 
 ## Phase 5：配布・更新
 
