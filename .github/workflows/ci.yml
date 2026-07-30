@@ -77,6 +77,40 @@ jobs:
       - name: Test
         run: npm test
 
+  mcp-server:
+    name: mcp-server / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # @agent-aiko/core は file:../core 依存で、npm はこれを symlink として張る。
+      # ローカル依存の devDependencies（typescript）は入らないため、core 自身の
+      # ビルドを先に済ませておく必要がある。順序を入れ替えると dist が無いまま
+      # 解決に失敗する。
+      - name: Build @agent-aiko/core
+        run: |
+          npm ci --prefix packages/core
+          npm run build --prefix packages/core
+
+      - name: Install dependencies
+        run: npm ci --prefix packages/mcp-server
+
+      - name: Typecheck
+        run: npm run typecheck --prefix packages/mcp-server
+
+      - name: Test
+        run: npm test --prefix packages/mcp-server
+
   schemas:
     name: schemas / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
