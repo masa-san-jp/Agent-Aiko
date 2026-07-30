@@ -109,6 +109,38 @@ jobs:
       - name: Test
         run: npm test --prefix packages/adapter-claude-code
 
+  adapter-codex:
+    name: adapter-codex / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # file:../core は symlink で張られ、リンクされたローカル依存には
+      # devDependencies が入らない。core は自分をビルドできないので先に済ませる。
+      - name: Build @agent-aiko/core
+        run: |
+          npm ci --prefix packages/core
+          npm run build --prefix packages/core
+
+      - name: Install dependencies
+        run: npm ci --prefix packages/adapter-codex
+
+      - name: Typecheck
+        run: npm run typecheck --prefix packages/adapter-codex
+
+      - name: Test
+        run: npm test --prefix packages/adapter-codex
+
   mcp-server:
     name: mcp-server / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
