@@ -11,13 +11,15 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod";
 import {
   CapabilityRegistry,
-  RuntimeProfileBinder,
   type PersonaRepository,
   type PersonaSnapshot,
   type ResolvedUserContext,
-  type RuntimeId,
-  type InjectionMethod,
 } from "@agent-aiko/core";
+import {
+  RuntimeProfileBinder,
+  type InjectionMethod,
+  type RuntimeId,
+} from "@agent-aiko/binder";
 import { ProfileStore } from "./profile-store.js";
 
 export const SERVER_NAME = "aiko-mcp";

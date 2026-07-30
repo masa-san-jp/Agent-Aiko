@@ -40,14 +40,3 @@ export {
   type CapabilityRegistryOptions,
   type ResolvedCapabilities,
 } from "./capability-registry.js";
-
-export {
-  RuntimeProfileBinder,
-  BindingError,
-  RUNTIME_PROFILE_SCHEMA_VERSION,
-  type BinderOptions,
-  type BindingRequest,
-  type InjectionMethod,
-  type RuntimeId,
-  type RuntimeProfile,
-} from "./binder.js";
