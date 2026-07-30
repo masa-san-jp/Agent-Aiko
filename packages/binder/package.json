@@ -1,16 +1,14 @@
 {
-  "name": "@agent-aiko/mcp-server",
+  "name": "@agent-aiko/binder",
   "version": "0.1.0",
-  "description": "Aiko-MCP の stdio MCP サーバー。設計書 §7 / §15 Phase 3",
+  "description": "Runtime Profile Binder — 人格・ユーザー・能力を1つの Runtime Profile に束ねる、束ねられなければ拒む。設計書 §5.3 / §6",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "main": "dist/index.js",
-  "bin": {
-    "aiko-mcp-server": "dist/server.js"
-  },
+  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "README.md"
@@ -22,21 +20,19 @@
     "test": "node --import tsx --test test/*.test.ts",
     "clean": "tsc -b --clean"
   },
-  "dependencies": {
-    "@agent-aiko/binder": "*",
-    "@agent-aiko/core": "*",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "zod": "^4.4.3"
-  },
   "devDependencies": {
     "@types/node": "^20.19.0",
+    "ajv": "^8.17.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@agent-aiko/core": "*"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
-    "directory": "packages/mcp-server"
+    "directory": "packages/binder"
   }
 }

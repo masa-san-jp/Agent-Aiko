@@ -9,11 +9,16 @@
 // Binding 失敗時は Aiko として起動しないと定めている。部分的に欠けた Profile を
 // 返すと、呼び出し側がそれを見て起動してしまう。だから欠けたら例外で止める。
 
-import { compile, type CompiledInstructions } from "./compiler.js";
-import { CapabilityRegistry, type ResolvedCapabilities } from "./capability-registry.js";
-import { checkSchemaVersion } from "./schema-compatibility.js";
-import type { PersonaRef, PersonaRepository } from "./persona-repository.js";
-import type { ResolvedUserContext } from "./user-context-provider.js";
+import {
+  compile,
+  CapabilityRegistry,
+  checkSchemaVersion,
+  type CompiledInstructions,
+  type PersonaRef,
+  type PersonaRepository,
+  type ResolvedCapabilities,
+  type ResolvedUserContext,
+} from "@agent-aiko/core";
 
 /** Runtime Profile の現行 schema_version。 */
 export const RUNTIME_PROFILE_SCHEMA_VERSION = 1;

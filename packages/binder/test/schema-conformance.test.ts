@@ -1,6 +1,6 @@
 // Binder の出力が Phase 0 のスキーマに適合することを確かめる。
 //
-// スキーマ（schemas/）と実装（packages/core/）は別々に書いたので、片方だけ直すと
+// スキーマ（schemas/）と実装（packages/binder/）は別々に書いたので、片方だけ直すと
 // 静かに食い違う。項目名を目で見比べても気付けないため、実際に合成した Profile を
 // スキーマに通す。スキーマ本体は相対パスで読むだけなので、パッケージ間の依存は
 // 作らない。
@@ -16,7 +16,7 @@ import { dirname, join } from "node:path";
 // を宣言して1回だけ変換する。
 import AjvModule from "ajv/dist/2020.js";
 import { RuntimeProfileBinder } from "../src/binder.js";
-import type { PersonaRepository } from "../src/persona-repository.js";
+import type { PersonaRepository } from "@agent-aiko/core";
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: unknown };
 interface AjvLike {

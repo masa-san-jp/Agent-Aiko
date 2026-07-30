@@ -9,9 +9,14 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RuntimeProfileBinder, BindingError } from "../src/binder.js";
-import { CapabilityRegistry, CapabilityManifestError } from "../src/capability-registry.js";
-import { UserContextProvider, UserProfileError } from "../src/user-context-provider.js";
-import { PersonaResolutionError, type PersonaRepository } from "../src/persona-repository.js";
+import {
+  CapabilityRegistry,
+  CapabilityManifestError,
+  UserContextProvider,
+  UserProfileError,
+  PersonaResolutionError,
+  type PersonaRepository,
+} from "@agent-aiko/core";
 
 const persona = {
   id: "aiko",

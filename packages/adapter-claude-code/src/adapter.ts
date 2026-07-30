@@ -11,13 +11,12 @@
 
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { type PersonaRepository, type ResolvedUserContext } from "@agent-aiko/core";
 import {
   RuntimeProfileBinder,
   type InjectionMethod,
-  type PersonaRepository,
-  type ResolvedUserContext,
   type RuntimeProfile,
-} from "@agent-aiko/core";
+} from "@agent-aiko/binder";
 
 /** 既定の注入手段。base を置き換える側を使う。 */
 export const DEFAULT_INJECTION: InjectionMethod = "claude-code:system-prompt-file";
