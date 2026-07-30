@@ -85,13 +85,41 @@ test("User Profile: 受理範囲外の版は例外（§10.3.1）", () => {
   );
 });
 
-test("User Profile: 未知の verbosity は黙って捨てる（既定へ落とす）", () => {
-  const resolved = new UserContextProvider().resolve({
-    schema_version: 1,
-    user_id: "default",
-    communication: { verbosity: "ものすごく詳しく" },
-  });
+test("User Profile: 未知の verbosity は黙って捨てず拒否する", () => {
+  // 捨てると、設定したつもりで効いていない状態に置かれ、しかも気付けない。
+  // スキーマ側も enum で弾く（§6.2）ので、ここで通すと二重基準になる。
+  assert.throws(
+    () =>
+      new UserContextProvider().resolve({
+        schema_version: 1,
+        user_id: "default",
+        communication: { verbosity: "ものすごく詳しく" },
+      }),
+    (err: unknown) => {
+      assert.ok(err instanceof UserProfileError);
+      assert.match(err.message, /concise \/ normal \/ detailed/);
+      return true;
+    },
+  );
+});
+
+test("User Profile: 未知の directness も拒否する", () => {
+  assert.throws(
+    () =>
+      new UserContextProvider().resolve({
+        schema_version: 1,
+        user_id: "default",
+        communication: { directness: "とても高い" },
+      }),
+    UserProfileError,
+  );
+});
+
+test("User Profile: communication が無い場合は何も設定しない（拒否しない）", () => {
+  const resolved = new UserContextProvider().resolve({ schema_version: 1, user_id: "default" });
   assert.equal(resolved.context.verbosity, undefined);
+  assert.equal(resolved.context.directness, undefined);
+  assert.equal(resolved.context.language, undefined);
 });
 
 test("User Profile: ファイルが無ければ例外", async () => {
@@ -146,6 +174,27 @@ test("Capability: 使えないものは理由つきで除外し、止めない�
   assert.deepEqual(resolved.excluded.map((e) => e.id), ["notion", "slack"]);
   assert.match(resolved.excluded[0]?.reason ?? "", /確認できません/);
   assert.match(resolved.excluded[1]?.reason ?? "", /利用できません/);
+});
+
+test("Capability: availability が不正な値なら ready に丸めず除外する", () => {
+  // 宣言が壊れているものを一番許す側へ倒すと、使えないものを使えることにしてしまう
+  const resolved = new CapabilityRegistry().resolve({
+    schema_version: 1,
+    runtime_id: "codex",
+    mcp_servers: [{ id: "github", availability: "ready-ish" }],
+  });
+  assert.deepEqual(resolved.available, []);
+  assert.deepEqual(resolved.excluded.map((e) => e.id), ["github"]);
+  assert.match(resolved.excluded[0]?.reason ?? "", /宣言が不正/);
+});
+
+test("Capability: availability が無い項目は ready 扱い（§6.3 の例）", () => {
+  const resolved = new CapabilityRegistry().resolve({
+    schema_version: 1,
+    runtime_id: "claude-code",
+    built_in_tools: [{ id: "filesystem", operations: ["read"] }],
+  });
+  assert.deepEqual(resolved.available, ["filesystem"]);
 });
 
 test("Capability: 認証情報の値を含む宣言は拒否する（§3.3）", () => {

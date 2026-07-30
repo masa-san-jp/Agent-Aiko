@@ -97,12 +97,36 @@ export class UserContextProvider {
     if (typeof preferredName === "string" && preferredName.length > 0) {
       context.preferredName = preferredName;
     }
+    // 値が入っているのに既知でないものは黙って捨てない。捨てると、利用者は
+    // 設定したつもりで効いていない状態に置かれ、しかもそれに気付けない。
+    // スキーマ側も enum で弾く（§6.2）ので、ここで通すと二重基準になる。
     const language = communication?.["language"];
-    if (typeof language === "string" && language.length > 0) context.language = language;
+    if (language !== undefined) {
+      if (typeof language !== "string" || language.length === 0) {
+        throw new UserProfileError("User Profile の language が不正です", { path });
+      }
+      context.language = language;
+    }
     const verbosity = communication?.["verbosity"];
-    if (isVerbosity(verbosity)) context.verbosity = verbosity;
+    if (verbosity !== undefined) {
+      if (!isVerbosity(verbosity)) {
+        throw new UserProfileError(
+          `User Profile の verbosity が不正です（${String(verbosity)}）。concise / normal / detailed のいずれかです`,
+          { path },
+        );
+      }
+      context.verbosity = verbosity;
+    }
     const directness = communication?.["directness"];
-    if (isDirectness(directness)) context.directness = directness;
+    if (directness !== undefined) {
+      if (!isDirectness(directness)) {
+        throw new UserProfileError(
+          `User Profile の directness が不正です（${String(directness)}）。low / medium / high のいずれかです`,
+          { path },
+        );
+      }
+      context.directness = directness;
+    }
 
     const memoryNamespace = relationship?.["memory_namespace"];
 

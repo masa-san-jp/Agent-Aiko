@@ -19,7 +19,8 @@ export interface CapabilityEntry {
   /** 目録上の種別。指示文では区別せず一覧にするが、除外理由の説明に使う。 */
   kind: "tool" | "mcp-server" | "skill";
   id: string;
-  availability: Availability;
+  /** "invalid" は Manifest が既知でない値を宣言していた場合。目録側の値ではない。 */
+  availability: Availability | "invalid";
 }
 
 export interface ResolvedCapabilities {
@@ -90,9 +91,13 @@ export class CapabilityRegistry {
   }
 }
 
-/** availability が無い項目は "unknown" ではなく "ready" として扱う。
- *  §6.3 の例は built_in_tools に availability を書いておらず、それを使えないもの
- *  として落とすと目録どおりの環境が空になる。 */
+/** availability の扱いは3通りに分ける。
+ *  - 項目が無い → "ready"。§6.3 の例は built_in_tools に availability を書いて
+ *    おらず、それを使えないものとして落とすと目録どおりの環境が空になる。
+ *  - 既知の値 → そのまま。
+ *  - 値はあるが不正 → "invalid"。**"ready" に丸めない。** 宣言が壊れている
+ *    ものを、一番許す側へ倒すのは危険側の既定になる。止めはしないが（§6.5 末尾）、
+ *    除外して理由を残す。 */
 function readEntries(value: unknown, kind: CapabilityEntry["kind"]): CapabilityEntry[] {
   if (!Array.isArray(value)) return [];
   const entries: CapabilityEntry[] = [];
@@ -100,12 +105,10 @@ function readEntries(value: unknown, kind: CapabilityEntry["kind"]): CapabilityE
     const record = asRecord(item);
     const id = record?.["id"];
     if (typeof id !== "string" || id.length === 0) continue;
-    const availability = record?.["availability"];
-    entries.push({
-      kind,
-      id,
-      availability: isAvailability(availability) ? availability : "ready",
-    });
+    const declared = record === undefined ? undefined : record["availability"];
+    const availability: CapabilityEntry["availability"] =
+      declared === undefined ? "ready" : isAvailability(declared) ? declared : "invalid";
+    entries.push({ kind, id, availability });
   }
   return entries;
 }
@@ -113,9 +116,14 @@ function readEntries(value: unknown, kind: CapabilityEntry["kind"]): CapabilityE
 function reasonFor(entry: CapabilityEntry): string {
   const label =
     entry.kind === "mcp-server" ? "MCP サーバー" : entry.kind === "skill" ? "スキル" : "ツール";
-  return entry.availability === "unavailable"
-    ? `${label}が利用できません`
-    : `${label}の利用可否を確認できません`;
+  switch (entry.availability) {
+    case "unavailable":
+      return `${label}が利用できません`;
+    case "invalid":
+      return `${label}の利用可否の宣言が不正です`;
+    default:
+      return `${label}の利用可否を確認できません`;
+  }
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
