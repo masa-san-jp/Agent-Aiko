@@ -9,8 +9,7 @@
 // すると、誰のものか分からない関係情報で人格が立ち上がる。
 
 import { readFile } from "node:fs/promises";
-import { checkSchemaVersion } from "./schema-compatibility.js";
-import type { UserContext } from "./compiler.js";
+import { checkSchemaVersion, type UserContext } from "@agent-aiko/core";
 
 /** User Profile の現行 schema_version。増やすときは §10.3.1 の受理範囲も動く。 */
 export const USER_PROFILE_SCHEMA_VERSION = 1;

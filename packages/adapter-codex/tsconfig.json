@@ -17,6 +17,9 @@
     },
     {
       "path": "../binder"
+    },
+    {
+      "path": "../user-context"
     }
   ]
 }

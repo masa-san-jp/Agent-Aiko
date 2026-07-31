@@ -17,6 +17,12 @@
     },
     {
       "path": "../binder"
+    },
+    {
+      "path": "../user-context"
+    },
+    {
+      "path": "../capability-registry"
     }
   ]
 }

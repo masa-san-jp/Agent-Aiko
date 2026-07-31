@@ -24,7 +24,9 @@
   },
   "dependencies": {
     "@agent-aiko/binder": "*",
+    "@agent-aiko/capability-registry": "*",
     "@agent-aiko/core": "*",
+    "@agent-aiko/user-context": "*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.4.3"
   },

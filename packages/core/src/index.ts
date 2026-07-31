@@ -22,23 +22,3 @@ export {
   acceptableVersions,
   type CompatibilityVerdict,
 } from "./schema-compatibility.js";
-
-export {
-  UserContextProvider,
-  UserProfileError,
-  USER_PROFILE_SCHEMA_VERSION,
-  type ResolvedUserContext,
-  type UserContextProviderOptions,
-} from "./user-context-provider.js";
-
-export { defaultUserProfilePath, resolveUserProfilePath } from "./user-profile-path.js";
-
-export {
-  CapabilityRegistry,
-  CapabilityManifestError,
-  CAPABILITY_MANIFEST_SCHEMA_VERSION,
-  type Availability,
-  type CapabilityEntry,
-  type CapabilityRegistryOptions,
-  type ResolvedCapabilities,
-} from "./capability-registry.js";

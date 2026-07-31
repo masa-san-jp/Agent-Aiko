@@ -4,7 +4,8 @@
 // 診断が勝手に書き換えると、何が壊れていたのかが分からなくなる。
 
 import { chmod, stat } from "node:fs/promises";
-import { FileSystemPersonaRepository, UserContextProvider, UserProfileError } from "@agent-aiko/core";
+import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider, UserProfileError } from "@agent-aiko/user-context";
 import { RuntimeProfileBinder, BindingError } from "@agent-aiko/binder";
 // 検査する注入手段は Adapter の既定と同じものを使う。ここを自前で書くと、
 // Adapter が既定を変えたときに doctor だけ古い経路を検査し続ける。

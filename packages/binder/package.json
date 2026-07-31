@@ -27,7 +27,9 @@
     "typescript": "^5.6.0"
   },
   "dependencies": {
-    "@agent-aiko/core": "*"
+    "@agent-aiko/capability-registry": "*",
+    "@agent-aiko/core": "*",
+    "@agent-aiko/user-context": "*"
   },
   "license": "MIT",
   "repository": {

@@ -20,6 +20,9 @@
     },
     {
       "path": "../adapter-claude-code"
+    },
+    {
+      "path": "../user-context"
     }
   ]
 }

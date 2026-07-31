@@ -9,12 +9,9 @@
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import {
-  CapabilityRegistry,
-  type PersonaRepository,
-  type PersonaSnapshot,
-  type ResolvedUserContext,
-} from "@agent-aiko/core";
+import { type PersonaRepository, type PersonaSnapshot } from "@agent-aiko/core";
+import { type ResolvedUserContext } from "@agent-aiko/user-context";
+import { CapabilityRegistry } from "@agent-aiko/capability-registry";
 import {
   RuntimeProfileBinder,
   type InjectionMethod,

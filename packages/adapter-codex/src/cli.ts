@@ -11,7 +11,8 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { FileSystemPersonaRepository, UserContextProvider, resolveUserProfilePath } from "@agent-aiko/core";
+import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
 import { prepareThread, AdapterError } from "./adapter.js";
 
 async function main(): Promise<void> {
