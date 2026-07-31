@@ -113,6 +113,23 @@ describe("codex/scripts/install.sh", () => {
     assert.equal(override, origin);
   });
 
+  it("bakes AIKO_HOME into the shim when installed somewhere other than ~/.aiko", async () => {
+    // installer は --aiko-home を受け付けるのに、起動側は常に ~/.aiko を見ていた。
+    // 指定して入れた人が必ず ENOENT で起動できない状態だった（2026-07-31）。
+    await runInstaller(sandbox);
+    const shim = await readFile(join(sandbox.binDir, "aiko"), "utf8");
+    assert.match(
+      shim,
+      new RegExp(`export AIKO_HOME="${sandbox.aikoHome}"`),
+      "shim must carry the install location it was given",
+    );
+    // 焼き込む位置が exec より後ろだと効かない。
+    assert.ok(
+      shim.indexOf("export AIKO_HOME=") < shim.indexOf("exec node"),
+      "AIKO_HOME must be exported before exec",
+    );
+  });
+
   it("creates an executable aiko shim that exec's node with the dist path", async () => {
     await runInstaller(sandbox);
     const shimPath = join(sandbox.binDir, "aiko");
