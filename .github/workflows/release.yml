@@ -1,0 +1,165 @@
+name: Release
+
+# 設計書 §10.1（GitHub Releases に成果物・checksum・署名）／§11.4（Supply Chain）。
+#
+# タグを打ったときだけ動く。main への push では動かさない。「main の先端を配る」の
+# をやめて「タグを打ったものを配る」に変えるのが、この工程を置く目的（Threat Model
+# T1: main に1コミット入るだけで全新規導入者へ届く状態を無くす）。
+#
+# 配布物は `git archive` で作る。ビルド成果物もタイムスタンプも混ぜないので、
+# 同じタグから作り直せば同じ tar.gz が出る（同一環境で2回作って checksum 一致を実測）。
+# checksum を配る以上、それを手元で再現できる形にしておきたいため。
+# ただし git のバージョン差まで含めた再現性は検証していない。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '成果物を作るタグ（例: v0.1.0）'
+        required: true
+
+permissions:
+  contents: write        # Release の作成
+  id-token: write        # attestation の署名
+  attestations: write    # attestation の登録
+
+jobs:
+  verify:
+    name: verify / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        node: ['20', '22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # 落ちたものを配らない。CI と同じ手順をタグに対してもう一度通す。
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Audit
+        run: npm audit --audit-level=high
+
+  release:
+    name: release
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: meta
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # 設計書 §10.2 の channel。v1.2.3 は stable、v1.2.3-beta.1 のように
+          # ハイフンが付くものは beta として prerelease で出す。
+          if [ "${tag#*-}" != "$tag" ]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build distribution archive
+        id: archive
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          name="agent-aiko-${tag}"
+          mkdir -p dist-release
+          # git archive はタグの中身をそのまま固める。ビルド成果物を含まないので、
+          # 同じタグから作り直せば同じ checksum が出る。
+          git archive --format=tar.gz --prefix="${name}/" -o "dist-release/${name}.tar.gz" "$tag"
+          cd dist-release
+          sha256sum "${name}.tar.gz" > SHA256SUMS
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          cat SHA256SUMS
+
+      # 署名。GitHub の attestation は鍵の管理が要らず、「この成果物はこのリポジトリの
+      # このワークフローが作った」を後から検証できる（`gh attestation verify`）。
+      # 設計書 §11.4 の signed tag は別途 GPG 鍵が要るため、本工程には含めない。
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist-release/${{ steps.archive.outputs.name }}.tar.gz
+
+      # notes は引用符付きヒアドキュメント（<<'EOF'）で書く。引用しないと本文中の
+      # バッククォートがシェルのコマンド置換として実行される。GitHub の ${{ }} は
+      # シェルより前に展開されるので、引用しても値は入る。
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<'EOF'
+          channel: ${{ steps.meta.outputs.channel }}
+
+          ## 取得したものが本物か確かめる
+
+          ```bash
+          # 1. 成果物と checksum を落とす
+          gh release download ${{ steps.meta.outputs.tag }} --repo ${{ github.repository }} \
+            --pattern '*.tar.gz' --pattern 'SHA256SUMS'
+
+          # 2. 中身が置いたものと同じか
+          sha256sum -c SHA256SUMS
+
+          # 3. このリポジトリのワークフローが作ったものか
+          gh attestation verify ${{ steps.archive.outputs.name }}.tar.gz --repo ${{ github.repository }}
+          ```
+
+          2 は配送途中の破損・改竄を、3 は出どころを確かめる。3 まで通って初めて
+          「GitHub 上で差し替えられていない」と言える。
+
+          この成果物は `git archive` でタグの中身をそのまま固めたもの。ビルド結果を
+          含まないので、同じ git で作り直せば同じ checksum が出る。
+          EOF
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          name="${{ steps.archive.outputs.name }}"
+          # set -e の下で `cond && cmd` を単独文に置くと、cond が偽のときに
+          # スクリプトごと終了する（stable リリースが必ずここで死ぬ）。if で書く。
+          extra=""
+          if [ "$PRERELEASE" = "true" ]; then
+            extra="--prerelease"
+          fi
+          # shellcheck disable=SC2086
+          gh release create "$tag" \
+            "dist-release/${name}.tar.gz" \
+            dist-release/SHA256SUMS \
+            --repo "${{ github.repository }}" \
+            --title "$tag" \
+            --notes-file release-notes.md \
+            $extra
