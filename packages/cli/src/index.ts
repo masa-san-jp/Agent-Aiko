@@ -5,3 +5,14 @@ export { runChecks, worstLevel, type CheckResult, type Level } from "./checks.js
 export { collectStatus, type Status, type AdapterStatus } from "./status.js";
 export { resolveEnvironment, type Environment } from "./environment.js";
 export { renderStatus, renderChecks } from "./render.js";
+export {
+  checkForUpdate,
+  renderCheck,
+  compareVersions,
+  parseVersion,
+  fetchReleasesFromGitHub,
+  type Channel,
+  type UpdateCheckResult,
+  type ReleaseInfo,
+  type FetchReleases,
+} from "./update.js";
