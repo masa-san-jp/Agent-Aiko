@@ -2,8 +2,10 @@
 // 同じ既定で読む。ここがずれると `aiko doctor` が「問題なし」と言った構成で
 // サーバーが起動に失敗する、という最悪の食い違いになる。
 
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { resolveUserProfilePath } from "@agent-aiko/core";
 
 export interface Environment {
   aikoHome: string;
@@ -13,9 +15,12 @@ export interface Environment {
 }
 
 export function resolveEnvironment(env: NodeJS.ProcessEnv = process.env): Environment {
-  const userProfilePath = env["AIKO_USER_PROFILE"];
+  const aikoHome = env["AIKO_HOME"] ?? join(homedir(), ".aiko");
+  // 明示指定が無くても、configure が置いた既定のファイルがあれば拾う。
+  // 無ければ undefined＝従来どおり既定値で動く。
+  const userProfilePath = resolveUserProfilePath(aikoHome, env["AIKO_USER_PROFILE"], existsSync);
   return {
-    aikoHome: env["AIKO_HOME"] ?? join(homedir(), ".aiko"),
+    aikoHome,
     ...(userProfilePath ? { userProfilePath } : {}),
     personaId: env["AIKO_PERSONA_ID"] ?? "aiko",
   };

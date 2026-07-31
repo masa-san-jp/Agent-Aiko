@@ -4,14 +4,23 @@
 // stdout は MCP のフレームが流れる経路なので、ここへ人間向けの文字列を書いては
 // いけない。診断は stderr へ出す。
 
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { FileSystemPersonaRepository, UserContextProvider } from "@agent-aiko/core";
+import { FileSystemPersonaRepository, UserContextProvider, resolveUserProfilePath } from "@agent-aiko/core";
 import { createAikoServer } from "./aiko-server.js";
 
 const personaId = process.env["AIKO_PERSONA_ID"] ?? "aiko";
-const userProfilePath = process.env["AIKO_USER_PROFILE"];
-// 既定は ~/.aiko。別の場所を指せるようにしておくと、実バイナリのまま検証できる。
 const aikoHome = process.env["AIKO_HOME"];
+// AIKO_USER_PROFILE が無くても、aiko configure が置いた既定のファイルを拾う。
+// 置き場の決め方は core に集約してある（ここで独自に組み立てると configure と食い違う）。
+const userProfilePath = resolveUserProfilePath(
+  aikoHome ?? join(homedir(), ".aiko"),
+  process.env["AIKO_USER_PROFILE"],
+  existsSync,
+);
+// 既定は ~/.aiko。別の場所を指せるようにしておくと、実バイナリのまま検証できる。
 
 async function main(): Promise<void> {
   const provider = new UserContextProvider();
