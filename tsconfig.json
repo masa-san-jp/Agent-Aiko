@@ -27,6 +27,9 @@
     },
     {
       "path": "packages/golden"
+    },
+    {
+      "path": "packages/runtime-sdk"
     }
   ]
 }
