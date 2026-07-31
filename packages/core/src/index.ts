@@ -31,6 +31,8 @@ export {
   type UserContextProviderOptions,
 } from "./user-context-provider.js";
 
+export { defaultUserProfilePath, resolveUserProfilePath } from "./user-profile-path.js";
+
 export {
   CapabilityRegistry,
   CapabilityManifestError,

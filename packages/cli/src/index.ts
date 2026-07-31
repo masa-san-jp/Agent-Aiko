@@ -16,3 +16,4 @@ export {
   type ReleaseInfo,
   type FetchReleases,
 } from "./update.js";
+export { configure, renderConfigured, type Ask, type UserProfile } from "./configure.js";

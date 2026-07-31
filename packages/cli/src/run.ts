@@ -6,6 +6,8 @@ import { resolveEnvironment } from "./environment.js";
 import { renderChecks, renderStatus } from "./render.js";
 import { collectStatus } from "./status.js";
 import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from "./update.js";
+import { configure, renderConfigured, type Ask } from "./configure.js";
+import { defaultUserProfilePath } from "@agent-aiko/core";
 
 export interface RunIO {
   out: (text: string) => void;
@@ -13,6 +15,8 @@ export interface RunIO {
   env?: NodeJS.ProcessEnv;
   /** テストから Release 一覧の取得を差し替えるための口。 */
   fetchReleases?: FetchReleases;
+  /** 対話の問い合わせ。未指定なら configure は使えない（非対話環境）。 */
+  ask?: Ask;
 }
 
 /** 設計書 §4.4 に挙がっているが、まだ実装していないもの。 */
@@ -20,7 +24,6 @@ const DEFERRED: Record<string, string> = {
   install: "インストーラは scripts/install.sh が担当しています",
   uninstall: "配布（設計書 §15 Phase 5）で実装します",
   rollback: "配布（設計書 §15 Phase 5）で実装します",
-  configure: "User Profile の対話設定は未実装です。AIKO_USER_PROFILE で場所を指定してください",
 };
 
 const USAGE = `使い方: aiko <コマンド>
@@ -28,12 +31,13 @@ const USAGE = `使い方: aiko <コマンド>
   status                いま何が読めていて何が起動できるかを表示する
   doctor                構成を点検する
   doctor --fix          点検で見つかったもののうち、直し方が分かっているものを直す
+  configure             呼び名などを設定して User Profile を作る
   update --check        新しい版が出ていないかを見る（何も書き換えない）
   update --check --channel beta   試用版も対象に含める
   help                  この使い方を表示する
 
 未実装（設計書 §4.4 にはあるもの）:
-  install / uninstall / rollback / configure
+  install / uninstall / rollback
   update（--check なしの実際の更新。インストーラ側の切り替えが先）
 
 終了コード:
@@ -82,6 +86,19 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     const after: CheckResult[] = wantFix ? await runChecks(env) : results;
     io.out(renderChecks(after, fixed));
     return worstLevel(after) === "fail" ? 1 : 0;
+  }
+
+  if (command === "configure") {
+    if (!io.ask) {
+      // 対話できない場所で黙って既定値を書き込むと、誰のものか分からない
+      // Profile が静かにできる。作らずに理由を返す。
+      io.err("configure は対話できる環境でだけ使えます\n");
+      return 2;
+    }
+    const target = env.userProfilePath ?? defaultUserProfilePath(env.aikoHome);
+    const { profile, path } = await configure(target, io.ask);
+    io.out(renderConfigured(profile, path));
+    return 0;
   }
 
   if (command === "update") {
