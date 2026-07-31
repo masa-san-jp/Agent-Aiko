@@ -9,9 +9,13 @@
 // ので、ディスクに落とす必要がない。呼び方などの利用者情報を書き出さずに済む
 // なら、書き出さないほうが安全（§11.2）。
 
-import { type PersonaRepository } from "@agent-aiko/core";
-import { type ResolvedUserContext } from "@agent-aiko/user-context";
-import { RuntimeProfileBinder, type RuntimeProfile } from "@agent-aiko/binder";
+import {
+  createRuntimeSdk,
+  RuntimeSdkError,
+  type PersonaRepository,
+  type ResolvedUserContext,
+  type RuntimeProfile,
+} from "@agent-aiko/runtime-sdk";
 
 export interface PrepareOptions {
   personaRepository: PersonaRepository;
@@ -41,27 +45,39 @@ export class AdapterError extends Error {
 /** スレッド開始に必要なものを用意する。スレッドは開始しない。
  *  「文字列を作る」と「スレッドを張る」を分けると、通信せずに中身を検証できる。 */
 export async function prepareThread(options: PrepareOptions): Promise<PreparedThread> {
-  const binder = new RuntimeProfileBinder({ personaRepository: options.personaRepository });
+  // R4: Binder を直接呼ばず Runtime SDK を通す（SDK 設計書 §1・§23 R4）。
+  const sdk = createRuntimeSdk({
+    personaRepository: options.personaRepository,
+    user: options.user,
+  });
 
   let profile: RuntimeProfile;
   try {
-    profile = await binder.bind(
-      {
-        persona: { id: options.personaId ?? "aiko" },
-        runtime: { id: "codex", injectionMethod: "codex:base-instructions" },
-        ...(options.capabilityManifest === undefined
-          ? {}
-          : { capabilityManifest: options.capabilityManifest }),
-        ...(options.outputPrefix ? { outputPrefix: options.outputPrefix } : {}),
-      },
-      options.user,
-    );
+    const bundle = await sdk.prepareLaunch({
+      requestId: `codex-${Date.now()}`,
+      personaRef: { personaId: options.personaId ?? "aiko" },
+      userRef: { userId: options.user.context.id },
+      runtime: { id: "codex", version: "1" },
+      // §17.1: Adapter が使える注入手段を申告する。SDK に推測させない。
+      injectionCapability: { systemLevel: ["codex:base-instructions"] },
+      requestedConsistencyLevel: 2,
+      ...(options.capabilityManifest === undefined
+        ? {}
+        : { capabilityManifest: options.capabilityManifest }),
+      ...(options.outputPrefix ? { outputPrefix: options.outputPrefix } : {}),
+    });
+    profile = bundle.profile;
   } catch (err) {
     // 合成できないならスレッドを張らせない。部分的な結果を返すと、呼び出し側が
     // 人格なしでスレッドを開始できてしまう（§3.4）。
+    // §10.3: SDK のエラーコードを別の意味へ置き換えない。
     throw new AdapterError(
       `人格を合成できなかったため Codex スレッドを開始しません: ${
-        err instanceof Error ? err.message : String(err)
+        err instanceof RuntimeSdkError
+          ? err.userMessage
+          : err instanceof Error
+            ? err.message
+            : String(err)
       }`,
       { stage: "binding" },
     );

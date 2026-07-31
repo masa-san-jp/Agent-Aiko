@@ -4,12 +4,11 @@
 // 診断が勝手に書き換えると、何が壊れていたのかが分からなくなる。
 
 import { chmod, stat } from "node:fs/promises";
-import { FileSystemPersonaRepository } from "@agent-aiko/core";
-import { UserContextProvider, UserProfileError } from "@agent-aiko/user-context";
-import { RuntimeProfileBinder, BindingError } from "@agent-aiko/binder";
+import { RuntimeSdkError } from "@agent-aiko/runtime-sdk";
 // 検査する注入手段は Adapter の既定と同じものを使う。ここを自前で書くと、
 // Adapter が既定を変えたときに doctor だけ古い経路を検査し続ける。
 import { DEFAULT_INJECTION } from "@agent-aiko/adapter-claude-code";
+import { openEnvironment } from "./resolve.js";
 import type { Environment } from "./environment.js";
 
 export type Level = "ok" | "warn" | "fail";
@@ -85,35 +84,33 @@ async function checkHome(env: Environment): Promise<CheckResult[]> {
 }
 
 async function checkPersona(env: Environment): Promise<CheckResult> {
-  const repo = new FileSystemPersonaRepository({ aikoHome: env.aikoHome });
-  try {
-    const persona = await repo.load({ id: env.personaId });
-    if (persona.invariants.trim().length === 0) {
-      return {
-        id: "persona",
-        title: "人格を読める",
-        level: "fail",
-        detail: "不変条項が空です。この状態では起動しません（§6.5）",
-      };
-    }
-    return {
-      id: "persona",
-      title: "人格を読める",
-      level: "ok",
-      detail: `${persona.id}@${persona.version}`,
-    };
-  } catch (err) {
+  const { sdk } = await openEnvironment(env);
+  const health = await sdk.health({ requestId: "cli-doctor", personaId: env.personaId });
+  if (health.status === "unavailable") {
     return {
       id: "persona",
       title: "人格を読める",
       level: "fail",
-      detail: err instanceof Error ? err.message : String(err),
+      detail: health.reason ?? "人格を読めません",
     };
   }
+  if (health.persona && !health.persona.invariantsPresent) {
+    return {
+      id: "persona",
+      title: "人格を読める",
+      level: "fail",
+      detail: "不変条項が空です。この状態では起動しません（§6.5）",
+    };
+  }
+  return {
+    id: "persona",
+    title: "人格を読める",
+    level: "ok",
+    detail: `${health.persona?.id}@${health.persona?.version}`,
+  };
 }
 
 async function checkUserProfile(env: Environment): Promise<CheckResult[]> {
-  const provider = new UserContextProvider();
   if (!env.userProfilePath) {
     return [
       {
@@ -126,23 +123,22 @@ async function checkUserProfile(env: Environment): Promise<CheckResult[]> {
   }
 
   const results: CheckResult[] = [];
-  try {
-    const user = await provider.loadFromFile(env.userProfilePath);
-    results.push({
-      id: "user-profile",
-      title: "User Profile を読める",
-      level: "ok",
-      detail: `${env.userProfilePath}（呼び名: ${user.context.preferredName ?? "未設定"}）`,
-    });
-  } catch (err) {
+  const opened = await openEnvironment(env);
+  if (opened.userError) {
     results.push({
       id: "user-profile",
       title: "User Profile を読める",
       level: "fail",
-      detail: err instanceof UserProfileError ? err.message : String(err),
+      detail: opened.userError,
     });
     return results;
   }
+  results.push({
+    id: "user-profile",
+    title: "User Profile を読める",
+    level: "ok",
+    detail: `${env.userProfilePath}（user_id: ${opened.userId}）`,
+  });
 
   try {
     const info = await stat(env.userProfilePath);
@@ -167,22 +163,21 @@ async function checkUserProfile(env: Environment): Promise<CheckResult[]> {
 }
 
 async function checkBinding(env: Environment): Promise<CheckResult> {
-  const repo = new FileSystemPersonaRepository({ aikoHome: env.aikoHome });
-  const binder = new RuntimeProfileBinder({ personaRepository: repo });
-  const provider = new UserContextProvider();
+  const opened = await openEnvironment(env);
   try {
-    const user = env.userProfilePath
-      ? await provider.loadFromFile(env.userProfilePath)
-      : provider.resolve({ schema_version: 1, user_id: "default" });
-    const profile = await binder.bind(
-      { persona: { id: env.personaId }, runtime: { id: "claude-code", injectionMethod: DEFAULT_INJECTION } },
-      user,
-    );
+    const bundle = await opened.sdk.prepareLaunch({
+      requestId: "cli-doctor-bind",
+      personaRef: { personaId: env.personaId },
+      userRef: { userId: opened.userId },
+      runtime: { id: "claude-code", version: "1" },
+      injectionCapability: { systemLevel: [DEFAULT_INJECTION] },
+      requestedConsistencyLevel: 2,
+    });
     return {
       id: "binding",
       title: "Runtime Profile を合成できる",
       level: "ok",
-      detail: `profile_hash ${profile.profile_hash.slice(0, 12)}…`,
+      detail: `profile_hash ${bundle.profile.profile_hash.slice(0, 12)}…`,
     };
   } catch (err) {
     return {
@@ -190,7 +185,11 @@ async function checkBinding(env: Environment): Promise<CheckResult> {
       title: "Runtime Profile を合成できる",
       level: "fail",
       detail:
-        err instanceof BindingError || err instanceof Error ? err.message : String(err),
+        err instanceof RuntimeSdkError
+          ? err.userMessage
+          : err instanceof Error
+            ? err.message
+            : String(err),
     };
   }
 }

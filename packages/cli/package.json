@@ -32,6 +32,7 @@
     "@agent-aiko/adapter-claude-code": "*",
     "@agent-aiko/binder": "*",
     "@agent-aiko/core": "*",
+    "@agent-aiko/runtime-sdk": "*",
     "@agent-aiko/user-context": "*"
   },
   "license": "MIT",
