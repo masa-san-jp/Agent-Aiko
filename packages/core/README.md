@@ -15,7 +15,6 @@ Aiko Core。人格を読み出し、ユーザー・能力と合わせて実行�
 | `schema-compatibility.ts` | `schema_version` の受理判定（現行とその1つ前まで） | §10.3.1 |
 | `user-context-provider.ts` | User Profile から Compiler が使う最小情報だけを取り出す | §5.4・§6.2 |
 | `capability-registry.ts` | Capability Manifest を使える能力／除外に分ける | §5.5・§6.3 |
-| `binder.ts` | 上記を合成して Runtime Profile を1つ作る | §5.3・§6.1・§6.5 |
 
 ## 現行レイアウトをそのまま読む理由
 
@@ -37,23 +36,18 @@ Aiko Core。人格を読み出し、ユーザー・能力と合わせて実行�
 
 **hash はキー順に依存しない** — `JSON.stringify` をそのまま使うとキーの並びで結果が変わる。同じ入力から必ず同じ hash が出ないと、§6.5 の hash 検証も §16 の追跡も成立しない。
 
-**止まるところと止まらないところを分けた** — 人格・不変条項・ユーザーの解決失敗は例外で止める（§6.5 の fail-closed 条件）。一方、ツールやスキルの一部が使えないだけなら止めず、除外して理由を残す（§6.5 末尾）。どちらも「黙って続行しない」点は同じで、違うのは続行するかどうかだけ。
-
-**Level 2 を名乗るには注入手段が要る** — Claude Code と Codex は Level 2 対象だが、注入手段が指定されていなければ Binder は Profile を返さない。手段なしで Level 2 を名乗る Profile は、§3.4 の Fail Closed を素通りさせる嘘になる。
-
 **渡された最小情報しか下流へ流さない** — User Profile 全体を Compiler へ渡さない。§5.4 が「最小情報」と定めており、`privacy` と `memory_namespace` は指示文に載せるものではないため `UserContext` に含めない。
 
-**Binder の出力をスキーマに通している** — `schemas/` と実装は別々に書いたので、片方だけ直すと静かに食い違う。合成した Profile を `runtime-profile.schema.json` に通すテストを置いた。項目名を1つ変えるだけでこのテストが落ちることを実際に確認している。
-
 **拒否するときは直し方まで返す** — `schema_version` が範囲外のとき、読めない事実だけを返しても利用者は動けない。拒否した版・受理できる版・とるべき操作（`aiko update` か `aiko migrate`）を添える。新しすぎる場合と古すぎる場合で必要な操作が逆なので、区別して返す。
+
+束ねる責務（Runtime Profile の生成と fail-closed 判定）は [`@agent-aiko/binder`](../binder/README.md) に分けてある。設計書 §5.3 / §6 の担当はそちら。
 
 ## テスト
 
 ```bash
-cd packages/core
-npm ci
+npm ci          # ルートで1度
 npm run typecheck
-npm test
+npm test -w @agent-aiko/core
 ```
 
 ファイルを読む部分は一時ディレクトリに `~/.aiko/` 相当を作って検証している。mock で置き換えると「ファイルが無いときにどう振る舞うか」という、この実装が最も間違えやすい部分を確かめられなくなるため。

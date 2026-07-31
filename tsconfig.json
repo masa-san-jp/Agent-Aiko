@@ -1,9 +1,20 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/core" },
-    { "path": "packages/mcp-server" },
-    { "path": "packages/adapter-claude-code" },
-    { "path": "packages/adapter-codex" }
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/binder"
+    },
+    {
+      "path": "packages/mcp-server"
+    },
+    {
+      "path": "packages/adapter-claude-code"
+    },
+    {
+      "path": "packages/adapter-codex"
+    }
   ]
 }

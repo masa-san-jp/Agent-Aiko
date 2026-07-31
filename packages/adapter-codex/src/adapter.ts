@@ -9,12 +9,8 @@
 // ので、ディスクに落とす必要がない。呼び方などの利用者情報を書き出さずに済む
 // なら、書き出さないほうが安全（§11.2）。
 
-import {
-  RuntimeProfileBinder,
-  type PersonaRepository,
-  type ResolvedUserContext,
-  type RuntimeProfile,
-} from "@agent-aiko/core";
+import { type PersonaRepository, type ResolvedUserContext } from "@agent-aiko/core";
+import { RuntimeProfileBinder, type RuntimeProfile } from "@agent-aiko/binder";
 
 export interface PrepareOptions {
   personaRepository: PersonaRepository;
