@@ -29,3 +29,11 @@ export type {
 } from "@agent-aiko/binder";
 export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
 export type { ResolvedUserContext } from "@agent-aiko/user-context";
+
+// User Profile の置き場と版。利用側（CLI）が user-context を直接見ずに済むよう
+// ここから出す。どこに置くかは「利用者を解決する」話で、SDK の担当範囲に入る。
+export {
+  defaultUserProfilePath,
+  resolveUserProfilePath,
+  USER_PROFILE_SCHEMA_VERSION,
+} from "@agent-aiko/user-context";

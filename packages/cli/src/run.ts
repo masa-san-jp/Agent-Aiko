@@ -7,7 +7,7 @@ import { renderChecks, renderStatus } from "./render.js";
 import { collectStatus } from "./status.js";
 import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from "./update.js";
 import { configure, renderConfigured, type Ask } from "./configure.js";
-import { defaultUserProfilePath } from "@agent-aiko/user-context";
+import { defaultUserProfilePath } from "@agent-aiko/runtime-sdk";
 
 export interface RunIO {
   out: (text: string) => void;

@@ -26,6 +26,7 @@
   "dependencies": {
     "@agent-aiko/binder": "*",
     "@agent-aiko/core": "*",
+    "@agent-aiko/runtime-sdk": "*",
     "@agent-aiko/user-context": "*"
   },
   "devDependencies": {
