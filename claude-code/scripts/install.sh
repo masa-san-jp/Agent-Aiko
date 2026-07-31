@@ -321,6 +321,14 @@ if [ "$USER_HAD_MODE" -eq 0 ]; then
 fi
 
 chmod 444 "$ORIGIN" "$LEGACY_ORIGIN" "$AIKO_HOME/persona/INVARIANTS.md" 2>/dev/null || true
+
+# 設計書 §11.3 が定める権限。指定はあったが一度も設定しておらず、umask 任せに
+# なっていた（2026-07-31 実測: ~/.aiko が 0775）。呼び名や関係性は同じ端末の
+# 他のユーザーから読めてよいものではない。
+chmod 700 "$AIKO_HOME" 2>/dev/null || true
+for f in "$AIKO_HOME/user.md" "$AIKO_HOME/user-profile.json"; do
+  [ -f "$f" ] && chmod 600 "$f" 2>/dev/null || true
+done
 find "$AIKO_HOME/hooks" -type f -name '*.sh' -exec chmod +x {} +
 [ -d "$PROJECT_CLAUDE_DIR/scripts" ] && find "$PROJECT_CLAUDE_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
 

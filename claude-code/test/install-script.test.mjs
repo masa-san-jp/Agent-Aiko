@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync } from "node:fs";
+import { existsSync, lstatSync, statSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -37,6 +37,22 @@ describe("claude-code/scripts/install.sh", () => {
 
   afterEach(async () => {
     await sandbox.cleanup();
+  });
+
+  it("applies the file modes §11.3 specifies", async () => {
+    // 仕様に書いてあっても設定していなければ意味が無い。実測で 0775 だった
+    // （2026-07-31）。ここは実際のモードを見る。
+    const project = join(sandbox.root, "project");
+    await mkdir(project, { recursive: true });
+    runInstaller({ cwd: project, home: sandbox.root });
+
+    const aikoHome = join(sandbox.root, ".aiko");
+    assert.equal(statSync(aikoHome).mode & 0o777, 0o700, "~/.aiko must not be readable by others");
+
+    const userMd = join(aikoHome, "user.md");
+    if (existsSync(userMd)) {
+      assert.equal(statSync(userMd).mode & 0o777, 0o600, "user.md must not be readable by others");
+    }
   });
 
   it("refuses to install into $HOME/.claude", async () => {
