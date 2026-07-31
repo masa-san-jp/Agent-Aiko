@@ -252,6 +252,12 @@ else
 "
 fi
 
+# 設計書 §11.3 の権限。claude-code 側の installer と揃える。
+chmod 700 "$AIKO_HOME" 2>/dev/null || true
+for f in "$AIKO_HOME/user.md" "$AIKO_HOME/user-profile.json"; do
+  [ -f "$f" ] && chmod 600 "$f" 2>/dev/null || true
+done
+
 step "[6/6] aiko コマンドの shim を設置しています..."
 mkdir -p "$BIN_DIR"
 SHIM="$BIN_DIR/aiko"
