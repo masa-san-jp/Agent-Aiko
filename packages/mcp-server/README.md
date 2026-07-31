@@ -40,7 +40,22 @@ node packages/mcp-server/dist/server.js
 
 結果には Persona version と hash を必ず載せる（§7.4）。載せないとクライアント側は自分が何版の人格で動いているかを追えない（§16 の追跡性）。
 
+## Prompts（§7.3）
+
+| 名前 | 何を返すか | 引数 |
+|---|---|---|
+| `aiko.activate` | 合成した人格をそのまま | なし |
+| `aiko.activate_for_task` | 人格＋いま取り組む作業 | `task` |
+| `aiko.review_as_aiko` | 人格＋レビュー対象 | `subject` |
+| `aiko.handoff` | 人格＋引き継ぐ内容 | `context` |
+
+**Prompt は正式 Adapter の代わりではない。** §7.3 が「正式Adapterは Prompt に依存せず、Compiler 出力を system/developer 級指示へ注入する」と定めている。Prompt が要るのは §8.4 の Generic MCP Host——system 級に注入する手段が無いホストで、会話の先頭に置く以外に手が無い場合。
+
+引数は設計書に書かれていない（名前だけが定められている）。`task` は §6.1 の Binding Request が task_context を持つことに合わせ、他は各 Prompt の役割から決めた。
+
 ## 設計上の判断
+
+**Prompt では黙って空を返さない。** 人格を合成できないとき、Prompt には「返さない」という選択肢が無い（返さなければホスト側では人格なしの会話が静かに始まる）。合成できなければ、その旨と「Aiko として応答してはいけない」を本文にして返す。Resource / Tool の fail closed に対応する扱い。
 
 **合成できないときも「成功と同じ形」で理由を返す** — 例外をそのまま投げると、クライアントには通信断と区別が付かない。`bound: false` と理由を返し、併せて `isError` を立てる。fail closed で止めることと、止まった理由を伝えないことは別。
 
@@ -54,7 +69,7 @@ node packages/mcp-server/dist/server.js
 
 ## この段階で入れていないもの
 
-設計書 §7.3 の Prompts（`aiko.activate` 等）と、§7.4 の `aiko.evaluate_action` / `aiko.validate_response` は入れていない。前者は正式 Adapter が Prompt に依存しない設計（§7.3 末尾）であり優先度が低く、後者は Policy Engine（§5.2）が未実装のため、今作ると判断の中身が空になる。`aiko.get_relationship_context` も、どのクライアントへ何を渡してよいかの権限モデルが決まっていないため保留している（§11.2）。
+§7.4 の `aiko.evaluate_action` / `aiko.validate_response` は入れていない。Policy Engine（§5.2）が未実装のため、今作ると判断の中身が空になる。`aiko.get_relationship_context` も、どのクライアントへ何を渡してよいかの権限モデルが決まっていないため保留している（§11.2）。
 
 ## テスト
 
