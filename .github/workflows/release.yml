@@ -130,9 +130,12 @@ jobs:
           # 2. 中身が置いたものと同じか
           sha256sum -c SHA256SUMS
 
-          # 3. このリポジトリのワークフローが作ったものか
+          # 3. このリポジトリのワークフローが作ったものか（gh 2.49 以上が必要）
           gh attestation verify ${{ steps.archive.outputs.name }}.tar.gz --repo ${{ github.repository }}
           ```
+
+          `gh attestation` は gh 2.49 で入ったサブコマンド。それより古いと 3 は実行できない
+          （`gh --version` で確認できる）。
 
           2 は配送途中の破損・改竄を、3 は出どころを確かめる。3 まで通って初めて
           「GitHub 上で差し替えられていない」と言える。
