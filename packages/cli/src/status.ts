@@ -3,10 +3,9 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, join } from "node:path";
-import { FileSystemPersonaRepository } from "@agent-aiko/core";
-import { UserContextProvider } from "@agent-aiko/user-context";
-import { RuntimeProfileBinder } from "@agent-aiko/binder";
+import { createRuntimeSdk } from "@agent-aiko/runtime-sdk";
 import { DEFAULT_INJECTION } from "@agent-aiko/adapter-claude-code";
+import { openEnvironment } from "./resolve.js";
 import type { Environment } from "./environment.js";
 
 export interface AdapterStatus {
@@ -45,43 +44,33 @@ export async function collectStatus(
   version: string,
   processEnv: NodeJS.ProcessEnv = process.env,
 ): Promise<Status> {
-  const repo = new FileSystemPersonaRepository({ aikoHome: env.aikoHome });
-  const provider = new UserContextProvider();
+  const opened = await openEnvironment(env);
 
   let persona = "読めません";
-  let user = "読めません";
   let binding: Status["binding"] = "failed";
-  let bindingDetail: string | undefined;
+  let bindingDetail: string | undefined = opened.userError;
+  const user = opened.userId;
 
-  let resolvedUser;
+  const health = await opened.sdk.health({ requestId: "cli-status", personaId: env.personaId });
+  if (health.persona) {
+    persona = `${health.persona.id}@${health.persona.version}`;
+  } else {
+    bindingDetail ??= health.reason;
+  }
+
   try {
-    resolvedUser = env.userProfilePath
-      ? await provider.loadFromFile(env.userProfilePath)
-      : provider.resolve({ schema_version: 1, user_id: "default" });
-    user = resolvedUser.context.id;
+    await opened.sdk.prepareLaunch({
+      requestId: "cli-status-bind",
+      personaRef: { personaId: env.personaId },
+      userRef: { userId: opened.userId },
+      runtime: { id: "claude-code", version: "1" },
+      injectionCapability: { systemLevel: [DEFAULT_INJECTION] },
+      requestedConsistencyLevel: 2,
+    });
+    binding = "healthy";
+    bindingDetail = undefined;
   } catch (err) {
     bindingDetail = err instanceof Error ? err.message : String(err);
-  }
-
-  try {
-    const snapshot = await repo.load({ id: env.personaId });
-    persona = `${snapshot.id}@${snapshot.version}`;
-  } catch (err) {
-    bindingDetail ??= err instanceof Error ? err.message : String(err);
-  }
-
-  if (resolvedUser) {
-    try {
-      const binder = new RuntimeProfileBinder({ personaRepository: repo });
-      await binder.bind(
-        { persona: { id: env.personaId }, runtime: { id: "claude-code", injectionMethod: DEFAULT_INJECTION } },
-        resolvedUser,
-      );
-      binding = "healthy";
-      bindingDetail = undefined;
-    } catch (err) {
-      bindingDetail = err instanceof Error ? err.message : String(err);
-    }
   }
 
   const [claude, codex] = await Promise.all([
