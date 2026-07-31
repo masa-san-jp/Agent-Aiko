@@ -6,20 +6,27 @@
 //
 // 追加の引数はそのまま claude へ渡す。Adapter が使う人格の引数だけを足す。
 
-import { spawn } from "node:child_process";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { FileSystemPersonaRepository, UserContextProvider } from "@agent-aiko/core";
+import { spawn } from "node:child_process";
+import { FileSystemPersonaRepository, UserContextProvider, resolveUserProfilePath } from "@agent-aiko/core";
 import { prepareLaunch, AdapterError } from "./adapter.js";
 
 async function main(): Promise<void> {
   const provider = new UserContextProvider();
-  const userProfilePath = process.env["AIKO_USER_PROFILE"];
+const aikoHome = process.env["AIKO_HOME"];
+  // AIKO_USER_PROFILE が無くても、aiko configure が置いた既定のファイルを拾う。
+  // 置き場の決め方は core に集約してある（ここで独自に組み立てると configure と食い違う）。
+  const userProfilePath = resolveUserProfilePath(
+    aikoHome ?? join(homedir(), ".aiko"),
+    process.env["AIKO_USER_PROFILE"],
+    existsSync,
+  );
   const user = userProfilePath
     ? await provider.loadFromFile(userProfilePath)
     : provider.resolve({ schema_version: 1, user_id: "default" });
 
-  const aikoHome = process.env["AIKO_HOME"];
   const stateDir =
     process.env["AIKO_STATE_DIR"] ??
     join(process.env["XDG_RUNTIME_DIR"] ?? tmpdir(), "aiko-claude-code");
