@@ -1,0 +1,43 @@
+{
+  "name": "@agent-aiko/golden",
+  "version": "0.1.0",
+  "description": "Persona Golden Test — 人格が一貫しているかを、文面の一致ではなく振る舞いで見る。設計書 §12.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "pretest": "npm run build",
+    "test": "node --import tsx --test test/*.test.ts",
+    "clean": "tsc -b --clean",
+    "golden": "node dist/cli.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@agent-aiko/binder": "*",
+    "@agent-aiko/core": "*",
+    "@agent-aiko/user-context": "*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
+    "directory": "packages/golden"
+  },
+  "bin": {
+    "aiko-golden": "dist/cli.js"
+  }
+}
