@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@agent-aiko/binder": "*",
+    "@agent-aiko/capability-registry": "*",
     "@agent-aiko/core": "*",
     "@agent-aiko/user-context": "*"
   },

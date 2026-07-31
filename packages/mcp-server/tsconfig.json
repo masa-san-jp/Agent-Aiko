@@ -23,6 +23,9 @@
     },
     {
       "path": "../capability-registry"
+    },
+    {
+      "path": "../runtime-sdk"
     }
   ]
 }
