@@ -1,0 +1,39 @@
+{
+  "name": "@agent-aiko/runtime-sdk",
+  "version": "0.1.0",
+  "description": "Aiko Runtime SDK — 各ランタイムが人格を安全かつ一貫して注入するための唯一の公開実行インターフェース。SDK 設計書 §6",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "pretest": "npm run build",
+    "test": "node --import tsx --test test/*.test.ts",
+    "clean": "tsc -b --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@agent-aiko/binder": "*",
+    "@agent-aiko/core": "*",
+    "@agent-aiko/user-context": "*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
+    "directory": "packages/runtime-sdk"
+  }
+}
