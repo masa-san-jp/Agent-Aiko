@@ -1,4 +1,4 @@
-// Phase 2（Binder / User Context Provider / Capability Registry）のテスト。
+// Binder のテスト。設計書 §5.3 / §6。
 //
 // 通る経路より、止まるべき経路を厚く見る。この層の役割は §6.5 の fail-closed
 // 判定なので、止まらないことが最大の欠陥になる。
@@ -9,14 +9,9 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RuntimeProfileBinder, BindingError } from "../src/binder.js";
-import {
-  CapabilityRegistry,
-  CapabilityManifestError,
-  UserContextProvider,
-  UserProfileError,
-  PersonaResolutionError,
-  type PersonaRepository,
-} from "@agent-aiko/core";
+import { PersonaResolutionError, type PersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider, UserProfileError } from "@agent-aiko/user-context";
+import { CapabilityRegistry, CapabilityManifestError } from "@agent-aiko/capability-registry";
 
 const persona = {
   id: "aiko",
@@ -45,186 +40,6 @@ const user = {
 };
 
 // --- User Context Provider ---
-
-test("User Profile: §6.2 の例から最小情報を取り出す", () => {
-  const resolved = new UserContextProvider().resolve({
-    schema_version: 1,
-    user_id: "default",
-    identity: { preferred_name: "Masa" },
-    communication: { language: "ja", verbosity: "concise", directness: "high" },
-    relationship: { familiarity: "established", memory_namespace: "users/default/aiko" },
-    privacy: { allow_remote_persona_service: false, allow_usage_telemetry: false },
-  });
-  assert.deepEqual(resolved.context, {
-    id: "default",
-    preferredName: "Masa",
-    language: "ja",
-    verbosity: "concise",
-    directness: "high",
-  });
-  assert.equal(resolved.memoryNamespace, "users/default/aiko");
-});
-
-test("User Profile: privacy の項目が無ければ拒否側に倒す", () => {
-  const resolved = new UserContextProvider().resolve({ schema_version: 1, user_id: "default" });
-  assert.deepEqual(resolved.privacy, {
-    allowRemotePersonaService: false,
-    allowUsageTelemetry: false,
-  });
-});
-
-test("User Profile: user_id が無ければ例外（§6.5 解決不能）", () => {
-  assert.throws(
-    () => new UserContextProvider().resolve({ schema_version: 1 }),
-    UserProfileError,
-  );
-});
-
-test("User Profile: 受理範囲外の版は例外（§10.3.1）", () => {
-  assert.throws(
-    () => new UserContextProvider({ currentSchemaVersion: 3 }).resolve({
-      schema_version: 1,
-      user_id: "default",
-    }),
-    UserProfileError,
-  );
-});
-
-test("User Profile: 未知の verbosity は黙って捨てず拒否する", () => {
-  // 捨てると、設定したつもりで効いていない状態に置かれ、しかも気付けない。
-  // スキーマ側も enum で弾く（§6.2）ので、ここで通すと二重基準になる。
-  assert.throws(
-    () =>
-      new UserContextProvider().resolve({
-        schema_version: 1,
-        user_id: "default",
-        communication: { verbosity: "ものすごく詳しく" },
-      }),
-    (err: unknown) => {
-      assert.ok(err instanceof UserProfileError);
-      assert.match(err.message, /concise \/ normal \/ detailed/);
-      return true;
-    },
-  );
-});
-
-test("User Profile: 未知の directness も拒否する", () => {
-  assert.throws(
-    () =>
-      new UserContextProvider().resolve({
-        schema_version: 1,
-        user_id: "default",
-        communication: { directness: "とても高い" },
-      }),
-    UserProfileError,
-  );
-});
-
-test("User Profile: communication が無い場合は何も設定しない（拒否しない）", () => {
-  const resolved = new UserContextProvider().resolve({ schema_version: 1, user_id: "default" });
-  assert.equal(resolved.context.verbosity, undefined);
-  assert.equal(resolved.context.directness, undefined);
-  assert.equal(resolved.context.language, undefined);
-});
-
-test("User Profile: ファイルが無ければ例外", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "aiko-user-"));
-  try {
-    await assert.rejects(
-      () => new UserContextProvider().loadFromFile(join(dir, "none.json")),
-      UserProfileError,
-    );
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("User Profile: 壊れた JSON は例外", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "aiko-user-"));
-  const path = join(dir, "profile.json");
-  try {
-    await writeFile(path, "{ not json", "utf8");
-    await assert.rejects(() => new UserContextProvider().loadFromFile(path), UserProfileError);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-// --- Capability Registry ---
-
-test("Capability: §6.3 の例から使える能力を並べる", () => {
-  const resolved = new CapabilityRegistry().resolve({
-    schema_version: 1,
-    runtime_id: "claude-code",
-    built_in_tools: [{ id: "filesystem", operations: ["read", "write"] }],
-    mcp_servers: [{ id: "github", availability: "ready" }],
-    skills: [{ id: "code-review", version: "2.1.0" }],
-    credentials: { handling: "host-managed", values_included: false },
-  });
-  assert.deepEqual(resolved.available, ["code-review", "filesystem", "github"]);
-  assert.deepEqual(resolved.excluded, []);
-});
-
-test("Capability: 使えないものは理由つきで除外し、止めない（§6.5 末尾）", () => {
-  const resolved = new CapabilityRegistry().resolve({
-    schema_version: 1,
-    runtime_id: "codex",
-    mcp_servers: [
-      { id: "github", availability: "ready" },
-      { id: "slack", availability: "unavailable" },
-      { id: "notion", availability: "unknown" },
-    ],
-  });
-  assert.deepEqual(resolved.available, ["github"]);
-  assert.deepEqual(resolved.excluded.map((e) => e.id), ["notion", "slack"]);
-  assert.match(resolved.excluded[0]?.reason ?? "", /確認できません/);
-  assert.match(resolved.excluded[1]?.reason ?? "", /利用できません/);
-});
-
-test("Capability: availability が不正な値なら ready に丸めず除外する", () => {
-  // 宣言が壊れているものを一番許す側へ倒すと、使えないものを使えることにしてしまう
-  const resolved = new CapabilityRegistry().resolve({
-    schema_version: 1,
-    runtime_id: "codex",
-    mcp_servers: [{ id: "github", availability: "ready-ish" }],
-  });
-  assert.deepEqual(resolved.available, []);
-  assert.deepEqual(resolved.excluded.map((e) => e.id), ["github"]);
-  assert.match(resolved.excluded[0]?.reason ?? "", /宣言が不正/);
-});
-
-test("Capability: availability が無い項目は ready 扱い（§6.3 の例）", () => {
-  const resolved = new CapabilityRegistry().resolve({
-    schema_version: 1,
-    runtime_id: "claude-code",
-    built_in_tools: [{ id: "filesystem", operations: ["read"] }],
-  });
-  assert.deepEqual(resolved.available, ["filesystem"]);
-});
-
-test("Capability: 認証情報の値を含む宣言は拒否する（§3.3）", () => {
-  assert.throws(
-    () =>
-      new CapabilityRegistry().resolve({
-        schema_version: 1,
-        runtime_id: "claude-code",
-        credentials: { handling: "host-managed", values_included: true },
-      }),
-    CapabilityManifestError,
-  );
-});
-
-test("Capability: 受理範囲外の版は拒否する", () => {
-  assert.throws(
-    () => new CapabilityRegistry({ currentSchemaVersion: 3 }).resolve({
-      schema_version: 1,
-      runtime_id: "codex",
-    }),
-    CapabilityManifestError,
-  );
-});
-
-// --- Binder ---
 
 test("Binder: Claude Code の Profile を合成する", async () => {
   const binder = new RuntimeProfileBinder({ personaRepository: repo() });

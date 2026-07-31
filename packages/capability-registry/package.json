@@ -1,7 +1,7 @@
 {
-  "name": "@agent-aiko/binder",
+  "name": "@agent-aiko/capability-registry",
   "version": "0.1.0",
-  "description": "Runtime Profile Binder — 人格・ユーザー・能力を1つの Runtime Profile に束ねる、束ねられなければ拒む。設計書 §5.3 / §6",
+  "description": "Capability Registry — Capability Manifest を使える能力と除外に分ける。設計書 §5.5 / §6.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -22,19 +22,16 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
-    "ajv": "^8.17.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   },
   "dependencies": {
-    "@agent-aiko/capability-registry": "*",
-    "@agent-aiko/core": "*",
-    "@agent-aiko/user-context": "*"
+    "@agent-aiko/core": "*"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
-    "directory": "packages/binder"
+    "directory": "packages/capability-registry"
   }
 }

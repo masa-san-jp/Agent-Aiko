@@ -3,7 +3,8 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { delimiter, join } from "node:path";
-import { FileSystemPersonaRepository, UserContextProvider } from "@agent-aiko/core";
+import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider } from "@agent-aiko/user-context";
 import { RuntimeProfileBinder } from "@agent-aiko/binder";
 import { DEFAULT_INJECTION } from "@agent-aiko/adapter-claude-code";
 import type { Environment } from "./environment.js";

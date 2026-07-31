@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "@agent-aiko/binder": "*",
-    "@agent-aiko/core": "*"
+    "@agent-aiko/core": "*",
+    "@agent-aiko/user-context": "*"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",

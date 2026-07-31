@@ -11,7 +11,8 @@
 
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { type PersonaRepository, type ResolvedUserContext } from "@agent-aiko/core";
+import { type PersonaRepository } from "@agent-aiko/core";
+import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import {
   RuntimeProfileBinder,
   type InjectionMethod,

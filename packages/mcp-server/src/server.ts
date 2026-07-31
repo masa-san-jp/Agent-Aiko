@@ -8,7 +8,8 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { FileSystemPersonaRepository, UserContextProvider, resolveUserProfilePath } from "@agent-aiko/core";
+import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
 import { createAikoServer } from "./aiko-server.js";
 
 const personaId = process.env["AIKO_PERSONA_ID"] ?? "aiko";
