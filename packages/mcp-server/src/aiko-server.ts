@@ -18,6 +18,7 @@ import {
   type RuntimeId,
 } from "@agent-aiko/binder";
 import { ProfileStore } from "./profile-store.js";
+import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
 export const SERVER_VERSION = "0.1.0";
@@ -50,6 +51,19 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
 
   const loadPersona = (): Promise<PersonaSnapshot> =>
     deps.personaRepository.load({ id: personaId });
+
+  // §7.3 Prompts。system 級に注入できないホスト（§8.4）が、会話の先頭で人格を
+  // 置くための口。合成には Binder を通す——ここで独自に組み立てると、Adapter が
+  // 注入するものと違う人格が Prompt から出る。
+  registerPrompts(server, {
+    compileInstructions: async () => {
+      const profile = await binder.bind(
+        { persona: { id: personaId }, runtime: { id: "generic-mcp-host" } },
+        deps.user,
+      );
+      return { instructions: profile.instructions, personaVersion: profile.persona.version };
+    },
+  });
 
   const textResource = (uri: string, name: string, description: string, pick: (p: PersonaSnapshot) => string) => {
     server.registerResource(
