@@ -18,3 +18,14 @@ export type {
   RuntimeLaunchBundle,
   RuntimeWarning,
 } from "./types.js";
+
+// 利用側（Adapter / MCP Server / CLI）が binder・core・user-context を直接
+// import せずに済むよう、必要な型をここから出す。SDK 設計書 §1 は通常処理での
+// 直接呼び出しを禁じており、型のためだけの import も依存として残ってしまう。
+export type {
+  InjectionMethod,
+  RuntimeProfile,
+  RuntimeId as BinderRuntimeId,
+} from "@agent-aiko/binder";
+export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
+export type { ResolvedUserContext } from "@agent-aiko/user-context";

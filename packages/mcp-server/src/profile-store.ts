@@ -8,7 +8,7 @@
 // 無制限に貯めない。bind を繰り返すセッションで際限なく増えると、長時間動く
 // ホストで効いてくる。
 
-import type { RuntimeProfile } from "@agent-aiko/binder";
+import type { RuntimeProfile } from "@agent-aiko/runtime-sdk";
 
 const DEFAULT_LIMIT = 32;
 
