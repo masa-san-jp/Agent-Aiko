@@ -5,6 +5,12 @@
       "path": "packages/core"
     },
     {
+      "path": "packages/capability-registry"
+    },
+    {
+      "path": "packages/user-context"
+    },
+    {
       "path": "packages/binder"
     },
     {

@@ -8,7 +8,7 @@
 // 認証情報の値は決して受け取らない（§3.3）。values_included: true を宣言した
 // Manifest は、その時点で扱ってはいけないものなので拒否する。
 
-import { checkSchemaVersion } from "./schema-compatibility.js";
+import { checkSchemaVersion } from "@agent-aiko/core";
 
 /** Capability Manifest の現行 schema_version。 */
 export const CAPABILITY_MANIFEST_SCHEMA_VERSION = 1;
