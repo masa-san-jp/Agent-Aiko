@@ -137,3 +137,28 @@ jobs:
 
       - name: Test
         run: npm test
+
+  # 設計書 §12.2 が PR CI に dependency audit を挙げているが、実装されていなかった
+  # （Threat Model T7）。lockfile ごとに監査する。閾値を high にしているのは、
+  # low / moderate で赤を常態化させると、本当に危ない1件が埋もれるため。
+  dependency-audit:
+    name: dependency-audit / ${{ matrix.dir }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: ['.', 'schemas', 'codex']
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Audit
+        run: npm audit --audit-level=high
