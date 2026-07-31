@@ -9,16 +9,18 @@
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { type PersonaRepository, type PersonaSnapshot } from "@agent-aiko/core";
-import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import { CapabilityRegistry } from "@agent-aiko/capability-registry";
-// 型のみ。実行時の依存は無い（R2 の完了基準は Binder への直接依存を無くすこと）。
-// MCP の公開スキーマ（§7.4）が Binder の綴りで固定されているため、綴りの正本として使う。
-import type { InjectionMethod, RuntimeId } from "@agent-aiko/binder";
+// 型も含め、SDK から受け取る。型のためだけの import も依存として残るため
+// （SDK 設計書 §1・R3 の直接 import 禁止テスト）。
 import {
   createRuntimeSdk,
   RuntimeSdkError,
+  type BinderRuntimeId as RuntimeId,
   type InjectionCapability,
+  type InjectionMethod,
+  type PersonaRepository,
+  type PersonaSnapshot,
+  type ResolvedUserContext,
   type RuntimeId as SdkRuntimeId,
 } from "@agent-aiko/runtime-sdk";
 import { ProfileStore } from "./profile-store.js";
@@ -307,24 +309,25 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       inputSchema: {},
     },
     async () => {
-      try {
-        const persona = await loadPersona();
-        return json({
-          server: { name: SERVER_NAME, version: SERVER_VERSION },
-          persona: { id: persona.id, version: persona.version, invariantsPresent: persona.invariants.trim().length > 0 },
-          profiles: store.size,
-          status: "ok",
-        });
-      } catch (err) {
+      // §16.1 の対応表どおり SDK の health を使う。SDK は投げずに状態を返すので、
+      // ここでは MCP の形へ写すだけ。公開する形は変えない（§16.3）。
+      const health = await sdk.health({ requestId: nextRequestId(), personaId });
+      if (health.status === "unavailable") {
         return json(
           {
             server: { name: SERVER_NAME, version: SERVER_VERSION },
             status: "persona-unavailable",
-            reason: err instanceof Error ? err.message : String(err),
+            reason: health.reason ?? "人格を読めません",
           },
           true,
         );
       }
+      return json({
+        server: { name: SERVER_NAME, version: SERVER_VERSION },
+        persona: health.persona,
+        profiles: store.size,
+        status: "ok",
+      });
     },
   );
 

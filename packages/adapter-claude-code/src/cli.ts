@@ -10,6 +10,8 @@ import { existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+// 実体の生成（Repository / Provider）は入口の仕事。SDK 設計書 §1 が禁じているのは
+// 「人格を適用する通常処理」での直接呼び出しで、依存の組み立てはここで行う。
 import { FileSystemPersonaRepository } from "@agent-aiko/core";
 import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
 import { prepareLaunch, AdapterError } from "./adapter.js";
