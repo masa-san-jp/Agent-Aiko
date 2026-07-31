@@ -10,7 +10,8 @@ import { existsSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-import { FileSystemPersonaRepository, UserContextProvider, resolveUserProfilePath } from "@agent-aiko/core";
+import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
 import { prepareLaunch, AdapterError } from "./adapter.js";
 
 async function main(): Promise<void> {

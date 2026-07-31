@@ -13,8 +13,6 @@ Aiko Core。人格を読み出し、ユーザー・能力と合わせて実行�
 | `compiler.ts` | 人格・ユーザー・能力から指示文と hash を合成 | §5.2 |
 | `hash.ts` | SHA-256。キー順に依存しないオブジェクトハッシュ | §5.3・§6.5 |
 | `schema-compatibility.ts` | `schema_version` の受理判定（現行とその1つ前まで） | §10.3.1 |
-| `user-context-provider.ts` | User Profile から Compiler が使う最小情報だけを取り出す | §5.4・§6.2 |
-| `capability-registry.ts` | Capability Manifest を使える能力／除外に分ける | §5.5・§6.3 |
 
 ## 現行レイアウトをそのまま読む理由
 
@@ -36,11 +34,15 @@ Aiko Core。人格を読み出し、ユーザー・能力と合わせて実行�
 
 **hash はキー順に依存しない** — `JSON.stringify` をそのまま使うとキーの並びで結果が変わる。同じ入力から必ず同じ hash が出ないと、§6.5 の hash 検証も §16 の追跡も成立しない。
 
-**渡された最小情報しか下流へ流さない** — User Profile 全体を Compiler へ渡さない。§5.4 が「最小情報」と定めており、`privacy` と `memory_namespace` は指示文に載せるものではないため `UserContext` に含めない。
-
 **拒否するときは直し方まで返す** — `schema_version` が範囲外のとき、読めない事実だけを返しても利用者は動けない。拒否した版・受理できる版・とるべき操作（`aiko update` か `aiko migrate`）を添える。新しすぎる場合と古すぎる場合で必要な操作が逆なので、区別して返す。
 
-束ねる責務（Runtime Profile の生成と fail-closed 判定）は [`@agent-aiko/binder`](../binder/README.md) に分けてある。設計書 §5.3 / §6 の担当はそちら。
+設計書 §9 に沿って、次の3つは別パッケージに分けてある。
+
+- 束ねる（Runtime Profile の生成と fail-closed 判定）→ [`@agent-aiko/binder`](../binder/README.md)（§5.3 / §6）
+- 利用者を解決する → [`@agent-aiko/user-context`](../user-context/README.md)（§5.4 / §6.2）
+- 能力を解決する → [`@agent-aiko/capability-registry`](../capability-registry/README.md)（§5.5 / §6.3）
+
+core が持つのは、人格を読むことと合成すること、およびそれらが使う hash と版の判定。
 
 ## テスト
 
