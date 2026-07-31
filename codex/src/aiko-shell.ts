@@ -14,7 +14,13 @@ import { CLIENT_VERSION } from "./codex-client/codex-client.js";
 const DOUBLE_INTERRUPT_WINDOW_MS = 2000;
 
 async function main(): Promise<number> {
+  // AIKO_HOME を見る。インストーラは --aiko-home で別の場所へ入れられるのに、
+  // ここが常に ~/.aiko を見ていたため、指定して入れた人は必ず起動に失敗していた
+  // （ENOENT: ~/.aiko/persona/aiko-origin.md）。Runtime は元から場所を受け取れる
+  // ので、渡していなかっただけ。変数名は MCP サーバー・CLI と揃える。
+  const aikoHome = process.env["AIKO_HOME"];
   const runtime = new AikoRuntime({
+    ...(aikoHome ? { aikoHome } : {}),
     onLog: (line) => process.stderr.write(`[aiko] ${line}\n`),
   });
 
