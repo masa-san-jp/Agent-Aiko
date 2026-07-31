@@ -21,9 +21,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "pretest": "npm run build",
     "test": "node --import tsx --test test/*.test.ts",
-    "clean": "rm -rf dist"
+    "clean": "tsc -b --clean"
   },
   "dependencies": {
+    "@agent-aiko/binder": "*",
     "@agent-aiko/core": "*"
   },
   "devDependencies": {
