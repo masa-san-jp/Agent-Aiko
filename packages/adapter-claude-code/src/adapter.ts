@@ -11,13 +11,14 @@
 
 import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { type PersonaRepository } from "@agent-aiko/core";
-import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import {
-  RuntimeProfileBinder,
+  createRuntimeSdk,
+  RuntimeSdkError,
   type InjectionMethod,
+  type PersonaRepository,
+  type ResolvedUserContext,
   type RuntimeProfile,
-} from "@agent-aiko/binder";
+} from "@agent-aiko/runtime-sdk";
 
 /** 既定の注入手段。base を置き換える側を使う。 */
 export const DEFAULT_INJECTION: InjectionMethod = "claude-code:system-prompt-file";
@@ -62,27 +63,40 @@ export async function prepareLaunch(options: PrepareOptions): Promise<PreparedLa
       ? "claude-code:append-system-prompt-file"
       : "claude-code:system-prompt-file";
 
-  const binder = new RuntimeProfileBinder({ personaRepository: options.personaRepository });
+  // R3: Binder を直接呼ばず Runtime SDK を通す（SDK 設計書 §1・§23 R3）。
+  // Adapter はホスト固有の処理（引数の組み立てとファイル書き出し）だけを持つ。
+  const sdk = createRuntimeSdk({
+    personaRepository: options.personaRepository,
+    user: options.user,
+  });
 
   let profile: RuntimeProfile;
   try {
-    profile = await binder.bind(
-      {
-        persona: { id: options.personaId ?? "aiko" },
-        runtime: { id: "claude-code", injectionMethod },
-        ...(options.capabilityManifest === undefined
-          ? {}
-          : { capabilityManifest: options.capabilityManifest }),
-        ...(options.outputPrefix ? { outputPrefix: options.outputPrefix } : {}),
-      },
-      options.user,
-    );
+    const bundle = await sdk.prepareLaunch({
+      requestId: `claude-code-${Date.now()}`,
+      personaRef: { personaId: options.personaId ?? "aiko" },
+      userRef: { userId: options.user.context.id },
+      runtime: { id: "claude-code", version: "1" },
+      // §17.1: Adapter は自分が使える注入手段を申告する。SDK に推測させない。
+      injectionCapability: { systemLevel: [injectionMethod] },
+      requestedConsistencyLevel: 2,
+      ...(options.capabilityManifest === undefined
+        ? {}
+        : { capabilityManifest: options.capabilityManifest }),
+      ...(options.outputPrefix ? { outputPrefix: options.outputPrefix } : {}),
+    });
+    profile = bundle.profile;
   } catch (err) {
     // 合成できないなら引数を作らない。呼び出し側が「とりあえず起動」できないよう、
     // 部分的な結果を返さず例外で止める（§3.4）。
+    // §10.3: SDK のエラーコードを別の意味へ置き換えない。理由はそのまま伝える。
     throw new AdapterError(
       `人格を合成できなかったため Claude Code を起動しません: ${
-        err instanceof Error ? err.message : String(err)
+        err instanceof RuntimeSdkError
+          ? err.userMessage
+          : err instanceof Error
+            ? err.message
+            : String(err)
       }`,
       { stage: "binding" },
     );
