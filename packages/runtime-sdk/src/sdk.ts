@@ -9,6 +9,7 @@
 
 import { hashObject, type PersonaRepository } from "@agent-aiko/core";
 import type { ResolvedUserContext } from "@agent-aiko/user-context";
+import { CapabilityRegistry } from "@agent-aiko/capability-registry";
 import {
   RuntimeProfileBinder,
   type InjectionMethod,
@@ -31,8 +32,11 @@ import type {
 export const SDK_VERSION = "0.1.0";
 
 export interface CreateRuntimeSdkOptions {
-  binder: RuntimeProfileBinder;
+  /** 省略すると personaRepository から自分で組む。呼び出し側が Binder を
+   *  import しなくて済むようにするため（SDK 設計書 §1・§23 R2 の完了基準）。 */
+  binder?: RuntimeProfileBinder;
   personaRepository: PersonaRepository;
+  capabilityRegistry?: CapabilityRegistry;
   /** User Context の解決結果。SDK は取得の仕方を決めない（§6.2）。 */
   user: ResolvedUserContext;
   /** 合成済み Profile の置き場。渡さなければ SDK 内に持つ。 */
@@ -103,6 +107,12 @@ export interface AikoRuntimeSdk {
 export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeSdk {
   const store = options.profileStore ?? new MemoryProfileStore();
   const now = options.clock ?? (() => new Date());
+  const binder =
+    options.binder ??
+    new RuntimeProfileBinder({
+      personaRepository: options.personaRepository,
+      capabilityRegistry: options.capabilityRegistry ?? new CapabilityRegistry(),
+    });
 
   const bind = async (
     requestId: string,
@@ -113,7 +123,7 @@ export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeS
     outputPrefix: string | undefined,
   ): Promise<RuntimeProfile> => {
     try {
-      return await options.binder.bind(
+      return await binder.bind(
         {
           persona: { id: personaId },
           runtime: {

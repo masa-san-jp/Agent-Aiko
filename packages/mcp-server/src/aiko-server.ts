@@ -12,11 +12,15 @@ import { z } from "zod";
 import { type PersonaRepository, type PersonaSnapshot } from "@agent-aiko/core";
 import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import { CapabilityRegistry } from "@agent-aiko/capability-registry";
+// 型のみ。実行時の依存は無い（R2 の完了基準は Binder への直接依存を無くすこと）。
+// MCP の公開スキーマ（§7.4）が Binder の綴りで固定されているため、綴りの正本として使う。
+import type { InjectionMethod, RuntimeId } from "@agent-aiko/binder";
 import {
-  RuntimeProfileBinder,
-  type InjectionMethod,
-  type RuntimeId,
-} from "@agent-aiko/binder";
+  createRuntimeSdk,
+  RuntimeSdkError,
+  type InjectionCapability,
+  type RuntimeId as SdkRuntimeId,
+} from "@agent-aiko/runtime-sdk";
 import { ProfileStore } from "./profile-store.js";
 import { registerPrompts } from "./prompts.js";
 
@@ -42,10 +46,58 @@ const INJECTION_METHODS = [
 export function createAikoServer(deps: AikoServerDeps): McpServer {
   const personaId = deps.personaId ?? "aiko";
   const store = deps.profileStore ?? new ProfileStore();
-  const binder = new RuntimeProfileBinder({
+  // R2: Binder を直接呼ばない（SDK 設計書 §1・§23 R2 の完了基準）。生成も SDK に
+  // 任せる。型だけは MCP の公開スキーマが Binder の綴りで固定されているので使う。
+  const sdk = createRuntimeSdk({
     personaRepository: deps.personaRepository,
-    capabilityRegistry: new CapabilityRegistry(),
+    user: deps.user,
+    // MCP サーバーが元から持っている置き場をそのまま使う。SDK 側に別の置き場を
+    // 持たせると、bind した Profile と get_runtime_profile が見る Profile がずれる。
+    profileStore: store,
   });
+
+  // MCP の公開スキーマ（§7.4）は Binder の綴りで固定されている。SDK は別の綴りを
+  // 使うので、ここで写す。**公開面は変えない**（§16.3 挙動一致）。
+  const TO_SDK_RUNTIME: Record<RuntimeId, SdkRuntimeId> = {
+    "claude-code": "claude-code",
+    codex: "codex",
+    "antigravity-cli": "antigravity",
+    "generic-mcp-host": "generic-mcp",
+  };
+  // Binder が持っていた「ランタイムごとの到達レベル」。SDK には要求レベルを渡す
+  // 必要があるので、移行前と同じ判定になるようここに写す。
+  const REQUESTED_LEVEL: Record<RuntimeId, 1 | 2> = {
+    "claude-code": 2,
+    codex: 2,
+    "antigravity-cli": 1,
+    "generic-mcp-host": 1,
+  };
+
+  let requestSeq = 0;
+  const nextRequestId = (): string => `mcp-${++requestSeq}`;
+
+  const bindThroughSdk = async (
+    runtime: RuntimeId,
+    injectionMethod: InjectionMethod | undefined,
+    capabilityManifest: unknown,
+    outputPrefix: string | undefined,
+  ) => {
+    const injectionCapability: InjectionCapability =
+      injectionMethod && injectionMethod !== "none"
+        ? { systemLevel: [injectionMethod] }
+        : { systemLevel: [] };
+    const bundle = await sdk.prepareLaunch({
+      requestId: nextRequestId(),
+      personaRef: { personaId },
+      userRef: { userId: deps.user.context.id },
+      runtime: { id: TO_SDK_RUNTIME[runtime], version: SERVER_VERSION },
+      injectionCapability,
+      requestedConsistencyLevel: REQUESTED_LEVEL[runtime],
+      ...(capabilityManifest === undefined ? {} : { capabilityManifest }),
+      ...(outputPrefix ? { outputPrefix } : {}),
+    });
+    return bundle.profile;
+  };
 
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
 
@@ -57,11 +109,13 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
   // 注入するものと違う人格が Prompt から出る。
   registerPrompts(server, {
     compileInstructions: async () => {
-      const profile = await binder.bind(
-        { persona: { id: personaId }, runtime: { id: "generic-mcp-host" } },
-        deps.user,
-      );
-      return { instructions: profile.instructions, personaVersion: profile.persona.version };
+      const compiled = await sdk.compileInstructions({
+        requestId: nextRequestId(),
+        personaRef: { personaId },
+        userRef: { userId: deps.user.context.id },
+        runtime: { id: "generic-mcp", version: SERVER_VERSION },
+      });
+      return { instructions: compiled.content, personaVersion: compiled.personaVersion };
     },
   });
 
@@ -182,27 +236,24 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     },
     async ({ runtime, injectionMethod, capabilityManifest, outputPrefix }) => {
       try {
-        const profile = await binder.bind(
-          {
-            persona: { id: personaId },
-            runtime: {
-              id: runtime as RuntimeId,
-              ...(injectionMethod ? { injectionMethod: injectionMethod as InjectionMethod } : {}),
-            },
-            ...(capabilityManifest === undefined ? {} : { capabilityManifest }),
-            ...(outputPrefix ? { outputPrefix } : {}),
-          },
-          deps.user,
+        const profile = await bindThroughSdk(
+          runtime as RuntimeId,
+          injectionMethod as InjectionMethod | undefined,
+          capabilityManifest,
+          outputPrefix,
         );
-        store.put(profile);
         return json(summarize(profile));
       } catch (err) {
         // 例外をそのまま投げるとクライアントには通信断と区別が付かない。
         // 「合成できなかった」ことと理由を、成功と同じ形で返す。
-        return json(
-          { bound: false, reason: err instanceof Error ? err.message : String(err) },
-          true,
-        );
+        // SDK のエラーは利用者向けの文言を持っているので、それを使う（§10.2）。
+        const reason =
+          err instanceof RuntimeSdkError
+            ? err.userMessage
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        return json({ bound: false, reason }, true);
       }
     },
   );
