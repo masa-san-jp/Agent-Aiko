@@ -5,7 +5,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { resolveUserProfilePath } from "@agent-aiko/user-context";
+import { resolveUserProfilePath } from "@agent-aiko/runtime-sdk";
 
 export interface Environment {
   aikoHome: string;

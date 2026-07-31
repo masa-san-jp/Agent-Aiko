@@ -8,7 +8,7 @@
 
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { USER_PROFILE_SCHEMA_VERSION } from "@agent-aiko/user-context";
+import { USER_PROFILE_SCHEMA_VERSION } from "@agent-aiko/runtime-sdk";
 
 export type Ask = (question: string, options?: { default?: string }) => Promise<string>;
 

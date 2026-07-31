@@ -16,16 +16,15 @@ const PACKAGES = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /** 移行が済んだ側。**フェーズごとにここへ足す。** 足し忘れると検査が広がらず、
  *  移行したつもりの package が野放しになる。 */
-const MIGRATED = ["mcp-server", "adapter-claude-code"];
+const MIGRATED = ["mcp-server", "adapter-claude-code", "adapter-codex", "cli"];
 
-/** まだ SDK を通していない側。R4・R5 で MIGRATED へ移る。
- *  一覧をここに置くのは、移行のたびに**この行を消すことになる**から。
- *  残りが見えない状態にしない。 */
-const NOT_YET_MIGRATED = ["adapter-codex", "cli"];
+/** まだ SDK を通していない側。R5 まで終わったので空。
+ *  空でなくなる（新しい利用側が増える）ときは、ここに書いてから移行する。 */
+const NOT_YET_MIGRATED: string[] = [];
 
 /** 依存を組み立てる入口。実体（Repository / Provider）の生成はここの仕事で、
  *  人格を適用する処理ではない。**binder はここでも禁止**。 */
-const COMPOSITION_ROOTS = new Set(["cli.ts", "server.ts"]);
+const COMPOSITION_ROOTS = new Set(["cli.ts", "server.ts", "resolve.ts"]);
 
 /** どこからも直接触ってはいけないもの。 */
 const FORBIDDEN_EVERYWHERE = ["@agent-aiko/binder"];
@@ -87,13 +86,13 @@ test("人格を適用する処理は core / user-context を直接 import しな
   assert.deepEqual(offenders, [], "入口以外から core / user-context を直接見ている");
 });
 
-test("未移行の package を把握している（R4・R5 で消える）", () => {
-  // 「残っているものが分かっている」ことを検査にする。移行したら消す。
-  assert.deepEqual(NOT_YET_MIGRATED.sort(), ["adapter-codex", "cli"]);
+test("未移行の package が残っていない（R5 まで完了）", () => {
+  assert.deepEqual(NOT_YET_MIGRATED, []);
 });
 
 test("入口として許すファイルを絞っている（許可リストが広がっていない）", () => {
   // 「入口だから」で例外を増やすと、この検査は意味を失う。増やすときは
   // ここも直すことになるので、増やしたことが差分に残る。
-  assert.deepEqual([...COMPOSITION_ROOTS].sort(), ["cli.ts", "server.ts"]);
+  // resolve.ts は R5 で足した CLI の組み立て口。増やすときは必ずこの行が変わる。
+  assert.deepEqual([...COMPOSITION_ROOTS].sort(), ["cli.ts", "resolve.ts", "server.ts"]);
 });
