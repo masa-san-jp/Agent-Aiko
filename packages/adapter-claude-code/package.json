@@ -24,10 +24,7 @@
     "clean": "tsc -b --clean"
   },
   "dependencies": {
-    "@agent-aiko/binder": "*",
-    "@agent-aiko/core": "*",
-    "@agent-aiko/runtime-sdk": "*",
-    "@agent-aiko/user-context": "*"
+    "@agent-aiko/runtime-sdk": "*"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
