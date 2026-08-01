@@ -17,3 +17,13 @@ export {
   type FetchReleases,
 } from "./update.js";
 export { configure, renderConfigured, type Ask, type UserProfile } from "./configure.js";
+export {
+  applyUpdate,
+  isUserOwned,
+  listBackups,
+  rollback,
+  USER_OWNED_PATHS,
+  type ApplyUpdateResult,
+  type Backup,
+} from "./apply-update.js";
+export { downloadVerifiedRelease, DownloadError, type FetchBytes } from "./download.js";

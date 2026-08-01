@@ -8,6 +8,11 @@ import { collectStatus } from "./status.js";
 import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from "./update.js";
 import { configure, renderConfigured, type Ask } from "./configure.js";
 import { defaultUserProfilePath } from "@agent-aiko/runtime-sdk";
+import { applyUpdate, listBackups, rollback } from "./apply-update.js";
+import { downloadVerifiedRelease, DownloadError, type FetchBytes } from "./download.js";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as joinPath } from "node:path";
 
 export interface RunIO {
   out: (text: string) => void;
@@ -17,13 +22,16 @@ export interface RunIO {
   fetchReleases?: FetchReleases;
   /** 対話の問い合わせ。未指定なら configure は使えない（非対話環境）。 */
   ask?: Ask;
+  /** テストから配布物の取得を差し替えるための口。 */
+  fetchBytes?: FetchBytes;
+  /** テストから取得先を差し替えるための口。 */
+  releaseBaseUrl?: string;
 }
 
 /** 設計書 §4.4 に挙がっているが、まだ実装していないもの。 */
 const DEFERRED: Record<string, string> = {
   install: "インストーラは scripts/install.sh が担当しています",
   uninstall: "配布（設計書 §15 Phase 5）で実装します",
-  rollback: "配布（設計書 §15 Phase 5）で実装します",
 };
 
 const USAGE = `使い方: aiko <コマンド>
@@ -34,11 +42,12 @@ const USAGE = `使い方: aiko <コマンド>
   configure             呼び名などを設定して User Profile を作る
   update --check        新しい版が出ていないかを見る（何も書き換えない）
   update --check --channel beta   試用版も対象に含める
+  update                新しい版を取得して照合してから入れる（利用者の設定は触らない）
+  rollback              直前の版へ戻す（利用者の設定は触らない）
   help                  この使い方を表示する
 
 未実装（設計書 §4.4 にはあるもの）:
-  install / uninstall / rollback
-  update（--check なしの実際の更新。インストーラ側の切り替えが先）
+  install / uninstall
 
 終了コード:
   0   問題なし / 最新
@@ -101,13 +110,64 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     return 0;
   }
 
+  if (command === "rollback") {
+    const result = await rollback({
+      aikoHome: env.aikoHome,
+      backupRoot: joinPath(env.aikoHome, "backups"),
+    });
+    if (result === undefined) {
+      io.err("戻せる版がありません（まだ aiko update をしていません）\n");
+      return 1;
+    }
+    io.out(`${result.restoredFrom} から ${result.restored.length} 件を戻しました\n`);
+    io.out("利用者の設定（呼び名・自分で書いた人格と規則）は触っていません\n");
+    return 0;
+  }
+
   if (command === "update") {
     if (!rest.includes("--check")) {
-      // 確認だけできて適用はできない、を黙って成功にしない。
-      io.err(
-        "aiko update はまだ適用まで行えません。`aiko update --check` で新しい版の有無だけ見られます\n",
-      );
-      return 2;
+      const i = rest.indexOf("--channel");
+      const requested = i >= 0 ? rest[i + 1] : "stable";
+      if (requested !== "stable" && requested !== "beta") {
+        io.err(`--channel は stable か beta です: ${String(requested)}\n`);
+        return 2;
+      }
+      const found = await checkForUpdate(version, requested, io.fetchReleases);
+      if (!found.latest) {
+        io.err(`${requested} に配布物がありません${found.error ? `: ${found.error}` : ""}\n`);
+        return 1;
+      }
+      if (found.updateAvailable !== true) {
+        io.out(`すでに最新です（${version}）\n`);
+        return 0;
+      }
+      const work = await mkdtemp(joinPath(tmpdir(), "aiko-update-"));
+      try {
+        const extracted = await downloadVerifiedRelease({
+          tag: found.latest.tag,
+          destDir: work,
+          ...(io.releaseBaseUrl ? { baseUrl: io.releaseBaseUrl } : {}),
+          ...(io.fetchBytes ? { fetchBytes: io.fetchBytes } : {}),
+        });
+        const result = await applyUpdate({
+          aikoHome: env.aikoHome,
+          templateAikoDir: joinPath(extracted, "claude-code", "template", ".claude", "aiko"),
+          version: found.latest.tag,
+          backupRoot: joinPath(env.aikoHome, "backups"),
+          now: new Date(),
+        });
+        io.out(`${found.latest.tag} を入れました（${result.updated.length} 件）\n`);
+        io.out(`利用者の設定 ${result.preserved.length} 件はそのままです\n`);
+        io.out(`戻すときは aiko rollback（退避: ${result.backupDir}）\n`);
+        return 0;
+      } catch (err) {
+        // 照合に失敗したことと、取得に失敗したことを混ぜない。
+        if (err instanceof DownloadError) {
+          io.err(`${err.message}\n`);
+          return 1;
+        }
+        throw err;
+      }
     }
     const i = rest.indexOf("--channel");
     const requested = i >= 0 ? rest[i + 1] : "stable";
