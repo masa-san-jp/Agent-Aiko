@@ -9,11 +9,16 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RuntimeProfileBinder, BindingError } from "../src/binder.js";
-import { PersonaResolutionError, type PersonaRepository } from "@agent-aiko/core";
+import {
+  hashObject,
+  PersonaResolutionError,
+  type PersonaRepository,
+  type PersonaSnapshot,
+} from "@agent-aiko/core";
 import { UserContextProvider, UserProfileError } from "@agent-aiko/user-context";
 import { CapabilityRegistry, CapabilityManifestError } from "@agent-aiko/capability-registry";
 
-const persona = {
+const persona: PersonaSnapshot = {
   id: "aiko",
   version: "0.1.0",
   identityCore: "あたしはアイコ。",
@@ -22,7 +27,7 @@ const persona = {
   sources: [],
 };
 
-const repo = (override?: Partial<typeof persona>): PersonaRepository => ({
+const repo = (override?: Partial<PersonaSnapshot>): PersonaRepository => ({
   load: async () => ({ ...persona, ...override }),
 });
 
@@ -158,4 +163,65 @@ test("Binder: 同じ入力からは同じ profile_hash が出る", async () => {
   const b = await binder.bind(request, user);
   assert.equal(a.profile_hash, b.profile_hash);
   assert.equal(a.profile_id, b.profile_id);
+});
+
+// --- 応答契約（R7 仕様書 §6） ---
+
+test("Binder: 人格が宣言した応答契約を Profile に載せる", async () => {
+  const binder = new RuntimeProfileBinder({
+    personaRepository: repo({ responseContract: { firstPerson: "あたし" } }),
+  });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.equal(profile.response_contract?.["firstPerson"], "あたし");
+});
+
+test("Binder: 呼び名は利用者側から入る", async () => {
+  // 呼び名は人格ではなく利用者に属する。人格が何も宣言していなくても入る。
+  const binder = new RuntimeProfileBinder({ personaRepository: repo() });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.equal(profile.response_contract?.["preferredName"], "マサ");
+});
+
+test("Binder: 利用者が人格の禁止表現を上書きできない", async () => {
+  const binder = new RuntimeProfileBinder({
+    personaRepository: repo({ responseContract: { prohibitedExpressions: ["絶対に安全"] } }),
+  });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    { ...user, context: { ...user.context, prohibitedExpressions: [] } as never },
+  );
+  assert.deepEqual(profile.response_contract?.["prohibitedExpressions"], ["絶対に安全"]);
+});
+
+test("Binder: 契約が何も無ければ Profile は契約を持たない", async () => {
+  const binder = new RuntimeProfileBinder({ personaRepository: repo() });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    { ...user, context: { id: "default" } },
+  );
+  assert.equal(profile.response_contract, undefined);
+});
+
+test("Binder: 契約が無い Profile の hash は契約導入前と変わらない", async () => {
+  // 応答契約を hash の入力に足したが、undefined は hashObject が落とす。
+  // 既存の利用者の profile_id が変わらないことを、値そのもので確かめる。
+  const binder = new RuntimeProfileBinder({ personaRepository: repo() });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    { ...user, context: { id: "default" } },
+  );
+  assert.equal(
+    profile.profile_hash,
+    hashObject({
+      instructions: profile.instructions,
+      runtime: profile.runtime,
+      schema_version: profile.schema_version,
+    }),
+  );
 });
