@@ -10,12 +10,13 @@ export {
 
 export {
   FileSystemPersonaRepository,
+  isSafePersonaName,
   type FileSystemPersonaRepositoryOptions,
 } from "./filesystem-persona-repository.js";
 
 export { compile, type CompileInput, type CompiledInstructions, type UserContext } from "./compiler.js";
 
-export { sha256, hashObject } from "./hash.js";
+export { sha256, hashObject, HashInputError, MAX_HASH_DEPTH } from "./hash.js";
 
 export {
   checkSchemaVersion,

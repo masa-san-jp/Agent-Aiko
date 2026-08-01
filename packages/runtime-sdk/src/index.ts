@@ -10,6 +10,8 @@ export {
   notImplemented,
 } from "./errors.js";
 export type { RuntimeErrorCode, RuntimeSdkErrorInit } from "./errors.js";
+export { redact, redactText, REDACTED } from "./redaction.js";
+export type { RedactOptions } from "./redaction.js";
 export type {
   CompileInstructionsRequest,
   CompiledInstructions,
