@@ -73,6 +73,21 @@ const evaluateRequest: EvaluateActionRequest = {
   },
 };
 
+/** 応答検査は照合元の Profile を実引きする（fail closed）。SDK 側と MCP 側で
+ *  それぞれ合成してから使う——同じ入力なら同じ profile_id になるはずで、
+ *  そこがずれていれば検査以前の問題なので、まずそれを確かめる。 */
+async function boundProfileRef(): Promise<{ profileId: string; contentHash: string }> {
+  const bundle = await sdk().prepareLaunch({
+    requestId: "bind-1",
+    personaRef: { personaId: "aiko" },
+    userRef: { userId: "masa" },
+    runtime: { id: "claude-code", version: "1.0.0" },
+    injectionCapability: { systemLevel: ["claude-code:system-prompt-file"] },
+    requestedConsistencyLevel: 2,
+  });
+  return { profileId: bundle.profile.profile_id, contentHash: bundle.profile.profile_hash };
+}
+
 async function callTool(name: string, args: unknown): Promise<unknown> {
   const server = createAikoServer({
     personaRepository: repo,
@@ -85,6 +100,11 @@ async function callTool(name: string, args: unknown): Promise<unknown> {
   const [c, s] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(s), client.connect(c)]);
   try {
+    // MCP 側の置き場は別なので、Tool を呼ぶ前にこちらでも合成しておく。
+    await client.callTool({
+      name: "aiko.bind_runtime",
+      arguments: { runtime: "claude-code", injectionMethod: "claude-code:system-prompt-file" },
+    });
     const result = (await client.callTool({ name, arguments: args as Record<string, unknown> })) as {
       content: Array<{ type: string; text: string }>;
     };
@@ -126,12 +146,22 @@ test("権限外の操作でも SDK 直呼びと MCP Tool が一致する", async
 });
 
 test("同じ応答に対し SDK 直呼びと MCP Tool が同じ検査結果を返す", async () => {
+  const profileRef = await boundProfileRef();
   const request: ValidateResponseRequest = {
     requestId: "req-2",
-    profileRef: { profileId: "profile-1", contentHash: "hash-1" },
+    profileRef,
     response: { responseId: "res-1", content: "マサさん、私は直しておいたよ" },
   };
-  const direct = await sdk().validateResponse(request);
+  const engine = sdk();
+  await engine.prepareLaunch({
+    requestId: "bind-2",
+    personaRef: { personaId: "aiko" },
+    userRef: { userId: "masa" },
+    runtime: { id: "claude-code", version: "1.0.0" },
+    injectionCapability: { systemLevel: ["claude-code:system-prompt-file"] },
+    requestedConsistencyLevel: 2,
+  });
+  const direct = await engine.validateResponse(request);
   const viaMcp = await callTool("aiko.validate_response", request);
   assert.deepEqual(viaMcp, JSON.parse(JSON.stringify(direct)));
 });
@@ -141,7 +171,7 @@ test("MCP Tool へ呼び名を渡しても検査結果は変わらない", async
   // ハンドラへ届く前に落ちる。**落ちること自体が保証**——呼び名を渡す口が無い。
   const base = {
     requestId: "req-3",
-    profileRef: { profileId: "profile-1", contentHash: "hash-1" },
+    profileRef: await boundProfileRef(),
     response: { responseId: "res-1", content: "私は直しておいたよ" },
   };
   const without = await callTool("aiko.validate_response", base);
@@ -166,7 +196,7 @@ test("profileRef に人格情報を紛れ込ませると受け付けない", asy
       name: "aiko.validate_response",
       arguments: {
         requestId: "req-4",
-        profileRef: { profileId: "profile-1", contentHash: "hash-1", preferredName: "ご主人様" },
+        profileRef: { ...(await boundProfileRef()), preferredName: "ご主人様" },
         response: { responseId: "res-1", content: "こんにちは" },
       },
     })) as { isError?: boolean; content: Array<{ text: string }> };
