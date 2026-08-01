@@ -135,7 +135,11 @@ export class FileSystemPersonaRepository implements PersonaRepository {
   }
 
   async #readActivePersona(): Promise<string> {
-    return (await readOptional(join(this.#aikoHome, "active-persona")))?.trim() ?? "";
+    const raw = (await readOptional(join(this.#aikoHome, "active-persona")))?.trim() ?? "";
+    // active-persona はそのままパスの一部になる。`../../../x` と書けば ~/.aiko の外の
+    // ファイルが人格として読み込まれた（SDK 設計書 §20.6 の path traversal で実測）。
+    // 人格は「Aiko が何者か」そのものなので、置き場の外を読ませない。
+    return isSafePersonaName(raw) ? raw : "";
   }
 
   async #readFirst(
@@ -158,6 +162,15 @@ export class FileSystemPersonaRepository implements PersonaRepository {
     }
     return undefined;
   }
+}
+
+/** 人格名として使ってよい形か。区切り文字を含むものは、その時点でパスの指定になる。
+ *  許すのは英数字・ハイフン・アンダースコア・ドットのみで、`.` から始まるものは除く
+ *  （`..` を弾くため）。 */
+export function isSafePersonaName(name: string): boolean {
+  if (name.length === 0 || name.length > 128) return false;
+  if (name.startsWith(".")) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
 }
 
 /** 不在なら undefined。それ以外の失敗（権限など）は握りつぶさず投げる。 */

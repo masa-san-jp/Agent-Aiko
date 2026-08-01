@@ -6,6 +6,8 @@
 // §10.2: 秘密情報・Persona 全文・User Profile 全文・Tool 引数全文を含めない。
 // details に何を載せるかはここで絞る。
 
+import { redact, redactText } from "./redaction.js";
+
 /** §9.1 の拒否条件に対応するコード。 */
 export const RUNTIME_ERROR_CODES = [
   "AIKO_RUNTIME_PERSONA_NOT_FOUND",
@@ -70,17 +72,19 @@ export class RuntimeSdkError extends Error {
     if (init.cause !== undefined) this.cause = init.cause;
   }
 
-  /** ログや診断へ出す形。**本文の類は載せない**（§10.2）。 */
+  /** ログや診断へ出す形。**本文の類は載せない**（§10.2）。
+   *  載せると決めたものも redaction を通す（§13.3）——下位の例外文言に
+   *  パスや token が混ざる経路があり、載せない判断だけでは塞ぎきれない。 */
   toJSON(): Record<string, unknown> {
     return {
       code: this.code,
       severity: this.severity,
       retryable: this.retryable,
-      userMessage: this.userMessage,
-      ...(this.remediation ? { remediation: this.remediation } : {}),
+      userMessage: redactText(this.userMessage),
+      ...(this.remediation ? { remediation: redactText(this.remediation) } : {}),
       ...(this.component ? { component: this.component } : {}),
       ...(this.requestId ? { requestId: this.requestId } : {}),
-      ...(this.details ? { details: this.details } : {}),
+      ...(this.details ? { details: redact(this.details) as Record<string, unknown> } : {}),
     };
   }
 }
