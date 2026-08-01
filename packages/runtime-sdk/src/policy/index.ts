@@ -101,3 +101,16 @@ export type {
 
 export { POLICY_JSON_SCHEMAS, POLICY_SCHEMA_VERSION } from "./json-schema.js";
 export type { JsonSchema } from "./json-schema.js";
+
+// --- R7-2: Deterministic Policy Engine ---
+
+export { actionHash, canonicalizeAction, decisionCacheKey, isApprovalStillValid } from "./canonical.js";
+export type { CanonicalAction } from "./canonical.js";
+export { isEmptyMatcher, matchesStructured } from "./matcher.js";
+export { DEFAULT_POLICY_RULES } from "./defaults.js";
+export { checkPermissionManifest, isHighRisk, permissionKeysOf } from "./permission.js";
+export type { PermissionFinding, PermissionKey, PermissionManifest } from "./permission.js";
+export { DeterministicPolicyEngine } from "./engine.js";
+export type { DeterministicPolicyEngineOptions } from "./engine.js";
+export { auditAction, auditResponse } from "./audit.js";
+export type { PolicyAuditRecord } from "./audit.js";
