@@ -16,9 +16,6 @@
       "path": "../core"
     },
     {
-      "path": "../binder"
-    },
-    {
       "path": "../adapter-claude-code"
     },
     {
