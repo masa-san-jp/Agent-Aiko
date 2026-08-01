@@ -29,7 +29,8 @@
     "@agent-aiko/binder": "*",
     "@agent-aiko/capability-registry": "*",
     "@agent-aiko/core": "*",
-    "@agent-aiko/user-context": "*"
+    "@agent-aiko/user-context": "*",
+    "zod": "^4.4.3"
   },
   "license": "MIT",
   "repository": {

@@ -22,6 +22,10 @@ export const RUNTIME_ERROR_CODES = [
   "AIKO_RUNTIME_POLICY_CONFLICT",
   /** R1 の範囲外。仕様にはあるが未実装であることを、黙らずに返すためのコード。 */
   "AIKO_RUNTIME_NOT_IMPLEMENTED",
+  /** R7 §9。Policy Engine / Response Validator が未登録。「作っていない」ではなく
+   *  「この起動では使えない」を表す——登録すれば使えるようになるものなので、
+   *  未実装（NOT_IMPLEMENTED）と同じ扱いにすると呼び出し側が対処を選べない。 */
+  "AIKO_RUNTIME_FEATURE_UNAVAILABLE",
 ] as const;
 
 export type RuntimeErrorCode = (typeof RUNTIME_ERROR_CODES)[number];
@@ -162,6 +166,19 @@ export function classify(err: unknown, requestId: string): RuntimeSdkError {
     component: "runtime-sdk",
     requestId,
     cause: err,
+  });
+}
+
+/** R7 §9。Policy Engine / Response Validator が登録されていないときに返す。
+ *  §9 は「起動時の必須条件にはしない。ただし enforce 要求時は処理を開始しない」
+ *  としているので、止めるかどうかを決めるのは呼び出し側。ここは事実だけを返す。 */
+export function featureUnavailable(feature: string, requestId = ""): RuntimeSdkError {
+  return new RuntimeSdkError({
+    code: "AIKO_RUNTIME_FEATURE_UNAVAILABLE",
+    userMessage: `${feature} はこの起動では利用できません`,
+    remediation: "Policy Engine / Response Validator を登録するか、advisory で実行してください",
+    component: "runtime-sdk",
+    requestId,
   });
 }
 
