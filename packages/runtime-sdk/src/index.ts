@@ -2,7 +2,13 @@
 
 export { createRuntimeSdk, SDK_VERSION, notImplementedInR1 } from "./sdk.js";
 export type { AikoRuntimeSdk, CreateRuntimeSdkOptions, RuntimeProfileStore } from "./sdk.js";
-export { RuntimeSdkError, RUNTIME_ERROR_CODES, classify, notImplemented } from "./errors.js";
+export {
+  RuntimeSdkError,
+  RUNTIME_ERROR_CODES,
+  classify,
+  featureUnavailable,
+  notImplemented,
+} from "./errors.js";
 export type { RuntimeErrorCode, RuntimeSdkErrorInit } from "./errors.js";
 export type {
   CompileInstructionsRequest,
@@ -18,6 +24,11 @@ export type {
   RuntimeLaunchBundle,
   RuntimeWarning,
 } from "./types.js";
+
+// Policy Engine / Response Validator の型と schema。R7 仕様書 §7 / §11。
+// 実装（R7-2 以降）が入る前に型と schema を固定する——SDK 直呼びと MCP Tool で
+// 受理する入力が食い違わないようにするのが R7-1 の目的。
+export * from "./policy/index.js";
 
 // 利用側（Adapter / MCP Server / CLI）が binder・core・user-context を直接
 // import せずに済むよう、必要な型をここから出す。SDK 設計書 §1 は通常処理での

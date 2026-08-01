@@ -15,7 +15,8 @@ Aiko Runtime SDK。各ランタイムが人格を安全かつ一貫して注入�
 | `compileInstructions` | ある |
 | `health` | ある |
 | 共通エラーモデル | ある |
-| `verifyInjection` / `rebind` / `evaluateAction` / `validateResponse` / `diagnostics` | **無い**（呼ぶと理由を返して失敗する） |
+| `verifyInjection` / `rebind` / `diagnostics` | **無い**（呼ぶと理由を返して失敗する） |
+| `evaluateAction` / `validateResponse` | **型と schema だけある**（R7-1）。呼ぶと `AIKO_RUNTIME_FEATURE_UNAVAILABLE` |
 
 **R1 の約束は「挙動を変えない」こと。** 中身は既存の Binder を呼ぶ薄い層で、合成の内容も hash も変えない。先に通り道だけ作っておくと、R2 以降で「SDK にしたから壊れた」と「移行で壊れた」を切り分けられる。
 
@@ -53,6 +54,10 @@ const bundle = await sdk.prepareLaunch({
 **`health` は投げない。** 「不健全である」を返すのが仕事なので、読めなければ `unavailable` を返す。
 
 **仕様にあって R1 に無いものは、黙らずに理由を返す。** 呼べば失敗し、なぜ失敗したかとどこを見ればよいかを返す。
+
+**Policy の型は zod で1回だけ定義する（`src/policy/`）。** TypeScript 型も JSON Schema もそこから導く。手書きの interface と検証用 schema を別に置くと、片方だけ直された状態が作れてしまい、SDK 直呼びと MCP Tool で受理される入力が食い違う。R7 仕様書 R7-5 の「同一入力から同一結果」は、その食い違いがある限り成立しない。
+
+**仕様が禁じている形は、規約ではなく作れなくする。** 承認主体の無い `require_approval`、モデル判定だけの `deny`、`patch` 以外の方針に書き換え済み本文を添えた修正案 — いずれも parse で落ちる。ただし **JSON Schema にはこの制約が写らない**（zod の refine は生成結果に出ない）ので、MCP Tool 側も入口は zod で parse する。
 
 ## テスト
 

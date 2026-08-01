@@ -721,7 +721,9 @@ Schema、一貫性レベル、互換性方針、Threat Modelを確定する。
 
 ## Phase 1：Aiko Core抽出
 
-Repository Interface、Resolver、Compiler、Policy Engine、hash / versionを実装する。
+Repository Interface、Resolver、Compiler、共通Policy型・Rule schemaの定義、hash / versionを実装する。
+
+Policy Engine本体とResponse Validatorの実装はR7で行う（R7仕様書 §10.2）。Phase 1の成果物定義が過剰だったため実態へ合わせたものであり、Phase 1は完了扱いを維持する。
 
 ## Phase 2：BinderとUser Context
 

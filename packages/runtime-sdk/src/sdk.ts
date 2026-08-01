@@ -16,7 +16,7 @@ import {
   type RuntimeId as BinderRuntimeId,
   type RuntimeProfile,
 } from "@agent-aiko/binder";
-import { classify, notImplemented, RuntimeSdkError } from "./errors.js";
+import { classify, featureUnavailable, notImplemented, RuntimeSdkError } from "./errors.js";
 import type {
   CompileInstructionsRequest,
   CompiledInstructions,
@@ -243,7 +243,9 @@ export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeS
 export const notImplementedInR1 = {
   verifyInjection: () => Promise.reject(notImplemented("verifyInjection")),
   rebind: () => Promise.reject(notImplemented("rebind")),
-  evaluateAction: () => Promise.reject(notImplemented("evaluateAction")),
-  validateResponse: () => Promise.reject(notImplemented("validateResponse")),
+  // R7 §9 が返すべきコードを定めている。Policy Engine / Response Validator は
+  // 「登録すれば使える」ものなので、未実装ではなく利用不可として返す。
+  evaluateAction: () => Promise.reject(featureUnavailable("evaluateAction")),
+  validateResponse: () => Promise.reject(featureUnavailable("validateResponse")),
   diagnostics: () => Promise.reject(notImplemented("diagnostics")),
 };
