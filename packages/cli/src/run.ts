@@ -10,6 +10,12 @@ import { configure, renderConfigured, type Ask } from "./configure.js";
 import { defaultUserProfilePath } from "@agent-aiko/runtime-sdk";
 import { applyUpdate, listBackups, rollback } from "./apply-update.js";
 import { downloadVerifiedRelease, DownloadError, type FetchBytes } from "./download.js";
+import {
+  planUninstall,
+  renderManifestMissing,
+  renderUninstall,
+  uninstall,
+} from "./uninstall.js";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
@@ -31,7 +37,6 @@ export interface RunIO {
 /** 設計書 §4.4 に挙がっているが、まだ実装していないもの。 */
 const DEFERRED: Record<string, string> = {
   install: "インストーラは scripts/install.sh が担当しています",
-  uninstall: "配布（設計書 §15 Phase 5）で実装します",
 };
 
 const USAGE = `使い方: aiko <コマンド>
@@ -44,10 +49,12 @@ const USAGE = `使い方: aiko <コマンド>
   update --check --channel beta   試用版も対象に含める
   update                新しい版を取得して照合してから入れる（利用者の設定は触らない）
   rollback              直前の版へ戻す（利用者の設定は触らない）
+  uninstall             導入時に置いたものだけを消す（利用者の設定は残す）
+  uninstall --yes       確認せずに消す
   help                  この使い方を表示する
 
 未実装（設計書 §4.4 にはあるもの）:
-  install / uninstall
+  install
 
 終了コード:
   0   問題なし / 最新
@@ -107,6 +114,31 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     const target = env.userProfilePath ?? defaultUserProfilePath(env.aikoHome);
     const { profile, path } = await configure(target, io.ask);
     io.out(renderConfigured(profile, path));
+    return 0;
+  }
+
+  if (command === "uninstall") {
+    const plan = await planUninstall(env.aikoHome);
+    if (plan.manifestMissing) {
+      // 何が配布物のものか分からない状態で消すのは、消してよいものを
+      // 消し損ねるより悪い。何もせずに理由を返す。
+      io.err(renderManifestMissing(env.aikoHome));
+      return 1;
+    }
+    if (!rest.includes("--yes")) {
+      if (!io.ask) {
+        io.err("削除は確認が要ります。対話できない環境では --yes を付けてください\n");
+        return 2;
+      }
+      io.out(`${plan.removable.length} 件を削除します（${plan.kept.length} 件は残します）\n`);
+      const answer = await io.ask("削除していいですか？ [y/N]");
+      if (!/^y(es)?$/i.test(answer)) {
+        io.out("やめました\n");
+        return 0;
+      }
+    }
+    const result = await uninstall(env.aikoHome);
+    io.out(renderUninstall(result, env.aikoHome));
     return 0;
   }
 
