@@ -92,11 +92,12 @@ test("確認できなかったときは 1 を返す", async () => {
   assert.match(c.out(), /確認できませんでした/);
 });
 
-test("--check なしの update は、できないことを言って 2 を返す", async () => {
+test("最新なら update は何もせずに 0 を返す", async () => {
+  // 取得も展開もせずに終わる。更新の要らないときに何かを書き換えない。
   const c = capture(async () => releases);
-  const code = await run(["update"], "0.1.0", c.io);
-  assert.equal(code, 2);
-  assert.match(c.err(), /まだ適用まで行えません/);
+  const code = await run(["update"], "0.2.0", c.io);
+  assert.equal(code, 0);
+  assert.match(c.out(), /すでに最新です/);
 });
 
 test("知らない channel は 2 を返す", async () => {
