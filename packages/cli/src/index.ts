@@ -27,3 +27,12 @@ export {
   type Backup,
 } from "./apply-update.js";
 export { downloadVerifiedRelease, DownloadError, type FetchBytes } from "./download.js";
+export {
+  MANIFEST_NAME,
+  planUninstall,
+  renderManifestMissing,
+  renderUninstall,
+  uninstall,
+  type UninstallPlan,
+  type UninstallResult,
+} from "./uninstall.js";

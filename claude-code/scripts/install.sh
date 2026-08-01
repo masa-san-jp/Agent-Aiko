@@ -383,6 +383,10 @@ copy_aiko_template_tree() {
       mkdir -p "$(dirname "$dst")"
       prepare_destination_for_template "$src" "$dst"
       cp "$src" "$dst"
+      # 何を置いたかを残す。これが無いと、`aiko uninstall` は「配布物のもの」と
+      # 「利用者が後から置いたもの」を推測で分けることになる——推測で消すのは
+      # やってはいけないことの筆頭。
+      printf '%s\n' "$rel" >> "$MANIFEST_TMP"
     fi
   done
 }
@@ -396,7 +400,12 @@ copy_state_if_missing "persona/overrides"
 copy_state_if_missing "persona/proposals"
 copy_state_if_missing "capability/skills"
 copy_state_if_missing "capability/rules/rules-base.md"
+MANIFEST_TMP="$(mktemp)"
 copy_aiko_template_tree
+# 一覧は原子的に置き換える。途中で失敗した一覧を残すと、消してよいものを
+# 消し損ねるより悪い（消してはいけないものが一覧に無い状態になる）。
+sort -u "$MANIFEST_TMP" > "$AIKO_HOME/.install-manifest"
+rm -f "$MANIFEST_TMP"
 
 copy_project_children "skills"
 copy_project_children "scripts"
