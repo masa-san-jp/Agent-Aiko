@@ -7,6 +7,7 @@ created_at: 2026-08-01
 repository: https://github.com/masa-san-jp/Agent-Aiko
 related_document:
   - docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md
+  - docs/20260801-aiko-runtime-sdk-r7-policy-response-validator-specification.md
 related_issue:
   - https://github.com/masa-san-jp/Agent-Aiko/issues/44
 ---
@@ -845,6 +846,8 @@ Codex等、スレッド存続中にinstructionsを変更できないRuntimeで�
 
 # 12. Policy EngineおよびResponse Validator
 
+判定結果、強制力、承認主体、判定基準、呼出頻度、照合元、4型の定義は[R7仕様書](20260801-aiko-runtime-sdk-r7-policy-response-validator-specification.md)を正本とする。本章と矛盾する場合はR7仕様書が優先する（R7仕様書 §10.3）。
+
 ## 12.1 現時点の扱い
 
 Policy EngineおよびResponse Validatorが未実装でも、Runtime SDKのinterfaceは先に固定する。
@@ -1389,7 +1392,7 @@ cli → binder
 
 ## Phase R7：Policy・Response Validation
 
-Policy EngineおよびResponse ValidatorをRuntime SDKへ接続する。
+Policy EngineおよびResponse ValidatorをRuntime SDKへ接続する。実装範囲・順序・受入基準は[R7仕様書](20260801-aiko-runtime-sdk-r7-policy-response-validator-specification.md)による。
 
 ---
 
