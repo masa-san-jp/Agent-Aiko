@@ -225,7 +225,12 @@ esac
 # ─────────────────────────────────────
 # インストール先の確認
 # ─────────────────────────────────────
-if [ "$(pwd)" = "$HOME" ]; then
+# シンボリックリンクを解いてから比べる。macOS の $TMPDIR は /var/folders/... で、
+# pwd が返すのは /private/var/folders/... ——文字列のまま比べると一致せず、
+# ホーム直下でも素通りする（macOS を CI に足して判明。2026-08-01）。
+CURRENT_REAL="$(pwd -P)"
+HOME_REAL="$(cd "$HOME" 2>/dev/null && pwd -P || printf '%s' "$HOME")"
+if [ "$CURRENT_REAL" = "$HOME_REAL" ]; then
   printf "  %sエラー: ホームディレクトリ直下にはインストールできません%s\n" "$BOLD" "$RESET"
   printf "  Claude Code を使う対象プロジェクトへ移動してから実行してください\n\n"
   cleanup_temp_dir
