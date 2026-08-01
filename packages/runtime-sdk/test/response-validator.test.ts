@@ -168,6 +168,31 @@ test("検査した項目だけを checked に載せる", () => {
   );
 });
 
+test("照合元の Profile が無ければ検査せずに失敗する", () => {
+  const validator = new DeterministicResponseValidator({ resolveProfile: () => undefined, clock });
+  assert.throws(() =>
+    validator.validate({
+      requestId: "req-1",
+      profileRef: { profileId: "missing", contentHash: "h" },
+      response: { responseId: "res-1", content: "こんにちは" },
+    }),
+  );
+});
+
+test("参照先の hash が違えば検査せずに失敗する", () => {
+  const validator = new DeterministicResponseValidator({
+    resolveProfile: () => ({ profile_hash: "actual", response_contract: {} }),
+    clock,
+  });
+  assert.throws(() =>
+    validator.validate({
+      requestId: "req-1",
+      profileRef: { profileId: "p-1", contentHash: "expected" },
+      response: { responseId: "res-1", content: "こんにちは" },
+    }),
+  );
+});
+
 test("構造だけで判定したと報告する", () => {
   assert.deepEqual(validate("マサくん、あたしだよ").validation, {
     deterministic: true,

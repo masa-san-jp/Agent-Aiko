@@ -5,6 +5,7 @@
 // 走らせていない検査を通ったことにすると、validateResponse を通した応答が
 // 何を保証しているのか誰にも言えなくなる。
 
+import { RuntimeSdkError } from "../errors.js";
 import type { EvaluationMode, Severity } from "./common.js";
 import type {
   ResponseCheckId,
@@ -53,6 +54,33 @@ export class DeterministicResponseValidator {
 
   validate(request: ValidateResponseRequest): ResponseValidation {
     const profile = this.#resolveProfile(request.profileRef.profileId);
+    // 照合元が引けないまま「合格」を返さない。§6 は Runtime Profile を唯一の
+    // 照合元と定めており、それが無い状態は「何も違反が無い」ではなく
+    // 「照合していない」——valid として返すと通ったことにされる。
+    if (profile === undefined) {
+      throw new RuntimeSdkError({
+        code: "AIKO_RUNTIME_PROFILE_HASH_MISMATCH",
+        userMessage: "照合元の Runtime Profile を解決できません",
+        remediation: "先に prepareLaunch した profile_id を profileRef に指定してください",
+        component: "response-validator",
+        requestId: request.requestId,
+      });
+    }
+    // 参照先が呼び出し側の思っている Profile と同じか。違えば別の人格の宣言で
+    // 検査することになる。
+    const knownHash =
+      typeof profile === "object" && profile !== null
+        ? (profile as Record<string, unknown>)["profile_hash"]
+        : undefined;
+    if (typeof knownHash === "string" && knownHash !== request.profileRef.contentHash) {
+      throw new RuntimeSdkError({
+        code: "AIKO_RUNTIME_PROFILE_HASH_MISMATCH",
+        userMessage: "指定された Runtime Profile の hash が一致しません",
+        remediation: "profileRef.contentHash に現在の profile_hash を指定してください",
+        component: "response-validator",
+        requestId: request.requestId,
+      });
+    }
     const contract = responseContractOf(profile);
     const content = request.response.content;
     const only = request.checks;
