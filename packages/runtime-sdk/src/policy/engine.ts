@@ -71,7 +71,26 @@ export class DeterministicPolicyEngine {
     return this.#policyBundleHash;
   }
 
-  evaluate(request: EvaluateActionRequest): ActionDecision {
+  /** 意味判定が要る規則のうち、この Action に当たるもの。Stage 2（R7-4）が使う。 */
+  pendingSemanticRules(request: EvaluateActionRequest): PolicyRule[] {
+    return this.#rules.filter(
+      (rule) =>
+        rule.enabled &&
+        rule.matcher.kind === "semantic" &&
+        (rule.matcher.appliesTo === undefined ||
+          matchesStructured(rule.matcher.appliesTo, {
+            action: request.action,
+            context: request.context,
+          })),
+    );
+  }
+
+  /** @param options.skipSemanticFallback Stage 2 を呼ぶ側が既定の扱いを自分で決める場合に立てる。
+   *  ここで承認へ倒したまま Stage 2 の「懸念なし」を重ねると、下げられなくなる。 */
+  evaluate(
+    request: EvaluateActionRequest,
+    options: { skipSemanticFallback?: boolean } = {},
+  ): ActionDecision {
     const { action } = request;
     const hash = actionHash(action);
     const now = this.#clock();
@@ -171,13 +190,8 @@ export class DeterministicPolicyEngine {
     }
 
     // --- 3. 意味判定が要る規則（R7-4 まで評価者がいない） ---
-    const pendingSemantic = this.#rules.some(
-      (rule) =>
-        rule.enabled &&
-        rule.matcher.kind === "semantic" &&
-        (rule.matcher.appliesTo === undefined ||
-          matchesStructured(rule.matcher.appliesTo, { action, context: request.context })),
-    );
+    const pendingSemantic =
+      options.skipSemanticFallback !== true && this.pendingSemanticRules(request).length > 0;
     if (pendingSemantic && ENFORCEMENT_STRENGTH[state.enforcement] < ENFORCEMENT_STRENGTH.approve) {
       // §5.2 のタイムアウト時の既定と同じ扱い。評価者がいないことを黙って
       // 「問題なし」にしない——高リスクなら聞き、可逆なら警告して進む。
