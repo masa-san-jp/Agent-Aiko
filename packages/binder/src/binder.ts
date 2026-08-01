@@ -9,7 +9,7 @@
 // Binding 失敗時は Aiko として起動しないと定めている。部分的に欠けた Profile を
 // 返すと、呼び出し側がそれを見て起動してしまう。だから欠けたら例外で止める。
 
-import { compile, checkSchemaVersion, hashObject, type CompiledInstructions, type PersonaRef, type PersonaRepository } from "@agent-aiko/core";
+import { compile, checkSchemaVersion, hashObject, type CompiledInstructions, type PersonaRef, type PersonaRepository, type UserContext } from "@agent-aiko/core";
 import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import { CapabilityRegistry, type ResolvedCapabilities } from "@agent-aiko/capability-registry";
 
@@ -52,6 +52,10 @@ export interface RuntimeProfile {
   runtime: { id: RuntimeId; consistency_level: 0 | 1 | 2; injection_method: InjectionMethod };
   instructions: string;
   excluded_capabilities: Array<{ id: string; reason: string }>;
+  /** 応答の機械判定に使う宣言（R7 仕様書 §6）。validateResponse の唯一の照合元。
+   *  人格も利用者も何も宣言していなければ持たない——空の契約を作ると、
+   *  「何も決まっていない」と「全部合格した」が見分けられなくなる。 */
+  response_contract?: Record<string, unknown>;
 }
 
 export class BindingError extends Error {
@@ -135,10 +139,16 @@ export class RuntimeProfileBinder {
     // ——Claude Code 向けと Codex 向けで指示文が同一なら見分けられない
     // （2026-08-01 の cross-runtime テストで実測）。ランタイムまで含めて取る。
     // Compiler にランタイムを持ち込まないのは §5.3（core は runtime を知らない）。
+    // 応答契約は人格の宣言に利用者側の呼び名・言語を重ねたもの。呼び名は
+    // 人格ではなく利用者に属するので、人格側の宣言では決まらない。
+    const responseContract = mergeResponseContract(persona.responseContract, user.context);
+
     const profileHash = hashObject({
       instructions: compiled.instructions,
       runtime: { id: request.runtime.id, consistency_level: level, injection_method: injection },
       schema_version: this.#currentSchemaVersion,
+      // 契約が無ければ hashObject が落とすので、従来の profile の hash は変わらない。
+      response_contract: responseContract,
     });
 
     return {
@@ -153,6 +163,7 @@ export class RuntimeProfileBinder {
       runtime: { id: request.runtime.id, consistency_level: level, injection_method: injection },
       instructions: compiled.instructions,
       excluded_capabilities: capabilities.excluded,
+      ...(responseContract ? { response_contract: responseContract } : {}),
     };
   }
 
@@ -167,6 +178,19 @@ export class RuntimeProfileBinder {
       );
     }
   }
+}
+
+/** 人格の宣言と利用者の設定を重ねる。どちらも何も持たなければ undefined。
+ *  利用者側が上書きするのは呼び名と言語だけ——人格の禁止表現を利用者が
+ *  外せてしまうと、人格の宣言が宣言でなくなる。 */
+function mergeResponseContract(
+  personaContract: Record<string, unknown> | undefined,
+  user: UserContext,
+): Record<string, unknown> | undefined {
+  const merged: Record<string, unknown> = { ...(personaContract ?? {}) };
+  if (user.preferredName !== undefined) merged["preferredName"] = user.preferredName;
+  if (user.language !== undefined) merged["language"] = user.language;
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 function injectionMatchesRuntime(runtime: RuntimeId, injection: InjectionMethod): boolean {
