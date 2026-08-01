@@ -185,3 +185,42 @@ describe("installer: 配布物の取得と照合", () => {
     assert.match(combined, /配布物が見つかりません/);
   });
 });
+
+// --- 導入時の記録（aiko uninstall が使う） ---
+
+describe("installer: 導入時の記録", () => {
+  let root;
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), "aiko-manifest-test-"));
+  });
+
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("置いたファイルを .install-manifest に残す", async () => {
+    // 記録が無いと uninstall は「配布物のもの」と「利用者のもの」を推測で分けることになる。
+    const project = join(root, "project");
+    await mkdir(project, { recursive: true });
+    runInstaller({ cwd: project, home: root });
+
+    const manifest = await readFile(join(root, ".aiko", ".install-manifest"), "utf8");
+    const entries = manifest.split("\n").filter(Boolean);
+    assert.equal(entries.length > 0, true);
+    assert.equal(entries.includes("persona/INVARIANTS.md"), true);
+  });
+
+  it("利用者のものは記録に載らない", async () => {
+    const project = join(root, "project");
+    await mkdir(project, { recursive: true });
+    runInstaller({ cwd: project, home: root });
+
+    const manifest = await readFile(join(root, ".aiko", ".install-manifest"), "utf8");
+    const entries = manifest.split("\n").filter(Boolean);
+    assert.deepEqual(
+      entries.filter((e) => ["user.md", "mode", "persona/aiko-override.md"].includes(e)),
+      []
+    );
+  });
+});

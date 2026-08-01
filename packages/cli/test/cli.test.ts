@@ -150,11 +150,11 @@ test("doctor: User Profile の権限が緩いと --fix で 0600 に直る", asyn
 });
 
 test("配布に属するコマンドは、黙って何もしないのではなく理由を返す", async () => {
-  // update / rollback は入ったので、まだ無い uninstall で確かめる。
+  // update / rollback / uninstall は入ったので、まだ無い install で確かめる。
   const c = capture({ PATH: "" });
-  const code = await run(["uninstall"], VERSION, c.io);
+  const code = await run(["install"], VERSION, c.io);
   assert.equal(code, 2);
-  assert.match(c.err(), /Phase 5/);
+  assert.match(c.err(), /install.sh/);
 });
 
 test("知らないコマンドは使い方を出して 2 を返す", async () => {
