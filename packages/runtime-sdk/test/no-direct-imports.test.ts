@@ -96,3 +96,48 @@ test("入口として許すファイルを絞っている（許可リストが�
   // resolve.ts は R5 で足した CLI の組み立て口。増やすときは必ずこの行が変わる。
   assert.deepEqual([...COMPOSITION_ROOTS].sort(), ["cli.ts", "resolve.ts", "server.ts"]);
 });
+
+// --- §23 R6: 宣言そのものを禁じる ---
+//
+// import を消しても package.json に依存が残っていれば、次に誰かが書けば通ってしまう。
+// R6 は「許可する依存は runtime-sdk だけ」と定めているので、**宣言の側**を見る。
+//
+// 仕様は ESLint か dependency-cruiser を例に挙げているが、道具を1つ増やすと
+// その道具の面倒を見ることになる。同じことを追加依存ゼロで確かめられる。
+
+import { readFileSync as readPkg } from "node:fs";
+
+/** §23 R6 の表をそのまま持つ。 */
+const FORBIDDEN_DEPENDENCIES: Record<string, string[]> = {
+  "adapter-claude-code": ["@agent-aiko/binder", "@agent-aiko/core", "@agent-aiko/user-context"],
+  "adapter-codex": ["@agent-aiko/binder", "@agent-aiko/core", "@agent-aiko/user-context"],
+  "mcp-server": ["@agent-aiko/binder"],
+  cli: ["@agent-aiko/binder"],
+};
+
+test("§23 R6 の表にある依存を package.json が宣言していない", () => {
+  const offenders: string[] = [];
+  for (const [pkg, forbidden] of Object.entries(FORBIDDEN_DEPENDENCIES)) {
+    const manifest = JSON.parse(
+      readPkg(join(PACKAGES, pkg, "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    for (const name of Object.keys(manifest.dependencies ?? {})) {
+      if (forbidden.includes(name)) offenders.push(`${pkg} -> ${name}`);
+    }
+  }
+  assert.deepEqual(offenders, [], "R6 が禁じた依存が package.json に残っている");
+});
+
+test("Adapter が宣言してよい社内依存は runtime-sdk だけ", () => {
+  // Adapter は「ホスト固有の処理だけを持つ」（§4.4）。それ以外に手が伸びていない
+  // ことを、使っているかどうかではなく**宣言**で確かめる。
+  for (const pkg of ["adapter-claude-code", "adapter-codex"]) {
+    const manifest = JSON.parse(
+      readPkg(join(PACKAGES, pkg, "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    const internal = Object.keys(manifest.dependencies ?? {}).filter((n) =>
+      n.startsWith("@agent-aiko/"),
+    );
+    assert.deepEqual(internal, ["@agent-aiko/runtime-sdk"], `${pkg} の社内依存が多い`);
+  }
+});
