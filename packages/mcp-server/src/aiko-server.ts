@@ -14,13 +14,17 @@ import { CapabilityRegistry } from "@agent-aiko/capability-registry";
 // （SDK 設計書 §1・R3 の直接 import 禁止テスト）。
 import {
   createRuntimeSdk,
+  EvaluateActionRequestSchema,
   RuntimeSdkError,
+  SemanticBudget,
+  ValidateResponseRequestSchema,
   type BinderRuntimeId as RuntimeId,
   type InjectionCapability,
   type InjectionMethod,
   type PersonaRepository,
   type PersonaSnapshot,
   type ResolvedUserContext,
+  type CreateRuntimeSdkOptions,
   type RuntimeId as SdkRuntimeId,
 } from "@agent-aiko/runtime-sdk";
 import { ProfileStore } from "./profile-store.js";
@@ -35,6 +39,11 @@ export interface AikoServerDeps {
   user: ResolvedUserContext;
   personaId?: string;
   profileStore?: ProfileStore;
+  /** Policy Engine / Response Validator の設定。渡さなければ両 Tool は
+   *  「この起動では使えない」と返す（R7 §9）。 */
+  policy?: CreateRuntimeSdkOptions["policy"];
+  responseValidation?: CreateRuntimeSdkOptions["responseValidation"];
+  clock?: () => Date;
 }
 
 const RUNTIME_IDS = ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"] as const;
@@ -56,6 +65,9 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     // MCP サーバーが元から持っている置き場をそのまま使う。SDK 側に別の置き場を
     // 持たせると、bind した Profile と get_runtime_profile が見る Profile がずれる。
     profileStore: store,
+    ...(deps.policy ? { policy: deps.policy } : {}),
+    ...(deps.responseValidation ? { responseValidation: deps.responseValidation } : {}),
+    ...(deps.clock ? { clock: deps.clock } : {}),
   });
 
   // MCP の公開スキーマ（§7.4）は Binder の綴りで固定されている。SDK は別の綴りを
@@ -284,6 +296,53 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     },
   );
 
+  // R7-5: SDK 直呼びと同じ結果を返す口。**判定はここに書かない。**
+  // MCP 側に判定を1行でも足すと、同じ入力で SDK と MCP の答えが割れる（§12.3）。
+  server.registerTool(
+    "aiko.evaluate_action",
+    {
+      title: "操作を実行してよいか判定する",
+      description:
+        "allow / allow_with_warning / require_approval / deny のいずれかと、その理由を返す。Policy Engine が登録されていなければ、その旨を返す",
+      inputSchema: EvaluateActionRequestSchema.shape,
+    },
+    async (args) => {
+      // MCP は shape から自前で schema を組むため strict が効かない。
+      // 未知のキーを弾くのは元の schema でしかできない（§6）。
+      const parsed = EvaluateActionRequestSchema.safeParse(args);
+      if (!parsed.success) {
+        return json({ evaluated: false, reason: parsed.error.issues[0]?.message ?? "入力が不正です" }, true);
+      }
+      try {
+        // 上限は1ターン3回（§5.3）。Tool 1回の呼び出しを1ターンとして数える。
+        return json(await sdk.evaluateAction(parsed.data, { budget: new SemanticBudget() }));
+      } catch (err) {
+        return json({ evaluated: false, reason: reasonOf(err) }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    "aiko.validate_response",
+    {
+      title: "応答が人格の宣言に沿っているか検査する",
+      description:
+        "valid / valid_with_warnings / revision_required / blocked のいずれかを返す。照合元は Runtime Profile で、呼び名などを別入力で渡すことはできない",
+      inputSchema: ValidateResponseRequestSchema.shape,
+    },
+    async (args) => {
+      const parsed = ValidateResponseRequestSchema.safeParse(args);
+      if (!parsed.success) {
+        return json({ validated: false, reason: parsed.error.issues[0]?.message ?? "入力が不正です" }, true);
+      }
+      try {
+        return json(await sdk.validateResponse(parsed.data));
+      } catch (err) {
+        return json({ validated: false, reason: reasonOf(err) }, true);
+      }
+    },
+  );
+
   server.registerTool(
     "aiko.report_capabilities",
     {
@@ -353,6 +412,12 @@ function summarize(profile: {
     runtime: profile.runtime,
     excluded_capabilities: profile.excluded_capabilities,
   };
+}
+
+/** 例外を「なぜできなかったか」に写す。SDK のエラーは利用者向けの文言を持つ（§10.2）。 */
+function reasonOf(err: unknown): string {
+  if (err instanceof RuntimeSdkError) return err.userMessage;
+  return err instanceof Error ? err.message : String(err);
 }
 
 function json(value: unknown, isError = false) {

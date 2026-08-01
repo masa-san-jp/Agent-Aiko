@@ -17,6 +17,10 @@ import {
   type RuntimeProfile,
 } from "@agent-aiko/binder";
 import { classify, featureUnavailable, notImplemented, RuntimeSdkError } from "./errors.js";
+import { HybridPolicyEngine, type HybridEvaluateOptions, type HybridPolicyEngineOptions } from "./policy/hybrid-engine.js";
+import { DeterministicResponseValidator } from "./policy/validator.js";
+import type { ActionDecision, EvaluateActionRequest } from "./policy/action.js";
+import type { ResponseValidation, ValidateResponseRequest } from "./policy/response.js";
 import type {
   CompileInstructionsRequest,
   CompiledInstructions,
@@ -43,6 +47,10 @@ export interface CreateRuntimeSdkOptions {
   profileStore?: RuntimeProfileStore;
   /** 時刻。決定性の検証で固定できるようにしてある（§14）。 */
   clock?: () => Date;
+  /** Policy Engine の設定。渡さなければ evaluateAction は機能なしを返す（R7 §9）。 */
+  policy?: Omit<HybridPolicyEngineOptions, "clock"> | undefined;
+  /** Response Validator の設定。照合元の Profile は SDK の置き場から引く（R7 §6）。 */
+  responseValidation?: { policyBundleHash?: string } | undefined;
 }
 
 export interface RuntimeProfileStore {
@@ -102,10 +110,25 @@ export interface AikoRuntimeSdk {
   getProfile(request: GetProfileRequest): Promise<RuntimeProfile>;
   compileInstructions(request: CompileInstructionsRequest): Promise<CompiledInstructions>;
   health(request?: HealthRequest): Promise<RuntimeHealth>;
+  /** R7 §7.1。Policy Engine が無ければ AIKO_RUNTIME_FEATURE_UNAVAILABLE（§9）。 */
+  evaluateAction(request: EvaluateActionRequest, options?: HybridEvaluateOptions): Promise<ActionDecision>;
+  /** R7 §7.3。Response Validator が無ければ AIKO_RUNTIME_FEATURE_UNAVAILABLE（§9）。 */
+  validateResponse(request: ValidateResponseRequest): Promise<ResponseValidation>;
 }
 
 export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeSdk {
   const store = options.profileStore ?? new MemoryProfileStore();
+  // R7 §9: 起動の必須条件にしない。渡されなければ機能なしとして返す。
+  const policyEngine = options.policy
+    ? new HybridPolicyEngine({ ...options.policy, ...(options.clock ? { clock: options.clock } : {}) })
+    : undefined;
+  const responseValidator = options.responseValidation
+    ? new DeterministicResponseValidator({
+        resolveProfile: (profileId) => store.get(profileId),
+        ...options.responseValidation,
+        ...(options.clock ? { clock: options.clock } : {}),
+      })
+    : undefined;
   const now = options.clock ?? (() => new Date());
   const binder =
     options.binder ??
@@ -220,6 +243,18 @@ export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeS
       };
     },
 
+    async evaluateAction(request, evaluateOptions) {
+      if (policyEngine === undefined) throw featureUnavailable("evaluateAction", request.requestId);
+      return policyEngine.evaluate(request, evaluateOptions ?? {});
+    },
+
+    async validateResponse(request) {
+      if (responseValidator === undefined) {
+        throw featureUnavailable("validateResponse", request.requestId);
+      }
+      return responseValidator.validate(request);
+    },
+
     async health(request) {
       const personaId = request?.personaId ?? "aiko";
       try {
@@ -243,9 +278,5 @@ export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeS
 export const notImplementedInR1 = {
   verifyInjection: () => Promise.reject(notImplemented("verifyInjection")),
   rebind: () => Promise.reject(notImplemented("rebind")),
-  // R7 §9 が返すべきコードを定めている。Policy Engine / Response Validator は
-  // 「登録すれば使える」ものなので、未実装ではなく利用不可として返す。
-  evaluateAction: () => Promise.reject(featureUnavailable("evaluateAction")),
-  validateResponse: () => Promise.reject(featureUnavailable("validateResponse")),
   diagnostics: () => Promise.reject(notImplemented("diagnostics")),
 };
