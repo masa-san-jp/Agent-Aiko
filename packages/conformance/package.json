@@ -22,7 +22,9 @@
     "@modelcontextprotocol/sdk": "*",
     "@types/node": "^20.19.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@agent-aiko/cli": "*",
+    "@agent-aiko/user-context": "*"
   },
   "dependencies": {},
   "license": "MIT",

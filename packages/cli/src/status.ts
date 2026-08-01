@@ -22,6 +22,11 @@ export interface Status {
   user: string;
   binding: "healthy" | "failed";
   bindingDetail?: string;
+  /** 人格の中身の hash。ランタイムに依らないので、Claude Code と Codex で一致する
+   *  （§20.7 の受入はこれで見る）。 */
+  configurationHash?: string;
+  /** この起動の hash。注入手段まで含むので経路ごとに変わる（§14.1）。 */
+  profileHash?: string;
   adapters: AdapterStatus[];
 }
 
@@ -58,8 +63,10 @@ export async function collectStatus(
     bindingDetail ??= health.reason;
   }
 
+  let configurationHash: string | undefined;
+  let profileHash: string | undefined;
   try {
-    await opened.sdk.prepareLaunch({
+    const bundle = await opened.sdk.prepareLaunch({
       requestId: "cli-status-bind",
       personaRef: { personaId: env.personaId },
       userRef: { userId: opened.userId },
@@ -69,6 +76,8 @@ export async function collectStatus(
     });
     binding = "healthy";
     bindingDetail = undefined;
+    configurationHash = bundle.profile.configuration_hash;
+    profileHash = bundle.profile.profile_hash;
   } catch (err) {
     bindingDetail = err instanceof Error ? err.message : String(err);
   }
@@ -84,6 +93,8 @@ export async function collectStatus(
     user,
     binding,
     ...(bindingDetail ? { bindingDetail } : {}),
+    ...(configurationHash ? { configurationHash } : {}),
+    ...(profileHash ? { profileHash } : {}),
     adapters: [
       { name: "Claude Code", installed: claude, level: 2 },
       { name: "Codex", installed: codex, level: 2 },
