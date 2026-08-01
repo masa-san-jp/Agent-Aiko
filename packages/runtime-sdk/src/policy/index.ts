@@ -134,3 +134,8 @@ export type {
 } from "./semantic.js";
 export { HybridPolicyEngine } from "./hybrid-engine.js";
 export type { HybridEvaluateOptions, HybridPolicyEngineOptions } from "./hybrid-engine.js";
+
+// --- R7-6: 判定を効かせる層 ---
+
+export { PolicyGate } from "./gate.js";
+export type { GateOutcome, PolicyGateOptions, PolicyGateSdk, SendOutcome } from "./gate.js";
