@@ -97,18 +97,118 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" 2>/dev/null && pwd || echo "
 # claude-code/scripts/install.sh から見て ../template/.claude が同居の template
 TEMPLATE_DIR="${SCRIPT_DIR}/../template/.claude"
 
+# 取得元。テストから file:// を指せるように変数にしてある。
+RELEASE_API="${AGENT_AIKO_RELEASE_API:-https://api.github.com/repos/masa-san-jp/Agent-Aiko/releases}"
+RELEASE_DL="${AGENT_AIKO_RELEASE_DL:-https://github.com/masa-san-jp/Agent-Aiko/releases/download}"
+RELEASE_CHANNEL="${AGENT_AIKO_CHANNEL:-stable}"
+
+# sha256 を取る道具は OS で名前が違う。無ければ「検証できない」と言って止まる——
+# 検証を飛ばして入れるくらいなら入れないほうがいい。
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    return 1
+  fi
+}
+
+# JSON から tag_name を1つ取る。jq を要求しない（入っていない環境がある）。
+first_tag_name() {
+  grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$1" | head -1 |
+    sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
+}
+
+resolve_release_tag() {
+  local out="$1" url
+  if [ -n "${AGENT_AIKO_VERSION:-}" ]; then
+    printf '%s' "$AGENT_AIKO_VERSION"
+    return 0
+  fi
+  # stable は latest（GitHub は prerelease を latest に含めない）。
+  # beta は一覧の先頭＝最新の公開。
+  if [ "$RELEASE_CHANNEL" = "beta" ]; then url="${RELEASE_API}"; else url="${RELEASE_API}/latest"; fi
+  curl -fsSL "$url" -o "$out" 2>/dev/null || return 1
+  local tag
+  tag="$(first_tag_name "$out")"
+  [ -n "$tag" ] || return 1
+  printf '%s' "$tag"
+}
+
+# Release を取って checksum を照合してから展開する。
+# **照合に失敗したら fallback しない。** 落ちたものを別経路で入れ直すのは、
+# 検証していないものを入れるのと同じ。
+fetch_verified_release() {
+  # local は1文の中で左から順に代入されるだけで、同じ文の中の変数はまだ見えない。
+  # 1文にまとめると name が "agent-aiko-" になる（実際にそう書いて踏んだ）。
+  local dest="$1"
+  local tag="$2"
+  local name="agent-aiko-${tag}"
+  local work="${dest}/.download"
+  mkdir -p "$work"
+  curl -fsSL "${RELEASE_DL}/${tag}/${name}.tar.gz" -o "${work}/${name}.tar.gz" 2>/dev/null || return 2
+  curl -fsSL "${RELEASE_DL}/${tag}/SHA256SUMS" -o "${work}/SHA256SUMS" 2>/dev/null || return 2
+
+  local actual expected
+  actual="$(sha256_of "${work}/${name}.tar.gz")" || return 3
+  expected="$(grep -F "${name}.tar.gz" "${work}/SHA256SUMS" | awk '{print $1}' | head -1)"
+  [ -n "$expected" ] || return 4
+  [ "$actual" = "$expected" ] || return 4
+
+  tar -xzf "${work}/${name}.tar.gz" -C "$dest" || return 5
+  printf '%s' "${dest}/${name}"
+}
+
 if [ ! -d "$TEMPLATE_DIR" ]; then
-  printf "  リポジトリを取得しています...  "
   TEMP_DIR=$(mktemp -d)
   CLEANUP_TEMP=true
-  if git clone --depth=1 --quiet https://github.com/masa-san-jp/Agent-Aiko.git "$TEMP_DIR" 2>/dev/null; then
-    printf "%s✓%s\n" "$CYAN" "$RESET"
-  else
-    printf "\n  %sエラー: リポジトリの取得に失敗しました%s\n" "$BOLD" "$RESET"
-    cleanup_temp_dir
-    exit 1
+  RELEASE_TAG=""
+  EXTRACTED=""
+
+  if [ -z "${AGENT_AIKO_REF:-}" ]; then
+    printf "  配布物を取得しています...  "
+    RELEASE_TAG="$(resolve_release_tag "${TEMP_DIR}/releases.json" || true)"
+    if [ -n "$RELEASE_TAG" ]; then
+      set +e
+      EXTRACTED="$(fetch_verified_release "$TEMP_DIR" "$RELEASE_TAG")"
+      fetch_status=$?
+      set -e
+      case "$fetch_status" in
+        0) printf "%s✓%s %s（checksum 照合済み）\n" "$CYAN" "$RESET" "$RELEASE_TAG" ;;
+        3)
+          printf "\n  %sエラー: sha256 を計算する道具がありません（sha256sum / shasum）%s\n" "$BOLD" "$RESET" >&2
+          printf "  検証できないものは入れません。\n" >&2
+          cleanup_temp_dir; exit 1 ;;
+        4)
+          printf "\n  %sエラー: 配布物の checksum が一致しません（%s）%s\n" "$BOLD" "$RELEASE_TAG" "$RESET" >&2
+          printf "  取得したものが壊れているか、途中で差し替えられています。中止します。\n" >&2
+          cleanup_temp_dir; exit 1 ;;
+        *)
+          printf "\n  %s· 配布物を取得できませんでした。リポジトリから取得します%s\n" "$DIM" "$RESET"
+          EXTRACTED="" ;;
+      esac
+    else
+      printf "\n  %s· %s の配布物が見つかりません。リポジトリから取得します%s\n" "$DIM" "$RELEASE_CHANNEL" "$RESET"
+      printf "  %s（beta を使うなら AGENT_AIKO_CHANNEL=beta）%s\n" "$DIM" "$RESET"
+    fi
   fi
-  TEMPLATE_DIR="$TEMP_DIR/claude-code/template/.claude"
+
+  if [ -n "$EXTRACTED" ]; then
+    TEMPLATE_DIR="$EXTRACTED/claude-code/template/.claude"
+  else
+    # checksum を照合できない経路。ここを通ったことは黙らない。
+    printf "  リポジトリを取得しています...  "
+    if git clone --depth=1 --quiet --branch "${AGENT_AIKO_REF:-main}" \
+      https://github.com/masa-san-jp/Agent-Aiko.git "${TEMP_DIR}/repo" 2>/dev/null; then
+      printf "%s✓%s %s（checksum 照合なし）\n" "$CYAN" "$RESET" "${AGENT_AIKO_REF:-main}"
+    else
+      printf "\n  %sエラー: リポジトリの取得に失敗しました%s\n" "$BOLD" "$RESET"
+      cleanup_temp_dir
+      exit 1
+    fi
+    TEMPLATE_DIR="${TEMP_DIR}/repo/claude-code/template/.claude"
+  fi
 fi
 
 PROJECT_CLAUDE_DIR="$(pwd)/.claude"
@@ -125,7 +225,12 @@ esac
 # ─────────────────────────────────────
 # インストール先の確認
 # ─────────────────────────────────────
-if [ "$(pwd)" = "$HOME" ]; then
+# シンボリックリンクを解いてから比べる。macOS の $TMPDIR は /var/folders/... で、
+# pwd が返すのは /private/var/folders/... ——文字列のまま比べると一致せず、
+# ホーム直下でも素通りする（macOS を CI に足して判明。2026-08-01）。
+CURRENT_REAL="$(pwd -P)"
+HOME_REAL="$(cd "$HOME" 2>/dev/null && pwd -P || printf '%s' "$HOME")"
+if [ "$CURRENT_REAL" = "$HOME_REAL" ]; then
   printf "  %sエラー: ホームディレクトリ直下にはインストールできません%s\n" "$BOLD" "$RESET"
   printf "  Claude Code を使う対象プロジェクトへ移動してから実行してください\n\n"
   cleanup_temp_dir

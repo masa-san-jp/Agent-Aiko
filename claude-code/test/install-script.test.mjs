@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, statSync } from "node:fs";
+import { existsSync, lstatSync, statSync, symlinkSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -97,6 +97,24 @@ describe("claude-code/scripts/install.sh", () => {
     assert.equal(existsSync(join(projectDir, ".claude", "CLAUDE.md")), true);
     assert.equal(existsSync(join(projectDir, ".claude", "settings.json")), true);
     assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
+  });
+
+  it("refuses to install into $HOME even when $HOME is reached through a symlink", async () => {
+    // macOS の $TMPDIR がまさにこの形（/var/folders → /private/var/folders）。
+    // 文字列のまま比べていたので素通りしていた。CI に macOS を足して判明。
+    const real = join(sandbox.root, "real-home");
+    const link = join(sandbox.root, "linked-home");
+    await mkdir(real, { recursive: true });
+    symlinkSync(real, link);
+
+    assert.throws(
+      () => runInstaller({ cwd: link, home: link }),
+      (error) => {
+        assert.match(error.stdout ?? "", /ホームディレクトリ直下にはインストールできません/);
+        return true;
+      }
+    );
+    assert.equal(existsSync(join(real, ".claude")), false);
   });
 
   it("backs up project template path type mismatches instead of aborting", async () => {
