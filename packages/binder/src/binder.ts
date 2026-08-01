@@ -9,7 +9,7 @@
 // Binding 失敗時は Aiko として起動しないと定めている。部分的に欠けた Profile を
 // 返すと、呼び出し側がそれを見て起動してしまう。だから欠けたら例外で止める。
 
-import { compile, checkSchemaVersion, type CompiledInstructions, type PersonaRef, type PersonaRepository } from "@agent-aiko/core";
+import { compile, checkSchemaVersion, hashObject, type CompiledInstructions, type PersonaRef, type PersonaRepository } from "@agent-aiko/core";
 import { type ResolvedUserContext } from "@agent-aiko/user-context";
 import { CapabilityRegistry, type ResolvedCapabilities } from "@agent-aiko/capability-registry";
 
@@ -130,12 +130,23 @@ export class RuntimeProfileBinder {
       });
     }
 
+    // SDK 設計書 §14.1 は content hash の入力に Runtime Descriptor を挙げている。
+    // 指示文だけを hash すると、**注入手段が違う Profile が同じ hash になる**
+    // ——Claude Code 向けと Codex 向けで指示文が同一なら見分けられない
+    // （2026-08-01 の cross-runtime テストで実測）。ランタイムまで含めて取る。
+    // Compiler にランタイムを持ち込まないのは §5.3（core は runtime を知らない）。
+    const profileHash = hashObject({
+      instructions: compiled.instructions,
+      runtime: { id: request.runtime.id, consistency_level: level, injection_method: injection },
+      schema_version: this.#currentSchemaVersion,
+    });
+
     return {
       schema_version: this.#currentSchemaVersion,
       // profile_id は hash の先頭を使う。同じ合成結果が同じ id を持ち、
       // §7.2 の runtime-profile://{profile_id}/summary から一意に引ける。
-      profile_id: compiled.profileHash.slice(0, 16),
-      profile_hash: compiled.profileHash,
+      profile_id: profileHash.slice(0, 16),
+      profile_hash: profileHash,
       configuration_hash: compiled.configurationHash,
       persona: { id: persona.id, version: persona.version },
       user_id: user.context.id,

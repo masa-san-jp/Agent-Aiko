@@ -1,0 +1,34 @@
+{
+  "name": "@agent-aiko/conformance",
+  "version": "0.1.0",
+  "description": "経路をまたいで同じ人格が出ることを確かめる検査。SDK 設計書 §20.2 / §20.3 / §20.5",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "node --import tsx --test test/*.test.ts",
+    "clean": "tsc -b --clean"
+  },
+  "devDependencies": {
+    "@agent-aiko/adapter-claude-code": "*",
+    "@agent-aiko/adapter-codex": "*",
+    "@agent-aiko/core": "*",
+    "@agent-aiko/mcp-server": "*",
+    "@agent-aiko/runtime-sdk": "*",
+    "@modelcontextprotocol/sdk": "*",
+    "@types/node": "^20.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {},
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/masa-san-jp/Agent-Aiko.git",
+    "directory": "packages/conformance"
+  }
+}
