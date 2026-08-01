@@ -16,6 +16,16 @@ export function renderStatus(status: Status): string {
   if (status.bindingDetail) {
     lines.push(`  理由: ${status.bindingDetail}`);
   }
+  // §20.7 は「Claude Code と Codex が同じ profile hash を表示すること」を受入条件に
+  // している。実際に一致するのは人格の中身の hash で、起動の hash は注入手段を
+  // 含むため経路ごとに変わる（§14.1）。**両方出す**——片方だけだと、
+  // 一致するはずのものと変わるはずのものが混ざる。
+  if (status.configurationHash) {
+    lines.push(`人格の中身: ${status.configurationHash}`);
+  }
+  if (status.profileHash) {
+    lines.push(`この起動:   ${status.profileHash}`);
+  }
   lines.push("Adapters:");
   const width = Math.max(...status.adapters.map((a) => a.name.length));
   for (const adapter of status.adapters) {

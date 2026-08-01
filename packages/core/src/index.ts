@@ -19,6 +19,14 @@ export { compile, type CompileInput, type CompiledInstructions, type UserContext
 export { sha256, hashObject, HashInputError, MAX_HASH_DEPTH } from "./hash.js";
 
 export {
+  assertWithinLimit,
+  byteLength,
+  INPUT_LIMITS,
+  InputTooLargeError,
+  type InputKind,
+} from "./limits.js";
+
+export {
   checkSchemaVersion,
   acceptableVersions,
   type CompatibilityVerdict,
