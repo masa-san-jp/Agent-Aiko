@@ -121,3 +121,16 @@ export { DEFAULT_SECRET_PATTERNS, ResponseContractSchema, responseContractOf } f
 export type { ResponseContract } from "./response-contract.js";
 export { DeterministicResponseValidator, mustStopWithoutValidator } from "./validator.js";
 export type { DeterministicResponseValidatorOptions } from "./validator.js";
+
+// --- R7-4: Semantic Evaluator ---
+
+export { runSemantic, SemanticBudget, SEMANTIC_TIMEOUT_MS, semanticEvaluatorUnavailable } from "./semantic.js";
+export type {
+  SemanticEvaluationRequest,
+  SemanticEvaluationResult,
+  SemanticEvaluator,
+  SemanticEvaluatorKind,
+  SemanticOutcome,
+} from "./semantic.js";
+export { HybridPolicyEngine } from "./hybrid-engine.js";
+export type { HybridEvaluateOptions, HybridPolicyEngineOptions } from "./hybrid-engine.js";
