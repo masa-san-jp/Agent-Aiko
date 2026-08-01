@@ -47,6 +47,29 @@ jobs:
       - name: Test
         run: node --test antigravity/test/*.test.mjs
 
+  # installer は一番ユーザーに近いのに、これまで CI で1度も動いていなかった。
+  # §16 が主要 OS での検証を求めているので、macOS も回す——sha256 の道具名も
+  # tar の実装も違うため、Linux で通ったことは macOS で通る根拠にならない。
+  claude-code:
+    name: claude-code / ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: ['22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test
+        run: node --test claude-code/test/*.test.mjs
+
   packages:
     name: packages / Node ${{ matrix.node }}
     runs-on: ubuntu-latest

@@ -41,6 +41,26 @@ curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
+installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。**照合に失敗した場合は中止し、別経路での取得へは回りません。** 照合済みで入ったかどうかは出力に出ます。
+
+| 環境変数 | 既定 | 用途 |
+|---|---|---|
+| `AGENT_AIKO_CHANNEL` | `stable` | `beta` を指定すると prerelease も対象にする |
+| `AGENT_AIKO_VERSION` | （未指定） | 特定のタグを固定して入れる |
+| `AGENT_AIKO_REF` | （未指定） | 指定するとリポジトリから直接取得する（開発用・**照合なし**） |
+
+配布物がまだ無い channel を指定した場合はリポジトリから取得し、その旨（`checksum 照合なし`）を表示します。
+
+インストーラ自体を実行前に確認したい場合は、次の手順で取得・照合してから実行してください。
+
+```bash
+tag=$(curl -fsSL https://api.github.com/repos/masa-san-jp/Agent-Aiko/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/agent-aiko-${tag}.tar.gz"
+curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/SHA256SUMS"
+sha256sum -c SHA256SUMS && tar -xzf "agent-aiko-${tag}.tar.gz"
+bash "agent-aiko-${tag}/claude-code/scripts/install.sh"
+```
+
 ### Codex 版
 
 ```bash
