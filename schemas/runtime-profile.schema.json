@@ -5,17 +5,30 @@
   "description": "Binder が合成した、今回の実行に適用する結果。設計書 §5.3 / §3.2 / §7.2。",
   "$comment": "暫定。設計書 §5.3 は出力項目を列挙するのみで、instructions を本文として持つか参照で持つかを規定していない。ここでは 0600 のローカルファイル（§11.3）である前提で本文を持たせている（schemas/README.md）。",
   "type": "object",
-  "required": ["schema_version", "profile_id", "profile_hash", "persona", "runtime", "instructions"],
+  "required": [
+    "schema_version",
+    "profile_id",
+    "profile_hash",
+    "persona",
+    "runtime",
+    "instructions"
+  ],
   "additionalProperties": false,
   "$defs": {
     "version": {
       "type": "string",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?(\\+[0-9A-Za-z-.]+)?$"
     },
-    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
   },
   "properties": {
-    "schema_version": { "type": "integer", "minimum": 1 },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "profile_id": {
       "description": "§7.2 の runtime-profile://{profile_id}/summary で参照される識別子。",
       "type": "string",
@@ -25,25 +38,46 @@
       "description": "合成結果のハッシュ。追跡可能性（§16）と検証失敗時の fail closed（§6.5）に使う。",
       "$ref": "#/$defs/sha256"
     },
-    "configuration_hash": { "$ref": "#/$defs/sha256" },
+    "configuration_hash": {
+      "$ref": "#/$defs/sha256"
+    },
     "persona": {
       "type": "object",
-      "required": ["id", "version"],
-      "additionalProperties": false,
-      "properties": {
-        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
-        "version": { "$ref": "#/$defs/version" }
-      }
-    },
-    "user_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
-    "runtime": {
-      "type": "object",
-      "required": ["id", "consistency_level"],
+      "required": [
+        "id",
+        "version"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
           "type": "string",
-          "enum": ["claude-code", "codex", "antigravity-cli", "generic-mcp-host"]
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        }
+      }
+    },
+    "user_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "id",
+        "consistency_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "claude-code",
+            "codex",
+            "antigravity-cli",
+            "generic-mcp-host"
+          ]
         },
         "consistency_level": {
           "description": "§2.1 の適合レベル。Antigravity CLI は system 級注入の手段が未確認のため現状 1（§8.5）。",
@@ -73,11 +107,21 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "reason"],
+        "required": [
+          "id",
+          "reason"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
         }
       }
     },
@@ -91,9 +135,168 @@
           "type": "string",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
         },
-        "binder_version": { "$ref": "#/$defs/version" },
-        "compiler_version": { "$ref": "#/$defs/version" },
-        "capability_manifest_hash": { "$ref": "#/$defs/sha256" }
+        "binder_version": {
+          "$ref": "#/$defs/version"
+        },
+        "compiler_version": {
+          "$ref": "#/$defs/version"
+        },
+        "capability_manifest_hash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "response_contract": {
+      "description": "応答の機械判定に使う宣言。R7 仕様書 §6。宣言が無い項目は検査せず、検査していないと返す。",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preferredName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prohibitedNames": {
+          "type": "array",
+          "items": {
+            "description": "禁止語。文字列なら指摘のみ。置換先まで書くと自動修正の対象になる。",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "replaceWith"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "replaceWith": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "firstPerson": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prohibitedFirstPersons": {
+          "type": "array",
+          "items": {
+            "description": "禁止語。文字列なら指摘のみ。置換先まで書くと自動修正の対象になる。",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "replaceWith"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "replaceWith": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "prohibitedExpressions": {
+          "type": "array",
+          "items": {
+            "description": "禁止語。文字列なら指摘のみ。置換先まで書くと自動修正の対象になる。",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "replaceWith"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "replaceWith": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "requiredExpressions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "prohibitedAssertions": {
+          "type": "array",
+          "items": {
+            "description": "禁止語。文字列なら指摘のみ。置換先まで書くと自動修正の対象になる。",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "text",
+                  "replaceWith"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "replaceWith": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "secretPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     }
   }
