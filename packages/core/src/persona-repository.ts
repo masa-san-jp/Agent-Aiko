@@ -25,6 +25,10 @@ export interface PersonaSnapshot {
   behavioralContract: string;
   /** 由来。どのファイルから読んだかを保持し、profile の provenance に載せる（§5.2）。 */
   sources: PersonaSource[];
+  /** 応答の機械判定に使う宣言（R7 仕様書 §6）。人格本文は自然文で、そのままでは
+   *  「一人称が違う」を判定できない。判定できる形で書かれたものだけをここに持つ。
+   *  持たない人格がある——無い項目は検査せず、検査していないと返す。 */
+  responseContract?: Record<string, unknown>;
 }
 
 export interface PersonaSource {

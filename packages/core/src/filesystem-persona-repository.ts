@@ -64,6 +64,25 @@ export class FileSystemPersonaRepository implements PersonaRepository {
     ]);
     if (contract) sources.push({ part: "behavioral-contract", location: contract.path });
 
+    // 応答契約（R7 §6）。持たない人格のほうが多いので、無くても起動する。
+    // 壊れていたら黙って無視する——ここで起動を止めると、応答検査という
+    // 付随機能の設定ミスで人格そのものが立たなくなる。
+    const responseContract = await this.#readOptionalFirst(
+      dirs.map((d) => join(d, "response-contract.json")),
+    );
+    let parsedContract: Record<string, unknown> | undefined;
+    if (responseContract) {
+      try {
+        const value: unknown = JSON.parse(responseContract.content);
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+          parsedContract = value as Record<string, unknown>;
+          sources.push({ part: "response-contract", location: responseContract.path });
+        }
+      } catch {
+        parsedContract = undefined;
+      }
+    }
+
     return {
       id: ref.id,
       version: ref.version ?? this.#assumedVersion,
@@ -71,6 +90,7 @@ export class FileSystemPersonaRepository implements PersonaRepository {
       invariants: invariants.content,
       behavioralContract: contract?.content ?? "",
       sources,
+      ...(parsedContract ? { responseContract: parsedContract } : {}),
     };
   }
 

@@ -114,3 +114,10 @@ export { DeterministicPolicyEngine } from "./engine.js";
 export type { DeterministicPolicyEngineOptions } from "./engine.js";
 export { auditAction, auditResponse } from "./audit.js";
 export type { PolicyAuditRecord } from "./audit.js";
+
+// --- R7-3: Deterministic Response Validator ---
+
+export { DEFAULT_SECRET_PATTERNS, ResponseContractSchema, responseContractOf } from "./response-contract.js";
+export type { ResponseContract } from "./response-contract.js";
+export { DeterministicResponseValidator, mustStopWithoutValidator } from "./validator.js";
+export type { DeterministicResponseValidatorOptions } from "./validator.js";
