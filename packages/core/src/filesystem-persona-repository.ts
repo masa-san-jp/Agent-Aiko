@@ -10,6 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { assertWithinLimit } from "./limits.js";
 import {
   PersonaResolutionError,
   type PersonaRef,
@@ -158,7 +159,12 @@ export class FileSystemPersonaRepository implements PersonaRepository {
   async #readOptionalFirst(paths: string[]): Promise<{ path: string; content: string } | undefined> {
     for (const path of paths) {
       const content = await readOptional(path);
-      if (content !== undefined) return { path, content };
+      if (content !== undefined) {
+        // §21 の最大入力。読めてしまってから合成の途中で詰まるより、
+        // 読んだ直後に「大きすぎる」と言うほうが直しようがある。
+        assertWithinLimit("personaPackage", content);
+        return { path, content };
+      }
     }
     return undefined;
   }

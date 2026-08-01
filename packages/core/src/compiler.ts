@@ -8,6 +8,7 @@
 // 出力の同一性は保証しない（§2）。保証するのは、同じ入力から同じ instructions と
 // 同じ hash が出ることまで。
 
+import { assertWithinLimit } from "./limits.js";
 import { hashObject, sha256 } from "./hash.js";
 import type { PersonaSnapshot } from "./persona-repository.js";
 
@@ -102,6 +103,9 @@ export function compile(input: CompileInput): CompiledInstructions {
   );
 
   const instructions = sections.join("\n");
+  // §21 の最大入力。ここを超える指示文は、注入先のどこかで黙って切られる。
+  // 切られた人格で起動するくらいなら合成の時点で断る。
+  assertWithinLimit("compiledInstructions", instructions);
 
   return {
     instructions,
