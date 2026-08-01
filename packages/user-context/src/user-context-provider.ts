@@ -9,7 +9,7 @@
 // すると、誰のものか分からない関係情報で人格が立ち上がる。
 
 import { readFile } from "node:fs/promises";
-import { checkSchemaVersion, type UserContext } from "@agent-aiko/core";
+import { byteLength, checkSchemaVersion, INPUT_LIMITS, type UserContext } from "@agent-aiko/core";
 
 /** User Profile の現行 schema_version。増やすときは §10.3.1 の受理範囲も動く。 */
 export const USER_PROFILE_SCHEMA_VERSION = 1;
@@ -56,6 +56,14 @@ export class UserContextProvider {
         throw new UserProfileError("User Profile が見つかりません", { path });
       }
       throw err;
+    }
+    // §21 の最大入力。JSON へ起こす前に断る——大きいものを parse してから
+    // 断ると、断るために一番重い処理を通すことになる。
+    if (byteLength(raw) > INPUT_LIMITS.userProfile) {
+      throw new UserProfileError(
+        `User Profile が上限を超えています（上限 ${INPUT_LIMITS.userProfile} bytes）`,
+        { path },
+      );
     }
     let parsed: unknown;
     try {
