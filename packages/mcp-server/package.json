@@ -13,10 +13,11 @@
   },
   "files": [
     "dist",
+    "persona",
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/bundle-persona.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "pretest": "npm run build",
     "test": "node --import tsx --test test/*.test.ts",
