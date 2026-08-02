@@ -17,6 +17,7 @@ const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8")) as {
   name: string;
   version: string;
+  mcpName?: string;
   private?: boolean;
   dependencies?: Record<string, string>;
   files?: string[];
@@ -35,7 +36,7 @@ test("レジストリに出す名前と版が、package.json と食い違わな�
     version: string;
     packages: Array<{ identifier: string; version: string }>;
   };
-  assert.equal(server.name, (manifest as { mcpName?: string }).mcpName);
+  assert.equal(server.name, manifest.mcpName);
   assert.equal(server.version, manifest.version);
   assert.deepEqual(
     server.packages.map((p) => [p.identifier, p.version]),
