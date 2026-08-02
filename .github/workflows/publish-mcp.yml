@@ -1,0 +1,75 @@
+name: Publish to MCP Registry
+
+# npm に出したものを、公式 MCP レジストリの一覧に載せる。
+#
+# レジストリが持つのはメタ情報だけで、実体は npm にある。**先に npm へ出ていないと
+# 登録は通らない**（レジストリが package.json の mcpName を見に行って、名前の
+# 持ち主かどうかを確かめるため）。だから最初に npm 側の存在を確認してから進む。
+#
+# 認証は GitHub OIDC。この repo から出た job であることを GitHub が証明するので、
+# トークンも鍵も repo に置かなくて済む。io.github.masa-san-jp/ で始まる名前だけを
+# 名乗れる（それが OIDC で証明できる範囲）。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '登録するタグ（例: v0.2.0）'
+        required: true
+
+jobs:
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # OIDC の署名に要る
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      # 先に npm を見る。出ていないまま登録すると、一覧から辿れない項目ができる。
+      - name: npm に版が出ているか確かめる
+        run: |
+          version=$(node -p "require('./packages/mcp-server/package.json').version")
+          echo "aiko-mcp@${version} を探します"
+          npm view "aiko-mcp@${version}" version
+
+      - name: server.json と package.json の食い違いが無いか確かめる
+        working-directory: packages/mcp-server
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const server = require("./server.json");
+            const mismatch = [];
+            if (pkg.mcpName !== server.name) mismatch.push(`name: ${pkg.mcpName} != ${server.name}`);
+            if (pkg.version !== server.version) mismatch.push(`version: ${pkg.version} != ${server.version}`);
+            for (const p of server.packages ?? []) {
+              if (p.identifier !== pkg.name) mismatch.push(`package: ${p.identifier} != ${pkg.name}`);
+              if (p.version !== pkg.version) mismatch.push(`package version: ${p.version} != ${pkg.version}`);
+            }
+            if (mismatch.length) { console.error(mismatch.join("\n")); process.exit(1); }
+          '
+
+      - name: mcp-publisher を入れる
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help
+
+      - name: レジストリへログイン（OIDC）
+        run: ./mcp-publisher login github-oidc
+
+      - name: 登録
+        working-directory: packages/mcp-server
+        run: ../../mcp-publisher publish
+
+      - name: 載ったか確かめる
+        run: |
+          version=$(node -p "require('./packages/mcp-server/package.json').version")
+          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.masa-san-jp/aiko" | tee /dev/stderr | grep -q "\"version\":\"${version}\""

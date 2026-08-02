@@ -27,6 +27,27 @@ test("公開する名前と版が意図どおり", () => {
   assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.2.0"]);
 });
 
+test("レジストリに出す名前と版が、package.json と食い違わない", () => {
+  // レジストリは package.json の mcpName を見て「この名前の持ち主か」を確かめる。
+  // 食い違うと登録が通らないし、通っても一覧から実体へ辿れない項目ができる。
+  const server = JSON.parse(readFileSync(join(pkgRoot, "server.json"), "utf8")) as {
+    name: string;
+    version: string;
+    packages: Array<{ identifier: string; version: string }>;
+  };
+  assert.equal(server.name, (manifest as { mcpName?: string }).mcpName);
+  assert.equal(server.version, manifest.version);
+  assert.deepEqual(
+    server.packages.map((p) => [p.identifier, p.version]),
+    [[manifest.name, manifest.version]],
+  );
+});
+
+test("レジストリ用の server.json は npm に配らない", () => {
+  // 利用者の手元では使い道が無い。配る中身は files で絞ってある。
+  assert.equal((manifest.files ?? []).includes("server.json"), false);
+});
+
 test("名乗る版と公開する版が食い違わない", () => {
   // 版は package.json と SERVER_VERSION の2箇所にある。片方だけ上げると、
   // クライアントには古い版を名乗ったまま新しいものが配られる。
