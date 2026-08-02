@@ -17,7 +17,7 @@
     "@agent-aiko/adapter-claude-code": "*",
     "@agent-aiko/adapter-codex": "*",
     "@agent-aiko/core": "*",
-    "@agent-aiko/mcp-server": "*",
+    "aiko-mcp": "*",
     "@agent-aiko/runtime-sdk": "*",
     "@modelcontextprotocol/sdk": "*",
     "@types/node": "^20.19.0",
