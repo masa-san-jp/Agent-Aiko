@@ -448,14 +448,21 @@ find "$AIKO_HOME/hooks" -type f -name '*.sh' -exec chmod +x {} +
 
 mkdir -p "$AIKO_HOME/persona/overrides"
 
-mkdir -p "$PROJECT_CLAUDE_DIR/aiko"
-if [ -d "$AIKO_HOME/hooks" ]; then
-  if [ -e "$PROJECT_CLAUDE_DIR/aiko/hooks" ] && [ ! -L "$PROJECT_CLAUDE_DIR/aiko/hooks" ]; then
-    mv "$PROJECT_CLAUDE_DIR/aiko/hooks" "$PROJECT_CLAUDE_DIR/aiko/hooks.bak.$(date +%s)"
-  fi
-  [ -L "$PROJECT_CLAUDE_DIR/aiko/hooks" ] && rm "$PROJECT_CLAUDE_DIR/aiko/hooks"
-  ln -s "$AIKO_HOME/hooks" "$PROJECT_CLAUDE_DIR/aiko/hooks"
+# `.claude/aiko` を `~/.aiko` への symlink にする。
+#
+# 人格の実体は `~/.aiko` に置くが、起動手順を書いた `.claude/CLAUDE.md` は
+# `.claude/aiko/...` を読むよう指示している。リンクが無いと、入れた直後の
+# `.claude/aiko` は空で、**人格を1つも読めないまま起動する**（2026-08-02 実測。
+# 既存環境は /aiko-migrate-to-shared 実行済みのため表面化していなかった）。
+#
+# 既存の中身は先に `~/.aiko` へ移してある（STATE_SOURCE）。それでも消さずに
+# 退避してから張り替える——移し損ねたものがあったとき、消えていたら戻せない。
+if [ -L "$PROJECT_CLAUDE_DIR/aiko" ]; then
+  rm "$PROJECT_CLAUDE_DIR/aiko"
+elif [ -e "$PROJECT_CLAUDE_DIR/aiko" ]; then
+  backup_existing_path "$PROJECT_CLAUDE_DIR/aiko"
 fi
+ln -s "$AIKO_HOME" "$PROJECT_CLAUDE_DIR/aiko"
 
 if [ "$HAD_PROJECT_CLAUDE_MD" -eq 1 ]; then
   printf "  %s· .claude/CLAUDE.md は既存のため変更しません%s\n" "$DIM" "$RESET"
