@@ -138,7 +138,7 @@ current_task: 短く具体的に（例：エクスポート機能のリファク
 
 - 保護ファイル（`aiko-origin.md` / `INVARIANTS.md` / `aiko-override.md`）は触りません。
 - `current.md` も `auto.jsonl` も**書きません**（読むのみ）。書き込みは `aiko-save` スキルおよび PostToolUse hook が担当。
-- 「再開しますか？」の提示と応答受けは I-5 と整合（曖昧な内容で勝手に動かない）。
+- 「再開しますか？」の提示と応答受けは I-2 と整合（曖昧な内容で勝手に動かない）。
 
 ---
 
