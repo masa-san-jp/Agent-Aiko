@@ -188,6 +188,46 @@ test("読めない設定ファイルには触らない", async () => {
   assert.equal((await readdir(join(home, ".cursor"))).length, 1); // 控えも作らない
 });
 
+test("JSON として読めても、形が想定と違えば触らない", async () => {
+  // 配列を { ... } として扱って書き戻すと、元の中身が消える。
+  const home = await fakeHome();
+  const path = await withCursor(home, [{ command: "other-server" }]);
+  const h = harness(home);
+
+  const code = await runInstall([], h.deps);
+
+  assert.equal(code, 1);
+  assert.deepEqual(JSON.parse(await readFile(path, "utf8")), [{ command: "other-server" }]);
+});
+
+test("mcpServers がオブジェクトでなければ触らない", async () => {
+  const home = await fakeHome();
+  const path = await withCursor(home, { mcpServers: "まだ書いてない" });
+  const before = await readFile(path, "utf8");
+  const h = harness(home);
+
+  const code = await runInstall([], h.deps);
+
+  assert.equal(code, 1);
+  assert.equal(await readFile(path, "utf8"), before);
+});
+
+test("キーの並び順が違うだけなら、すでに入っていると見なす", async () => {
+  // 文字列にして比べると、同じ設定でも別物と判定して --force を要求してしまう。
+  const home = await fakeHome();
+  const path = await withCursor(home, {
+    mcpServers: { aiko: { args: ["-y", "aiko-mcp"], command: "npx" } },
+  });
+  const before = await readFile(path, "utf8");
+  const h = harness(home);
+
+  const code = await runInstall([], h.deps);
+
+  assert.equal(code, 0);
+  assert.equal(await readFile(path, "utf8"), before);
+  assert.match(h.out(), /すでに/);
+});
+
 test("--dry-run は何も実行せず、何も書かない", async () => {
   const home = await fakeHome();
   const path = await withCursor(home, { mcpServers: {} });

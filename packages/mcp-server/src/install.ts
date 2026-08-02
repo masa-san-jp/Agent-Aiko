@@ -143,6 +143,25 @@ async function isPresent(target: Target, deps: InstallDeps): Promise<boolean> {
   return target.kind === "cli" ? deps.lookPath(target.command) : existsSync(target.dir);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** 中身で比べる。JSON の文字列にして比べると、キーの並び順が違うだけで別物になる。 */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => sameValue(item, b[i]));
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = Object.keys(a);
+    return (
+      keys.length === Object.keys(b).length && keys.every((key) => sameValue(a[key], b[key]))
+    );
+  }
+  return false;
+}
+
 interface Outcome {
   target: Target;
   state: "added" | "already" | "conflict" | "failed";
@@ -159,8 +178,9 @@ async function writeFileTarget(
   let config: Record<string, unknown> = {};
   if (existed) {
     const raw = await readFile(target.path, "utf8");
+    let parsed: unknown;
     try {
-      config = JSON.parse(raw) as Record<string, unknown>;
+      parsed = JSON.parse(raw);
     } catch (err) {
       // 読めないものを書き直すと、利用者が手で書いた設定を丸ごと消すことになる。
       return {
@@ -169,12 +189,22 @@ async function writeFileTarget(
         detail: `設定を読めませんでした（${err instanceof Error ? err.message : String(err)}）。手で直すまで触りません: ${target.path}`,
       };
     }
+    // JSON として読めても、形が想定と違えば同じこと。配列や文字列を
+    // オブジェクトとして扱うと、書き戻したときに元の中身が消える。
+    if (!isPlainObject(parsed) || (parsed["mcpServers"] !== undefined && !isPlainObject(parsed["mcpServers"]))) {
+      return {
+        target,
+        state: "failed",
+        detail: `設定の形が想定と違います。手で直すまで触りません: ${target.path}`,
+      };
+    }
+    config = parsed;
   }
 
   const servers = (config["mcpServers"] ?? {}) as Record<string, unknown>;
   const current = servers[SERVER_KEY];
   if (current !== undefined) {
-    if (JSON.stringify(current) === JSON.stringify(ENTRY)) {
+    if (sameValue(current, ENTRY)) {
       return { target, state: "already", detail: target.path };
     }
     if (!options.force) {
