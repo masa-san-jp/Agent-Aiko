@@ -70,22 +70,41 @@ const USAGE = `使い方: npx aiko-mcp [コマンド]
 install の細かい指定は npx aiko-mcp install --help
 `;
 
-/** そのコマンドが PATH にあるか。which に頼らず自分で探す（Windows も同じ経路で見る）。 */
-async function lookPath(command: string): Promise<boolean> {
+/** PATH から実体を探す。which に頼らず自分で見る（Windows は拡張子まで含めて返す）。 */
+function resolveCommand(command: string): string | undefined {
   const isWindows = process.platform === "win32";
   const dirs = (process.env["PATH"] ?? "").split(isWindows ? ";" : ":");
   const exts = isWindows ? (process.env["PATHEXT"] ?? ".EXE;.CMD;.BAT").split(";") : [""];
-  return dirs.some((dir) => dir && exts.some((ext) => existsSync(join(dir, command + ext))));
+  for (const dir of dirs) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const candidate = join(dir, command + ext);
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  return undefined;
+}
+
+function lookPath(command: string): Promise<boolean> {
+  return Promise.resolve(resolveCommand(command) !== undefined);
 }
 
 function runCommand(
   command: string,
   args: readonly string[],
 ): Promise<{ code: number; stderr: string }> {
+  const resolved = resolveCommand(command);
+  // Windows の claude / codex / code は .cmd で入る。execFile は .cmd を直接
+  // 起動できない（Node 20.12 以降は EINVAL）ので、cmd.exe に渡す。**見つけ方と
+  // 起動の仕方が食い違うと「入っている」と判定してから落ちる**ことになる。
+  const isBatch = process.platform === "win32" && /\.(cmd|bat)$/i.test(resolved ?? "");
+  const bin = isBatch ? (process.env["ComSpec"] ?? "cmd.exe") : (resolved ?? command);
+  const finalArgs = isBatch ? ["/c", resolved as string, ...args] : [...args];
+
   return new Promise((resolve) => {
     // shell は使わない。引数はこちらが組み立てた定数だけだが、shell を挟むと
     // VS Code へ渡す JSON の引用符が環境ごとに壊れる。
-    execFile(command, [...args], (err, _stdout, stderr) => {
+    execFile(bin, finalArgs, (err, _stdout, stderr) => {
       if (!err) return resolve({ code: 0, stderr });
       const code = typeof (err as { code?: unknown }).code === "number" ? (err as { code: number }).code : 1;
       resolve({ code, stderr: stderr || err.message });
