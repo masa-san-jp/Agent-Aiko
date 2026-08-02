@@ -85,7 +85,7 @@ describe("claude-code/scripts/install.sh", () => {
     assert.equal(await readFile(join(projectDir, ".claude", "CLAUDE.md"), "utf8"), customClaude);
     assert.equal(existsSync(join(sandbox.root, ".aiko", "mode")), true);
     assert.equal(existsSync(join(projectDir, ".claude", "skills", "aiko", "SKILL.md")), true);
-    assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
+    assert.equal(lstatSync(join(projectDir, ".claude", "aiko")).isSymbolicLink(), true);
   });
 
   it("creates CLAUDE.md and settings.json when they are absent", async () => {
@@ -96,7 +96,28 @@ describe("claude-code/scripts/install.sh", () => {
 
     assert.equal(existsSync(join(projectDir, ".claude", "CLAUDE.md")), true);
     assert.equal(existsSync(join(projectDir, ".claude", "settings.json")), true);
-    assert.equal(lstatSync(join(projectDir, ".claude", "aiko", "hooks")).isSymbolicLink(), true);
+    assert.equal(lstatSync(join(projectDir, ".claude", "aiko")).isSymbolicLink(), true);
+  });
+
+  it("leaves CLAUDE.md able to read the persona it names", async () => {
+    // CLAUDE.md は起動手順として `.claude/aiko/...` を読めと書いている。人格の実体は
+    // `~/.aiko` にあるので、リンクが無いと**人格を1つも読めないまま起動する**。
+    // 入れた直後にそうなっていた（2026-08-02 実測）。読める側から確かめる。
+    const projectDir = join(sandbox.root, "project");
+    await mkdir(projectDir, { recursive: true });
+
+    runInstaller({ cwd: projectDir, home: sandbox.root });
+
+    const named = [
+      "mode",
+      "persona/origin/persona.md",
+      "persona/INVARIANTS.md",
+      "capability/rules",
+    ];
+    const missing = named.filter(
+      (rel) => !existsSync(join(projectDir, ".claude", "aiko", ...rel.split("/")))
+    );
+    assert.deepEqual(missing, []);
   });
 
   it("refuses to install into $HOME even when $HOME is reached through a symlink", async () => {
