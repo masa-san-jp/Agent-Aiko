@@ -54,13 +54,7 @@ npm run build -w aiko-mcp
 node packages/mcp-server/dist/server.js
 ```
 
-設計書 [`docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md`](../../docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md) §7 / §15 Phase 3 に対応する。設計書が唯一の正本。
-
-| 環境変数 | 既定 | 意味 |
-|---|---|---|
-| `AIKO_HOME` | `~/.aiko` | 人格ファイルの場所 |
-| `AIKO_PERSONA_ID` | `aiko` | 読み込む人格の識別子 |
-| `AIKO_USER_PROFILE` | なし | User Profile（JSON）のパス。未指定なら `user_id: default` |
+設計書は [リポジトリの docs/](https://github.com/masa-san-jp/Agent-Aiko/tree/main/docs) にある（配布物には含めていない）。設計書が唯一の正本。
 
 ## Resources（§7.2）
 
@@ -75,14 +69,32 @@ node packages/mcp-server/dist/server.js
 
 **Resource を取得しただけでは人格適用を保証しない**（§7.2 明記）。人格を効かせるのは Adapter による system 級注入であって、このサーバーではない。ここが提供するのは「人格の内容を読める口」と「Profile を合成する口」。
 
-## Tools（§7.4）
+## Tools
 
-| ツール | 役割 |
-|---|---|
-| `aiko.bind_runtime` | 人格・ユーザー・能力を合成して Runtime Profile を作る |
-| `aiko.get_runtime_profile` | 合成済みの Profile を取得する |
-| `aiko.report_capabilities` | Capability Manifest を使える／使えないに分ける |
-| `aiko.health` | 人格を読めているか、Profile を何件持っているか |
+| ツール | 役割 | 書き込み |
+|---|---|---|
+| `aiko.health` | 人格を読めているか、Profile を何件持っているか | しない |
+| `aiko.bind_runtime` | 人格・ユーザー・能力を合成して Runtime Profile を作る | しない |
+| `aiko.get_runtime_profile` | 合成済みの Profile を取得する | しない |
+| `aiko.report_capabilities` | Capability Manifest を使える／使えないに分ける | しない |
+| `aiko.list_personas` | 使える人格と、いまどれを使っているか | しない |
+| `aiko.remember_user` | 呼び名・記憶の場所を覚える | `~/.aiko/user.md` |
+| `aiko.switch_persona` | 使う人格を切り替える | `~/.aiko/mode`・`active-persona` |
+| `aiko.save_persona` | 独自の人格を保存する | `~/.aiko/persona/overrides/<名前>/persona.md` |
+| `aiko.delete_persona` | **独自の人格をディレクトリごと削除する** | 同上を**削除** |
+
+`aiko.evaluate_action` / `aiko.validate_response` は、判定器を渡して起動したときだけ現れる。渡していなければ一覧にも出ない。
+
+### 書き込みについて知っておくこと
+
+**このサーバーを繋ぐと、モデルが `~/.aiko` の中を書き換えられるようになる。** 何を書くかは会話の内容で決まる。
+
+- 書く先は `~/.aiko` の中だけ。外へは出ない（人格名に区切り文字を使えない・リンクを辿らない）
+- **`aiko.delete_persona` はディレクトリを再帰的に消す。** 確認は求めない。消せるのは `persona.md` を持つ独自人格のみで、同梱のオリジナルと不変条項は消せない
+- `aiko.save_persona` は同じ名前があれば黙って上書きする
+- 書き換えられて困るものを `~/.aiko` に置かない
+
+不安なら、判定器を渡さずに起動して読み取り用のツールだけ使う、という運用もできる（書き込み系は `AIKO_HOME` を渡した場合のみ登録される）。
 
 結果には Persona version と hash を必ず載せる（§7.4）。載せないとクライアント側は自分が何版の人格で動いているかを追えない（§16 の追跡性）。
 
@@ -115,7 +127,7 @@ node packages/mcp-server/dist/server.js
 
 ## この段階で入れていないもの
 
-§7.4 の `aiko.evaluate_action` / `aiko.validate_response` は入れていない。Policy Engine（§5.2）が未実装のため、今作ると判断の中身が空になる。`aiko.get_relationship_context` も、どのクライアントへ何を渡してよいかの権限モデルが決まっていないため保留している（§11.2）。
+`aiko.get_relationship_context` は、どのクライアントへ何を渡してよいかの権限モデルが決まっていないため保留している（§11.2）。
 
 ## テスト
 

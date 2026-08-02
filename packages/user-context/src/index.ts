@@ -15,5 +15,6 @@ export {
   renderUserMarkdown,
   userMarkdownCandidates,
   writeUserMarkdown,
+  UserMarkdownError,
   type UserMarkdown,
 } from "./user-markdown.js";

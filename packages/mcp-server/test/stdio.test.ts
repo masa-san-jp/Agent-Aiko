@@ -36,7 +36,6 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
     assert.deepEqual(names, [
       "aiko.bind_runtime",
       "aiko.delete_persona",
-      "aiko.evaluate_action",
       "aiko.get_runtime_profile",
       "aiko.health",
       "aiko.list_personas",
@@ -44,7 +43,6 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
       "aiko.report_capabilities",
       "aiko.save_persona",
       "aiko.switch_persona",
-      "aiko.validate_response",
     ]);
 
     const health = await client.callTool({ name: "aiko.health", arguments: {} });

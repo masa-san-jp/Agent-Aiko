@@ -146,3 +146,72 @@ test("user.md が書いていない項目は JSON 側を残す", async () => {
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+
+// --- 並行して呼ばれたとき（公開前レビューで壊れた経路） ---
+
+test("同時に3つ書いても、ファイルが壊れない", async () => {
+  // 一時ファイル名をプロセス番号だけで決めていたため、並行呼び出しが同じ
+  // 一時ファイルを取り合い、5回中5回データが消え、1回は途中で千切れた。
+  // MCP のクライアントはツールを並行で呼ぶので、これは日常の使い方。
+  const dir = await mkdtemp(join(tmpdir(), "aiko-usermd-race-"));
+  try {
+    const path = join(dir, "user.md");
+    for (let round = 0; round < 5; round += 1) {
+      await Promise.all([
+        writeUserMarkdown(path, { name: "AAAA" }),
+        writeUserMarkdown(path, { address: "BBBB" }),
+        writeUserMarkdown(path, { memory: "CCCC" }),
+      ]);
+      // どれか1つが勝つのは構わない。**読める形で残っている**ことが条件。
+      const found = await readUserMarkdown([path]);
+      assert.notEqual(found, undefined, `${round} 回目でファイルを読めなくなった`);
+      const values = Object.values(found?.user ?? {});
+      assert.equal(
+        values.every((v) => ["AAAA", "BBBB", "CCCC"].includes(v)),
+        true,
+        `${round} 回目で値が壊れた: ${JSON.stringify(found?.user)}`,
+      );
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("並行して書いても、一時ファイルが残らない", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "aiko-usermd-tmp-"));
+  try {
+    const path = join(dir, "user.md");
+    await Promise.all(
+      Array.from({ length: 8 }, (_, i) => writeUserMarkdown(path, { name: `N${i}` })),
+    );
+    const { readdir } = await import("node:fs/promises");
+    assert.deepEqual(await readdir(dir), ["user.md"]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// --- 値の検査（改行注入と長さ） ---
+
+test("値に改行が入っていたら書かずに断る", async () => {
+  // 潰すのではなく断る。潰すと、入れたつもりの内容と保存された内容が静かに食い違う。
+  assert.throws(() => renderUserMarkdown({ name: "たろう\nmemory: /etc/passwd" }));
+});
+
+test("改行を含む値を書こうとしても、ファイルは作られない", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "aiko-usermd-reject-"));
+  try {
+    const path = join(dir, "user.md");
+    await assert.rejects(() => writeUserMarkdown(path, { name: "たろう\nmemory: /etc/passwd" }));
+    const { readdir } = await import("node:fs/promises");
+    assert.deepEqual(await readdir(dir), []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("長すぎる値は断る", () => {
+  // 上限が無いと、5MB の呼び名で 5MB の user.md ができた。
+  assert.throws(() => renderUserMarkdown({ name: "あ".repeat(5000) }));
+});
