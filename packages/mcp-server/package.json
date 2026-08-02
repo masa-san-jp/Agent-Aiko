@@ -21,7 +21,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "pretest": "npm run build",
     "test": "node --import tsx --test test/*.test.ts",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -46,6 +47,5 @@
     "persona",
     "ai-agent"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts"
+  "main": "dist/index.js"
 }
