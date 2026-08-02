@@ -4,9 +4,19 @@
 
 使う人の端末の中で動く。人格もユーザー情報も端末の外へ出ないし、サーバーを別に立てる必要もない。
 
-## 使い方
+## 入れる
 
-MCP の設定へ1行足すだけ。
+使っているクライアントの行をコピーして実行する。設定ファイルを開く必要はない。
+
+| クライアント | コマンド |
+|---|---|
+| Claude Code | `claude mcp add aiko -- npx -y aiko-mcp` |
+| Codex CLI | `codex mcp add aiko -- npx -y aiko-mcp` |
+| VS Code | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
+
+Claude Code ですべてのプロジェクトから使うなら `-s user` を付ける。確認は `claude mcp list`（Codex は `codex mcp list`）。
+
+コマンドが無いクライアント（Claude Desktop など）は MCP 設定へ直接足す。
 
 ```json
 {
@@ -16,7 +26,7 @@ MCP の設定へ1行足すだけ。
 }
 ```
 
-人格は同梱されているので、何も用意しなくてもアイコとして立ち上がる。
+必要なのは Node.js 20 以上だけ。人格は同梱されているので、何も用意しなくてもアイコとして立ち上がる。
 
 ## 覚えてもらう
 
