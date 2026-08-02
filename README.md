@@ -41,7 +41,25 @@ MCP に対応したクライアントなら、**コマンドを 1 回打つだ�
 
 ### 入れる
 
-お使いのクライアントの行をコピーして実行してください。
+お使いのクライアントを自動で探して、設定を書きます。
+
+```bash
+npx aiko-mcp install
+```
+
+対応しているのは **Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop** です。入っていないクライアントには何もしません。
+
+書き込む前に内容だけ見たい場合は `npx aiko-mcp install --dry-run` を使ってください。既にある設定はそのまま残しますし、書き換える前に控え（`.aiko-bak-*`）を取ります。
+
+| オプション | 意味 |
+|---|---|
+| `--dry-run` | 何を書くかだけ表示して、実際には書かない |
+| `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
+| `--force` | 同じ名前で違う設定が入っていても置き換える |
+
+### 1 つずつ入れる
+
+自動で入れたくない場合は、お使いのクライアントの行をコピーして実行してください。
 
 | クライアント | コマンド |
 |---|---|
@@ -49,7 +67,7 @@ MCP に対応したクライアントなら、**コマンドを 1 回打つだ�
 | **Codex CLI** | `codex mcp add aiko -- npx -y aiko-mcp` |
 | **VS Code** | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
 
-Claude Code で**すべてのプロジェクトから使いたい**場合は `-s user` を付けます。
+Claude Code で**すべてのプロジェクトから使いたい**場合は `-s user` を付けます（`npx aiko-mcp install` はこちらを使います）。
 
 ```bash
 claude mcp add aiko -s user -- npx -y aiko-mcp

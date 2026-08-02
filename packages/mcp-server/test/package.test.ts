@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SERVER_VERSION } from "../src/aiko-server.js";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8")) as {
@@ -23,7 +24,13 @@ const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"))
 };
 
 test("公開する名前と版が意図どおり", () => {
-  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.1.0"]);
+  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.2.0"]);
+});
+
+test("名乗る版と公開する版が食い違わない", () => {
+  // 版は package.json と SERVER_VERSION の2箇所にある。片方だけ上げると、
+  // クライアントには古い版を名乗ったまま新しいものが配られる。
+  assert.equal(SERVER_VERSION, manifest.version);
 });
 
 test("公開できる状態になっている（private が外れている）", () => {
