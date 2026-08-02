@@ -8,8 +8,9 @@
 // ファイルを見るので、片方が書いている途中をもう片方が読む経路が実在する。
 // 途中のファイルを読ませないことが、共存の前提。
 
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 
 /** user.md が持てる項目。増やすときは書き出し側も一緒に直す。 */
 export interface UserMarkdown {
@@ -42,7 +43,31 @@ export function parseUserMarkdown(text: string): UserMarkdown {
   return out;
 }
 
+export class UserMarkdownError extends Error {
+  override readonly name = "UserMarkdownError";
+}
+
+/** 値の上限。1行に収まるものなので、長さは Profile 全体より短くてよい。 */
+const MAX_VALUE = 4096;
+
+/** 値に改行があると行が増え、**別の項目として読み直される**（`name` に改行を入れて
+ *  `memory:` を生やし、記憶の場所を任意のファイルへ向けられた）。
+ *
+ *  潰すのではなく**断る**。潰すと、利用者が入れたつもりの内容と保存された内容が
+ *  静かに食い違う。断れば、何が起きたか呼び出し側に伝わる。 */
+function assertOneLine(field: string, value: string): void {
+  if (/[\r\n]/.test(value)) {
+    throw new UserMarkdownError(`${field} に改行は入れられません`);
+  }
+  if (value.length > MAX_VALUE) {
+    throw new UserMarkdownError(`${field} が長すぎます（上限 ${MAX_VALUE} 文字）`);
+  }
+}
+
 export function renderUserMarkdown(user: UserMarkdown): string {
+  for (const [field, value] of Object.entries(user)) {
+    if (typeof value === "string") assertOneLine(field, value);
+  }
   const lines = [
     "# ユーザー設定",
     "",
@@ -83,8 +108,17 @@ export function userMarkdownCandidates(aikoHome: string, activePersona?: string)
 export async function writeUserMarkdown(path: string, user: UserMarkdown): Promise<void> {
   // 置き場ごと無いことがある。初めて覚えるのが `~/.aiko` を作る前、という順序は
   // 実際に起きる（入れた直後に呼び名を教える）。0700 は §11.3 の権限に合わせる。
+  // 中身の検査を先に済ませる。作りかけのファイルを残さないため。
+  const text = renderUserMarkdown(user);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const temp = join(dirname(path), `.user.md.tmp-${process.pid}`);
-  await writeFile(temp, renderUserMarkdown(user), { mode: 0o600 });
-  await rename(temp, path);
+  // 一時ファイル名は呼び出しごとに変える。プロセス番号だけだと、並行呼び出しが
+  // 同じ一時ファイルを取り合って壊れる（公開前レビューで実測）。
+  const temp = join(dirname(path), `.tmp-${randomUUID()}-${basename(path)}`);
+  try {
+    await writeFile(temp, text, { mode: 0o600 });
+    await rename(temp, path);
+  } catch (err) {
+    await rm(temp, { force: true }).catch(() => undefined);
+    throw err;
+  }
 }

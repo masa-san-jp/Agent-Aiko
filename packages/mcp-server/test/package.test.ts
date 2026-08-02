@@ -113,3 +113,18 @@ test("同梱するものを files で絞っている", () => {
 test("実行の入口が1つある", () => {
   assert.deepEqual(manifest.bin, { "aiko-mcp": "dist/server.js" });
 });
+
+test("ビルドせずに publish しても空にならない（prepack がある）", () => {
+  // dist と persona はビルドで作られるもので git には無い。prepack が無いと、
+  // 取り直した直後の publish が**中身の無いパッケージを出す**。npm はエラーを
+  // 出さないので、公開してから気づくことになる（公開前レビューで実測: 9.0kB /
+  // 5ファイル・bin の指す先が存在しない）。
+  assert.equal((manifest as { scripts?: Record<string, string> }).scripts?.["prepack"], "npm run build");
+});
+
+test("型定義を配らないなら types も宣言しない", () => {
+  // 宣言だけ残すと、利用側が TS7016 で落ちる。
+  const declared = (manifest as { types?: string }).types;
+  const shipsTypes = (manifest.files ?? []).some((f) => f.endsWith(".d.ts") || f === "dist");
+  assert.equal(declared === undefined || shipsTypes, true);
+});

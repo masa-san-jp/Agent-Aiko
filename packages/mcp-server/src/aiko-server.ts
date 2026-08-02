@@ -308,6 +308,10 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
 
   // R7-5: SDK 直呼びと同じ結果を返す口。**判定はここに書かない。**
   // MCP 側に判定を1行でも足すと、同じ入力で SDK と MCP の答えが割れる（§12.3）。
+  //
+  // 判定器を渡されていないときは登録しない。登録すると一覧には出るのに必ず
+  // 「使えません」を返すことになり、クライアントの一覧と文脈を無駄に占める。
+  if (deps.policy || deps.responseValidation) {
   server.registerTool(
     "aiko.evaluate_action",
     {
@@ -352,6 +356,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       }
     },
   );
+  }
 
   // 呼び名や記憶の場所を、会話の中で覚える口。**利用者に手でファイルを作らせない**
   // ための道具（マサさん指定 2026-08-02）。書くのは ~/.aiko の中だけで、
@@ -538,9 +543,20 @@ function summarize(profile: {
   };
 }
 
-/** 例外を「なぜできなかったか」に写す。SDK のエラーは利用者向けの文言を持つ（§10.2）。 */
+/** 例外を「なぜできなかったか」に写す。SDK のエラーは利用者向けの文言を持つ（§10.2）。
+ *
+ *  **OS のエラーはそのまま返さない。** `ENOENT: ... rename '/home/<user>/.aiko/...'` を
+ *  返すと、利用者名・ホームの構造・一時ファイル名がクライアントへ渡る（公開前
+ *  レビューで実測）。何が起きたかだけを返し、詳細は stderr に残す。 */
 function reasonOf(err: unknown): string {
   if (err instanceof RuntimeSdkError) return err.userMessage;
+  if (err instanceof Error && typeof (err as NodeJS.ErrnoException).code === "string") {
+    process.stderr.write(`aiko-mcp: ${err.message}\n`);
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EACCES" || code === "EPERM") return "書き込む権限がありません";
+    if (code === "ENOSPC") return "保存先の空き容量がありません";
+    return "ファイルの読み書きに失敗しました";
+  }
   return err instanceof Error ? err.message : String(err);
 }
 

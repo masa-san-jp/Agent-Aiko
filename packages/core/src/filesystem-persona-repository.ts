@@ -195,9 +195,22 @@ export class FileSystemPersonaRepository implements PersonaRepository {
 /** 人格名として使ってよい形か。区切り文字を含むものは、その時点でパスの指定になる。
  *  許すのは英数字・ハイフン・アンダースコア・ドットのみで、`.` から始まるものは除く
  *  （`..` を弾くため）。 */
+/** Windows が特別扱いする名前。ディレクトリとして作れず、作ろうとすると
+ *  「その名前は使えません」ではなく分かりにくいエラーになる。配る物なので、
+ *  自分の環境で通ることは根拠にならない（2026-08-02 の公開前レビューで指摘）。 */
+const RESERVED = new Set([
+  "CON", "PRN", "AUX", "NUL",
+  "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+  "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+]);
+
 export function isSafePersonaName(name: string): boolean {
   if (name.length === 0 || name.length > 128) return false;
   if (name.startsWith(".")) return false;
+  // 末尾のドットは Windows で落ちる。`aiko.` と `aiko` が同じものになるので、
+  // 別の人格のつもりで作ったものが既存を指す。
+  if (name.endsWith(".")) return false;
+  if (RESERVED.has(name.toUpperCase())) return false;
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
 }
 
