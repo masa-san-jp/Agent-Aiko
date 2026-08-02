@@ -16,6 +16,9 @@ import { CapabilityRegistry, type ResolvedCapabilities } from "@agent-aiko/capab
 /** Runtime Profile の現行 schema_version。 */
 export const RUNTIME_PROFILE_SCHEMA_VERSION = 1;
 
+/** provenance に載せる版。合成の手順が変わったことを、あとから見分けられるように。 */
+export const BINDER_VERSION = "0.1.0";
+
 export type RuntimeId = "claude-code" | "codex" | "antigravity-cli" | "generic-mcp-host";
 
 /** §8.5 で実測した注入手段だけを値に持つ。未検証の手段を Profile に名乗らせない。 */
@@ -52,6 +55,16 @@ export interface RuntimeProfile {
   runtime: { id: RuntimeId; consistency_level: 0 | 1 | 2; injection_method: InjectionMethod };
   instructions: string;
   excluded_capabilities: Array<{ id: string; reason: string }>;
+  /** この Profile が何から作られたか（§5.2 / Threat Model §5-7）。
+   *  人格がすり替わっていないかを、あとから照合できるようにするための記録。 */
+  provenance: {
+    created_at: string;
+    binder_version: string;
+    compiler_version: string;
+    persona_package_hash: string;
+    persona_sources: Array<{ part: string; location: string }>;
+    capability_manifest_hash?: string;
+  };
   /** 応答の機械判定に使う宣言（R7 仕様書 §6）。validateResponse の唯一の照合元。
    *  人格も利用者も何も宣言していなければ持たない——空の契約を作ると、
    *  「何も決まっていない」と「全部合格した」が見分けられなくなる。 */
@@ -74,17 +87,21 @@ export interface BinderOptions {
   personaRepository: PersonaRepository;
   capabilityRegistry?: CapabilityRegistry;
   currentSchemaVersion?: number;
+  /** 時刻。provenance の created_at に使う。検証で固定できるようにしてある。 */
+  clock?: () => Date;
 }
 
 export class RuntimeProfileBinder {
   readonly #personas: PersonaRepository;
   readonly #capabilities: CapabilityRegistry;
   readonly #currentSchemaVersion: number;
+  readonly #now: () => Date;
 
   constructor(options: BinderOptions) {
     this.#personas = options.personaRepository;
     this.#capabilities = options.capabilityRegistry ?? new CapabilityRegistry();
     this.#currentSchemaVersion = options.currentSchemaVersion ?? RUNTIME_PROFILE_SCHEMA_VERSION;
+    this.#now = options.clock ?? (() => new Date());
   }
 
   async bind(request: BindingRequest, user: ResolvedUserContext): Promise<RuntimeProfile> {
@@ -143,6 +160,18 @@ export class RuntimeProfileBinder {
     // 人格ではなく利用者に属するので、人格側の宣言では決まらない。
     const responseContract = mergeResponseContract(persona.responseContract, user.context);
 
+    // 適用した人格そのものの checksum。合成結果ではなく**材料**を指す。
+    // Threat Model T2（Persona Package のすり替え）は、合成後の hash だけでは
+    // 検知できない——材料が変わっても合成の手順は同じだから。
+    const personaPackageHash = hashObject({
+      id: persona.id,
+      version: persona.version,
+      identityCore: persona.identityCore,
+      invariants: persona.invariants,
+      behavioralContract: persona.behavioralContract,
+      ...(persona.responseContract ? { responseContract: persona.responseContract } : {}),
+    });
+
     const profileHash = hashObject({
       instructions: compiled.instructions,
       runtime: { id: request.runtime.id, consistency_level: level, injection_method: injection },
@@ -164,6 +193,19 @@ export class RuntimeProfileBinder {
       instructions: compiled.instructions,
       excluded_capabilities: capabilities.excluded,
       ...(responseContract ? { response_contract: responseContract } : {}),
+      provenance: {
+        created_at: this.#now().toISOString(),
+        binder_version: BINDER_VERSION,
+        compiler_version: BINDER_VERSION,
+        persona_package_hash: personaPackageHash,
+        persona_sources: persona.sources.map((src) => ({
+          part: src.part,
+          location: src.location,
+        })),
+        ...(request.capabilityManifest === undefined
+          ? {}
+          : { capability_manifest_hash: hashObject(request.capabilityManifest) }),
+      },
     };
   }
 
