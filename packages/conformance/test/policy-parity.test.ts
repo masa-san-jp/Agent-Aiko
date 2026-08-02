@@ -206,23 +206,19 @@ test("profileRef に人格情報を紛れ込ませると受け付けない", asy
   }
 });
 
-test("Policy Engine を登録していなければ、その旨を返す", async () => {
+test("Policy Engine を登録していなければ、その口を出さない", async () => {
   const server = createAikoServer({ personaRepository: repo, user, clock });
   const client = new Client({ name: "policy-parity", version: "0" });
   const [c, s] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(s), client.connect(c)]);
   try {
-    const result = (await client.callTool({
-      name: "aiko.evaluate_action",
-      arguments: evaluateRequest as unknown as Record<string, unknown>,
-    })) as { content: Array<{ text: string }> };
-    const payload = JSON.parse(result.content[0]?.text ?? "null") as {
-      evaluated?: boolean;
-      reason?: string;
-    };
+    // 一覧に出しておいて必ず「使えません」と返すより、出さないほうが正直。
+    // 出すと、クライアントの一覧と文脈を占めたうえで毎回失敗する。
+    const tools = await client.listTools();
+    const names = tools.tools.map((t) => t.name);
     assert.deepEqual(
-      [payload.evaluated, payload.reason?.includes("この起動では利用できません")],
-      [false, true],
+      names.filter((n) => n === "aiko.evaluate_action" || n === "aiko.validate_response"),
+      [],
     );
   } finally {
     await client.close();

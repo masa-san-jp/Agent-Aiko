@@ -7,8 +7,9 @@
 // 書き込みはすべて一時ファイル経由の置き換え。インストーラー版と MCP 版が
 // 同じ場所を見るので、書いている途中を読む経路が実在する。
 
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { randomUUID } from "node:crypto";
+import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { isSafePersonaName } from "./filesystem-persona-repository.js";
 import { assertWithinLimit } from "./limits.js";
 
@@ -28,12 +29,26 @@ async function readOptional(path: string): Promise<string | undefined> {
   return readFile(path, "utf8").catch(() => undefined);
 }
 
-/** 置き換え方式で書く。途中の状態を他方に読ませない。 */
+/** 置き換え方式で書く。途中の状態を他方に読ませない。
+ *
+ *  **一時ファイル名は呼び出しごとに変える。** プロセス番号だけで決めると、
+ *  同じプロセス内の並行呼び出しが同じ一時ファイルを取り合い、片方の rename の後に
+ *  もう片方が書いて、壊れたファイルが残る（公開前レビューで実測: 3並行×5回、
+ *  5回ともデータが消え、1回はファイルが途中で千切れた）。
+ *
+ *  basename を使うのは Windows のため。`split("/")` だと区切りが `\` の環境で
+ *  パス全体が名前になり、`:` を含む不正なファイル名になる。 */
 async function writeAtomic(path: string, text: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const temp = join(dirname(path), `.tmp-${process.pid}-${path.split("/").pop() ?? "f"}`);
-  await writeFile(temp, text, { mode: 0o600 });
-  await rename(temp, path);
+  const temp = join(dirname(path), `.tmp-${randomUUID()}-${basename(path)}`);
+  try {
+    await writeFile(temp, text, { mode: 0o600 });
+    await rename(temp, path);
+  } catch (err) {
+    // 失敗しても一時ファイルを残さない。次の読み手が拾う余地を作らない。
+    await rm(temp, { force: true }).catch(() => undefined);
+    throw err;
+  }
 }
 
 export async function readMode(aikoHome: string): Promise<"origin" | "override"> {
@@ -105,7 +120,14 @@ export async function savePersona(
   }
   assertWithinLimit("personaPackage", content);
 
-  const path = join(aikoHome, "persona", "overrides", name, "persona.md");
+  const dir = join(aikoHome, "persona", "overrides", name);
+  // 置き場が symlink だと、書き込みがその先へ抜ける。~/.aiko の外へ書けてしまうので、
+  // リンクなら断る（消す側は rm がリンク自体を外すので問題ない。実測済み）。
+  const info = await lstat(dir).catch(() => undefined);
+  if (info?.isSymbolicLink() === true) {
+    throw new PersonaStoreError(`${name} はリンクです。実体のある場所に作り直してください`);
+  }
+  const path = join(dir, "persona.md");
   await writeAtomic(path, content.endsWith("\n") ? content : `${content}\n`);
   return path;
 }
@@ -119,8 +141,15 @@ export async function deletePersona(aikoHome: string, name: string): Promise<voi
   if ((await stat(dir).catch(() => undefined)) === undefined) {
     throw new PersonaStoreError(`人格 ${name} がありません`);
   }
+  // 人格であることを確かめてから消す。名前が通るだけで中身を見ないと、
+  // overrides の下に置かれた別のディレクトリを丸ごと消せてしまう。
+  if ((await readOptional(join(dir, "persona.md"))) === undefined) {
+    throw new PersonaStoreError(`${name} は人格ではありません（persona.md がありません）`);
+  }
   if ((await readActivePersona(aikoHome)) === name) {
     await writeAtomic(join(aikoHome, "mode"), "origin\n");
+    // 指定も消す。残すと、次に override へ切り替えたとき無い人格を指す。
+    await writeAtomic(join(aikoHome, "active-persona"), "\n");
   }
   await rm(dir, { recursive: true, force: true });
 }
