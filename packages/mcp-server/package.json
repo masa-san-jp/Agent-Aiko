@@ -1,6 +1,6 @@
 {
   "name": "aiko-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "アイコの人格を、どの AI エージェントからでも同じ形で取り出せる MCP サーバー",
   "type": "module",
   "engines": {
