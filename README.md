@@ -29,7 +29,7 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 - 同じ人格定義（`persona/origin/persona.md` / `INVARIANTS.md`）と同じ操作感（`/aiko-or` `/aiko-mode` `/aiko-diff` 等の slash command）
 - **人格データの単一情報源**（`~/.aiko/`）を共有できます。
 
-上の 3 版とは別に、**MCP 対応のクライアントならどれでも使える [Aiko-MCP](#aiko-mcpmcp-サーバー) があります。**インストール不要で、設定に 1 行足すだけです。
+上の 3 版とは別に、**MCP 対応のクライアントならどれでも使える [Aiko-MCP](#aiko-mcpmcp-サーバー) があります。**インストール不要で、コマンド 1 回です。
 
 ---
 
@@ -37,7 +37,36 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 
 [![npm](https://img.shields.io/npm/v/aiko-mcp)](https://www.npmjs.com/package/aiko-mcp)
 
-MCP に対応したクライアント（Claude Code / Cursor など）なら、**設定に 1 行足すだけ**でアイコと話せます。インストーラを実行する必要はありません。
+MCP に対応したクライアントなら、**コマンドを 1 回打つだけ**でアイコと話せます。インストーラの実行も、設定ファイルの編集も要りません。
+
+### 入れる
+
+お使いのクライアントの行をコピーして実行してください。
+
+| クライアント | コマンド |
+|---|---|
+| **Claude Code** | `claude mcp add aiko -- npx -y aiko-mcp` |
+| **Codex CLI** | `codex mcp add aiko -- npx -y aiko-mcp` |
+| **VS Code** | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
+
+Claude Code で**すべてのプロジェクトから使いたい**場合は `-s user` を付けます。
+
+```bash
+claude mcp add aiko -s user -- npx -y aiko-mcp
+```
+
+入ったかどうかは `claude mcp list`（Codex は `codex mcp list`）で確認できます。`aiko ... ✔ Connected` と出れば完了です。
+
+### ボタンで入れる
+
+クリックするとクライアントが開いて、確認だけで入ります。
+
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Aiko-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22aiko%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22aiko-mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_Aiko-000000?logo=cursor&logoColor=white)](cursor://anysphere.cursor-deeplink/mcp/install?name=aiko&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImFpa28tbWNwIl19)
+
+### 設定ファイルを直接書く場合
+
+上のコマンドが使えないクライアント（Claude Desktop など）では、MCP 設定へ次を足してください。
 
 ```json
 {
@@ -47,7 +76,9 @@ MCP に対応したクライアント（Claude Code / Cursor など）なら、*
 }
 ```
 
-人格はパッケージに同梱されているので、**何も用意しなくてもアイコとして立ち上がります。**
+### 前提
+
+Node.js 20 以上だけです（`npx` は Node.js に同梱されています）。人格はパッケージに同梱されているので、**何も用意しなくてもアイコとして立ち上がります。**
 
 ### 会話でできること
 
@@ -73,7 +104,7 @@ MCP に対応したクライアント（Claude Code / Cursor など）なら、*
 
 | | Aiko-MCP | インストーラ版 |
 |---|---|---|
-| 導入 | 設定に 1 行 | インストーラを実行 |
+| 導入 | コマンド 1 回 | インストーラを実行 |
 | 対象 | MCP 対応クライアント全般 | Claude Code / Codex / Gemini CLI |
 | slash command | なし（会話で操作） | あり（`/aiko-or` など） |
 | hooks | なし | あり |
