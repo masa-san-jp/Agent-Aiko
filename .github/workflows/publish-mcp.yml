@@ -98,10 +98,13 @@ jobs:
         working-directory: packages/mcp-server
         run: npm publish --access public
 
+      # 名前も版も package.json から取る。ここだけ名前を書き写すと、名前を変えた
+      # ときに古いほうを見に行って「公開できていない」と誤って落ちる。
       - name: npm に載ったか確かめる
         run: |
+          name=$(node -p "require('./packages/mcp-server/package.json').name")
           version=$(node -p "require('./packages/mcp-server/package.json').version")
-          npm view "aiko-mcp@${version}" version
+          npm view "${name}@${version}" version
 
       # 版を固定して照合する。latest を引くと、こちらが何も変えていないのに
       # 上流の更新だけで動きが変わる。**その差分は誰もレビューしない**。
@@ -128,15 +131,17 @@ jobs:
       # 見分けがつかない。読んでから中身で確かめる。
       - name: レジストリに載ったか確かめる
         run: |
-          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.masa-san-jp/aiko" -o found.json
+          name=$(node -p "require('./packages/mcp-server/package.json').mcpName")
+          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=${name}" -o found.json
           node -e '
-            const want = require("./packages/mcp-server/package.json").version;
+            const pkg = require("./packages/mcp-server/package.json");
+            const want = pkg.version;
             const { servers = [] } = require("./found.json");
-            const mine = servers.filter((s) => (s.name ?? s.server?.name) === "io.github.masa-san-jp/aiko");
+            const mine = servers.filter((s) => (s.name ?? s.server?.name) === pkg.mcpName);
             const versions = mine.map((s) => s.version ?? s.server?.version);
             if (!versions.includes(want)) {
               console.error(`${want} が見つかりません。返ってきたもの: ${JSON.stringify(versions)}`);
               process.exit(1);
             }
-            console.log(`登録を確認: io.github.masa-san-jp/aiko ${want}`);
+            console.log(`登録を確認: ${pkg.mcpName} ${want}`);
           '
