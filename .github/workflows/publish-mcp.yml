@@ -1,14 +1,19 @@
-name: Publish to MCP Registry
+name: Publish to npm and MCP Registry
 
-# npm に出したものを、公式 MCP レジストリの一覧に載せる。
+# タグを打つと、npm へ公開し、その版を公式 MCP レジストリの一覧に載せる。
 #
-# レジストリが持つのはメタ情報だけで、実体は npm にある。**先に npm へ出ていないと
-# 登録は通らない**（レジストリが package.json の mcpName を見に行って、名前の
-# 持ち主かどうかを確かめるため）。だから最初に npm 側の存在を確認してから進む。
+# npm 側の認証は trusted publishing（OIDC）。**トークンを一切置かない。**
+# 2026-07-31 に npm は 2FA をバイパスする granular token の権限を絞り、2027-01 には
+# 直接公開もできなくなる予定になった。長命なトークンを持ち続ける形は行き止まりなので、
+# 「この repo のこの workflow から出た job だ」と GitHub が証明する方式へ移す。
+# 副産物として provenance（どのコードから作られたかの証明）が自動で付く。
 #
-# 認証は GitHub OIDC。この repo から出た job であることを GitHub が証明するので、
-# トークンも鍵も repo に置かなくて済む。io.github.masa-san-jp/ で始まる名前だけを
-# 名乗れる（それが OIDC で証明できる範囲）。
+# レジストリ側も同じ OIDC。名前空間 io.github.masa-san-jp/ を名乗れる根拠がそれ。
+#
+# npmjs.com 側に1度だけ設定が要る（package settings > Trusted Publisher）:
+#   Organization or user: masa-san-jp / Repository: Agent-Aiko
+#   Workflow filename: publish-mcp.yml / Allowed actions: npm publish
+# **このファイル名を変えると公開が止まる**（npm 側は名前で照合している）。
 
 on:
   push:
@@ -17,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: '登録するタグ（例: v0.2.0）'
+        description: '公開するタグ（例: v0.2.0）'
         required: true
 
 jobs:
@@ -25,7 +30,7 @@ jobs:
     name: publish
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # OIDC の署名に要る
+      id-token: write   # OIDC。npm・レジストリ双方の認証がこれだけで済む
       contents: read
 
     steps:
@@ -34,13 +39,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
-      # 先に npm を見る。出ていないまま登録すると、一覧から辿れない項目ができる。
-      - name: npm に版が出ているか確かめる
-        run: |
-          version=$(node -p "require('./packages/mcp-server/package.json').version")
-          echo "aiko-mcp@${version} を探します"
-          npm view "aiko-mcp@${version}" version
-
+      # 食い違ったまま公開すると、一覧に出ても実体へ辿れない項目ができる。先に見る。
       - name: server.json と package.json の食い違いが無いか確かめる
         working-directory: packages/mcp-server
         run: |
@@ -56,6 +55,56 @@ jobs:
             }
             if (mismatch.length) { console.error(mismatch.join("\n")); process.exit(1); }
           '
+
+      # trusted publishing は npm 11.5.1 以上・Node 22.14 以上。24 系を使う。
+      # package-manager-cache: false は npm の要求（キャッシュを挟むと OIDC が通らない）。
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: 版の前提を満たしているか確かめる
+        run: |
+          echo "node $(node -v) / npm $(npm -v)"
+          node -e '
+            const [maj, min, pat] = process.versions.node.split(".").map(Number);
+            if (maj < 22 || (maj === 22 && (min < 14))) {
+              console.error(`Node 22.14 以上が要る: ${process.versions.node}`);
+              process.exit(1);
+            }
+          '
+          npm_v=$(npm -v)
+          node -e '
+            const [maj, min, pat] = process.argv[1].split(".").map(Number);
+            const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && pat >= 1)));
+            if (!ok) { console.error(`npm 11.5.1 以上が要る: ${process.argv[1]}`); process.exit(1); }
+          ' "$npm_v"
+
+      - name: Install
+        run: npm ci
+
+      # 落ちたものを配らない。タグに対してもう一度通す。
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      # NODE_AUTH_TOKEN は渡さない。渡すとトークン認証が優先されて OIDC が使われない。
+      # prepack がビルドするので、ここで別途 build は要らない。
+      - name: npm へ公開
+        working-directory: packages/mcp-server
+        run: npm publish --access public
+
+      # 名前も版も package.json から取る。ここだけ名前を書き写すと、名前を変えた
+      # ときに古いほうを見に行って「公開できていない」と誤って落ちる。
+      - name: npm に載ったか確かめる
+        run: |
+          name=$(node -p "require('./packages/mcp-server/package.json').name")
+          version=$(node -p "require('./packages/mcp-server/package.json').version")
+          npm view "${name}@${version}" version
 
       # 版を固定して照合する。latest を引くと、こちらが何も変えていないのに
       # 上流の更新だけで動きが変わる。**その差分は誰もレビューしない**。
@@ -74,23 +123,25 @@ jobs:
       - name: レジストリへログイン（OIDC）
         run: ./mcp-publisher login github-oidc
 
-      - name: 登録
+      - name: レジストリへ登録
         working-directory: packages/mcp-server
         run: ../../mcp-publisher publish
 
       # 応答を grep しない。整形が変わるだけで落ちる検査は、登録の失敗と
       # 見分けがつかない。読んでから中身で確かめる。
-      - name: 載ったか確かめる
+      - name: レジストリに載ったか確かめる
         run: |
-          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.masa-san-jp/aiko" -o found.json
+          name=$(node -p "require('./packages/mcp-server/package.json').mcpName")
+          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=${name}" -o found.json
           node -e '
-            const want = require("./packages/mcp-server/package.json").version;
+            const pkg = require("./packages/mcp-server/package.json");
+            const want = pkg.version;
             const { servers = [] } = require("./found.json");
-            const mine = servers.filter((s) => (s.name ?? s.server?.name) === "io.github.masa-san-jp/aiko");
+            const mine = servers.filter((s) => (s.name ?? s.server?.name) === pkg.mcpName);
             const versions = mine.map((s) => s.version ?? s.server?.version);
             if (!versions.includes(want)) {
               console.error(`${want} が見つかりません。返ってきたもの: ${JSON.stringify(versions)}`);
               process.exit(1);
             }
-            console.log(`登録を確認: io.github.masa-san-jp/aiko ${want}`);
+            console.log(`登録を確認: ${pkg.mcpName} ${want}`);
           '
