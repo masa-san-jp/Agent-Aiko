@@ -15,6 +15,9 @@ import { CapabilityRegistry } from "@agent-aiko/capability-registry";
 import {
   createRuntimeSdk,
   EvaluateActionRequestSchema,
+  readUserMarkdown,
+  userMarkdownCandidates,
+  writeUserMarkdown,
   RuntimeSdkError,
   SemanticBudget,
   ValidateResponseRequestSchema,
@@ -39,6 +42,9 @@ export interface AikoServerDeps {
   user: ResolvedUserContext;
   personaId?: string;
   profileStore?: ProfileStore;
+  /** user.md の置き場（~/.aiko）。渡さないと覚える口を出さない——
+   *  どこへ書くか分からないまま「覚えた」と言えてしまうのを避ける。 */
+  aikoHome?: string;
   /** Policy Engine / Response Validator の設定。渡さなければ両 Tool は
    *  「この起動では使えない」と返す（R7 §9）。 */
   policy?: CreateRuntimeSdkOptions["policy"];
@@ -342,6 +348,46 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       }
     },
   );
+
+  // 呼び名や記憶の場所を、会話の中で覚える口。**利用者に手でファイルを作らせない**
+  // ための道具（マサさん指定 2026-08-02）。書くのは ~/.aiko の中だけで、
+  // 配布物side（同梱人格・不変条項）には触れない。
+  if (deps.aikoHome) {
+    const aikoHome = deps.aikoHome;
+    server.registerTool(
+      "aiko.remember_user",
+      {
+        title: "呼び名や記憶の場所を覚える",
+        description:
+          "ユーザーが「〇〇と呼んで」「記憶は〇〇にある」と言ったときに使う。~/.aiko/user.md へ書く。記憶は場所を控えるだけで、中身は読まない",
+        inputSchema: {
+          name: z.string().min(1).optional(),
+          address: z.string().min(1).optional(),
+          memory: z.string().min(1).optional(),
+        },
+      },
+      async ({ name, address, memory }) => {
+        if (name === undefined && address === undefined && memory === undefined) {
+          return json({ remembered: false, reason: "覚える内容がありません" }, true);
+        }
+        const target = userMarkdownCandidates(aikoHome)[0] as string;
+        try {
+          // 既にあるものを消さない。今回言われた項目だけを重ねる。
+          const current = (await readUserMarkdown([target]))?.user ?? {};
+          const next = {
+            ...current,
+            ...(name !== undefined ? { name } : {}),
+            ...(address !== undefined ? { address } : {}),
+            ...(memory !== undefined ? { memory } : {}),
+          };
+          await writeUserMarkdown(target, next);
+          return json({ remembered: true, path: target, user: next });
+        } catch (err) {
+          return json({ remembered: false, reason: reasonOf(err) }, true);
+        }
+      },
+    );
+  }
 
   server.registerTool(
     "aiko.report_capabilities",

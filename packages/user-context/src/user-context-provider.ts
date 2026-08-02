@@ -10,6 +10,7 @@
 
 import { readFile } from "node:fs/promises";
 import { byteLength, checkSchemaVersion, INPUT_LIMITS, type UserContext } from "@agent-aiko/core";
+import type { UserMarkdown } from "./user-markdown.js";
 
 /** User Profile の現行 schema_version。増やすときは §10.3.1 の受理範囲も動く。 */
 export const USER_PROFILE_SCHEMA_VERSION = 1;
@@ -72,6 +73,23 @@ export class UserContextProvider {
       throw new UserProfileError("User Profile を JSON として読めません", { path });
     }
     return this.resolve(parsed, path);
+  }
+
+  /** user.md を重ねる。**user.md が書いている項目だけ**を上書きする。
+   *  user.md は会話でアイコが書くもの、JSON は `aiko configure` が書くもので、
+   *  どちらも消さずに済むようにこの形にした（片方を無視すると、設定したのに
+   *  効かない項目ができる）。 */
+  withMarkdown(base: ResolvedUserContext, md: UserMarkdown): ResolvedUserContext {
+    const preferredName = md.address ?? md.name;
+    return {
+      ...base,
+      context: {
+        ...base.context,
+        ...(preferredName ? { preferredName } : {}),
+      },
+      // 記憶は場所の参照だけ。中身はここでも下流でも開かない（§1.3）。
+      ...(md.memory ? { memoryNamespace: md.memory } : {}),
+    };
   }
 
   /** 読み込み済みの値から解決する。検証はここに集約する。 */

@@ -38,6 +38,7 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
       "aiko.evaluate_action",
       "aiko.get_runtime_profile",
       "aiko.health",
+      "aiko.remember_user",
       "aiko.report_capabilities",
       "aiko.validate_response",
     ]);
