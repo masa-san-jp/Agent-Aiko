@@ -1,14 +1,60 @@
-# @agent-aiko/mcp-server
+# aiko-mcp
 
-Aiko-MCP の stdio MCP サーバー。設計書 [`docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md`](../../docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md) §7 / §15 Phase 3 に対応する。
+アイコの人格を、どの AI エージェントからでも同じ形で取り出せる MCP サーバー。
 
-設計書が唯一の正本。
+使う人の端末の中で動く。人格もユーザー情報も端末の外へ出ないし、サーバーを別に立てる必要もない。
 
-## 起動
+## 使い方
+
+MCP の設定へ1行足すだけ。
+
+```json
+{
+  "mcpServers": {
+    "aiko": { "command": "npx", "args": ["-y", "aiko-mcp"] }
+  }
+}
+```
+
+人格は同梱されているので、何も用意しなくてもアイコとして立ち上がる。
+
+## 覚えてもらう
+
+呼び名や記憶の場所は、**話しかけるだけ**で覚える。ファイルを手で作る必要はない。
+
+```
+「たろうって呼んで」          → 呼び名を覚える
+「記憶は ~/notes にある」     → 場所を控える（中身は読まない）
+「自分用の人格を保存して」     → 独自人格として保存する
+「オリジナルに戻して」        → 元の人格へ戻る
+```
+
+覚えたものは `~/.aiko` に置かれる。**その端末のその人のものだけ**で、他の利用者には届かない。
+
+## 人格を自分用にする
+
+同梱されているのはオリジナルのアイコ1人。自分用の人格はいくつでも作れて、切り替えられる。
+
+オリジナルの人格と不変条項は書き換えられない（不変条項 I-5）。書き換えたい場合は別名で保存する。
+
+## 設定
+
+| 環境変数 | 既定 | 意味 |
+|---|---|---|
+| `AIKO_HOME` | `~/.aiko` | 人格やユーザー情報の場所 |
+| `AIKO_PERSONA_ID` | `aiko` | 読み込む人格の識別子 |
+| `AIKO_USER_PROFILE` | なし | User Profile（JSON）のパス。未指定なら `user_id: default` |
+
+## 開発
+
+このリポジトリの中から動かす場合。
 
 ```bash
+npm run build -w aiko-mcp
 node packages/mcp-server/dist/server.js
 ```
+
+設計書 [`docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md`](../../docs/20260730-aiko-mcp-usage-distribution-maintenance-design.md) §7 / §15 Phase 3 に対応する。設計書が唯一の正本。
 
 | 環境変数 | 既定 | 意味 |
 |---|---|---|
