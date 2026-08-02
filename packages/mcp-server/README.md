@@ -6,7 +6,21 @@
 
 ## 入れる
 
-使っているクライアントの行をコピーして実行する。設定ファイルを開く必要はない。
+使っているクライアントを自動で探して設定を書く。
+
+```bash
+npx aiko-mcp install
+```
+
+対応は Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop。入っていないクライアントには何もしない。既にある設定は残し、書き換える前に控え（`.aiko-bak-*`）を取る。
+
+| オプション | 意味 |
+|---|---|
+| `--dry-run` | 何を書くかだけ表示して、実際には書かない |
+| `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
+| `--force` | 同じ名前で違う設定が入っていても置き換える |
+
+自動で入れたくないなら、使っているクライアントの行をコピーして実行する。
 
 | クライアント | コマンド |
 |---|---|
@@ -16,7 +30,7 @@
 
 Claude Code ですべてのプロジェクトから使うなら `-s user` を付ける。確認は `claude mcp list`（Codex は `codex mcp list`）。
 
-コマンドが無いクライアント（Claude Desktop など）は MCP 設定へ直接足す。
+コマンドが無いクライアントは MCP 設定へ直接足す。
 
 ```json
 {
