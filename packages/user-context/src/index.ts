@@ -9,3 +9,11 @@ export {
 } from "./user-context-provider.js";
 
 export { defaultUserProfilePath, resolveUserProfilePath } from "./user-profile-path.js";
+export {
+  parseUserMarkdown,
+  readUserMarkdown,
+  renderUserMarkdown,
+  userMarkdownCandidates,
+  writeUserMarkdown,
+  type UserMarkdown,
+} from "./user-markdown.js";
