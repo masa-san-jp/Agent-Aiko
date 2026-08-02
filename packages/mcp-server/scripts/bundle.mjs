@@ -55,4 +55,9 @@ for (const entry of await readdir(dist)) {
   await rm(join(dist, entry), { recursive: true, force: true });
 }
 
+// tsc の「もう作ってある」という記録も消す。**出力を tsc の背中越しに消しているので、
+// 記録を残すと次のビルドが何も出さない**——型定義が消えたまま復活せず、
+// それを使う側の型検査だけが落ちる（実際にこの状態になった）。
+await rm(join(pkg, "tsconfig.tsbuildinfo"), { force: true });
+
 console.log("[bundle] dist/server.js, dist/index.js（他は削除）");

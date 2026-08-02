@@ -104,6 +104,18 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           cat SHA256SUMS
 
+      # SBOM。何が入っているかを機械可読で添える（Threat Model §5-3）。
+      # 依存の汚染（T7）が起きたとき、影響範囲を「入っているかどうか」で引けるようにする。
+      # npm 標準の出力なので追加の道具を入れない。
+      - name: Build SBOM
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npm sbom --sbom-format spdx --omit dev > "dist-release/${{ steps.archive.outputs.name }}.spdx.json"
+          node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" \
+            "dist-release/${{ steps.archive.outputs.name }}.spdx.json"
+          ls -la dist-release/
+
       # 署名。GitHub の attestation は鍵の管理が要らず、「この成果物はこのリポジトリの
       # このワークフローが作った」を後から検証できる（`gh attestation verify`）。
       # 設計書 §11.4 の signed tag は別途 GPG 鍵が要るため、本工程には含めない。
@@ -161,6 +173,7 @@ jobs:
           # shellcheck disable=SC2086
           gh release create "$tag" \
             "dist-release/${name}.tar.gz" \
+            "dist-release/${name}.spdx.json" \
             dist-release/SHA256SUMS \
             --repo "${{ github.repository }}" \
             --title "$tag" \

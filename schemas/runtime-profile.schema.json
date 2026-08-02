@@ -143,6 +143,30 @@
         },
         "capability_manifest_hash": {
           "$ref": "#/$defs/sha256"
+        },
+        "persona_package_hash": {
+          "$ref": "#/$defs/sha256",
+          "description": "適用された Persona Package の checksum。Threat Model §5-7「provenance から適用された Persona Package の checksum が辿れる」。人格がすり替わっていないかを、あとから照合できるようにする。"
+        },
+        "persona_sources": {
+          "type": "array",
+          "description": "人格をどのファイルから読んだか。すり替えの調査は「どこから読んだか」が分からないと始まらない。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "part",
+              "location"
+            ],
+            "properties": {
+              "part": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
