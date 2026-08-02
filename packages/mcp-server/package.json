@@ -6,12 +6,12 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "dist/index.js",
   "bin": {
     "aiko-mcp": "dist/server.js"
   },
   "files": [
-    "dist",
+    "dist/server.js",
+    "dist/index.js",
     "persona",
     "README.md",
     "LICENSE"
@@ -45,5 +45,7 @@
     "aiko",
     "persona",
     "ai-agent"
-  ]
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
 }

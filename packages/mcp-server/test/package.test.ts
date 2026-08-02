@@ -8,7 +8,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,11 +38,56 @@ test("社内 package を依存として要求しない", () => {
   assert.deepEqual(internal, []);
 });
 
-test("配布物の中身に社内 package の名前が残っていない", () => {
-  // 依存の宣言を消しても、bundle し損ねていれば実行時に落ちる。
-  // 落ちるのは利用者の環境なので、こちらで見つける。
-  const bundled = readFileSync(join(pkgRoot, "dist", "server.js"), "utf8");
-  assert.equal(bundled.includes("@agent-aiko/"), false);
+/** 実際に配る中身。files の指定どおりに集める。 */
+function shippedFiles(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) walk(full);
+      else out.push(full);
+    }
+  };
+  for (const rel of manifest.files ?? []) {
+    const full = join(pkgRoot, rel);
+    if (!existsSync(full)) continue;
+    if (statSync(full).isDirectory()) walk(full);
+    else out.push(full);
+  }
+  return out;
+}
+
+test("配る中身のどれにも社内 package の名前が残っていない", () => {
+  // 依存の宣言を消しても、bundle し損ねていれば実行時に落ちる。落ちるのは
+  // 利用者の環境なので、こちらで見つける。**1ファイルだけ見ても足りない**——
+  // bundle していない tsc 出力が dist に残っていて、そこに import が生きていた
+  // （2026-08-02 の公開前確認で発見）。
+  const offenders = shippedFiles().filter((f) =>
+    readFileSync(f, "utf8").includes("@agent-aiko/"),
+  );
+  assert.deepEqual(offenders.map((f) => f.replace(pkgRoot, "")), []);
+});
+
+test("配る中身に個人名が入っていない", () => {
+  // ソースのコメントには開発の内輪の記述が入る。bundle していない出力や source map を
+  // 配ると、それがそのまま外へ出る（source map には元のソースが丸ごと埋まる）。
+  //
+  // **エスケープを戻してから見る。** JSON は日本語を \uXXXX で書くので、生の文字列で
+  // 探すと map の中の名前を素通しする。最初その形で書いて、通ってしまった。
+  const offenders = shippedFiles().filter((f) => {
+    const raw = readFileSync(f, "utf8");
+    const decoded = raw.replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    );
+    return /マサ(さん|くん)/.test(decoded);
+  });
+  assert.deepEqual(offenders.map((f) => f.replace(pkgRoot, "")), []);
+});
+
+test("配るのは bundle した2本だけ", () => {
+  // 型定義は手元に残す（他 package の型検査が使う）。**配る範囲は files で絞る**。
+  const shipped = (manifest.files ?? []).filter((f) => f.startsWith("dist/")).sort();
+  assert.deepEqual(shipped, ["dist/index.js", "dist/server.js"]);
 });
 
 test("人格を同梱している", () => {
@@ -59,7 +104,8 @@ test("同梱するものを files で絞っている", () => {
   assert.deepEqual([...(manifest.files ?? [])].sort(), [
     "LICENSE",
     "README.md",
-    "dist",
+    "dist/index.js",
+    "dist/server.js",
     "persona",
   ]);
 });
