@@ -85,8 +85,9 @@ test("配る中身に個人名が入っていない", () => {
 });
 
 test("配るのは bundle した2本だけ", () => {
-  const dist = readdirSync(join(pkgRoot, "dist")).sort();
-  assert.deepEqual(dist, ["index.js", "server.js"]);
+  // 型定義は手元に残す（他 package の型検査が使う）。**配る範囲は files で絞る**。
+  const shipped = (manifest.files ?? []).filter((f) => f.startsWith("dist/")).sort();
+  assert.deepEqual(shipped, ["dist/index.js", "dist/server.js"]);
 });
 
 test("人格を同梱している", () => {
@@ -103,7 +104,8 @@ test("同梱するものを files で絞っている", () => {
   assert.deepEqual([...(manifest.files ?? [])].sort(), [
     "LICENSE",
     "README.md",
-    "dist",
+    "dist/index.js",
+    "dist/server.js",
     "persona",
   ]);
 });

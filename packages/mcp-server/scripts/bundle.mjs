@@ -46,10 +46,12 @@ for (const [entry, out] of [
 // （2026-08-02 の公開前確認で発見）。
 //
 // 配るのは bundle した2本とその map だけ。
-const keep = new Set(["server.js", "index.js"]);
+// 型定義（.d.ts）は消さない。**配らないだけで、手元では要る**——他の package の
+// 型検査がこれを見る。配る範囲は package.json の files で絞ってある。
 const dist = join(pkg, "dist");
 for (const entry of await readdir(dist)) {
-  if (keep.has(entry)) continue;
+  if (entry.endsWith(".d.ts") || entry.endsWith(".d.ts.map")) continue;
+  if (entry === "server.js" || entry === "index.js") continue;
   await rm(join(dist, entry), { recursive: true, force: true });
 }
 
