@@ -57,9 +57,18 @@ jobs:
             if (mismatch.length) { console.error(mismatch.join("\n")); process.exit(1); }
           '
 
+      # 版を固定して照合する。latest を引くと、こちらが何も変えていないのに
+      # 上流の更新だけで動きが変わる。**その差分は誰もレビューしない**。
+      # 値は上流の registry_1.8.0_checksums.txt と突き合わせて確認済み。
       - name: mcp-publisher を入れる
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.0
+          MCP_PUBLISHER_SHA256: 1370446bbe74d562608e8005a6ccce02d146a661fbd78674e11cc70b9618d6cf
         run: |
-          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          curl -fsSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
           ./mcp-publisher --help
 
       - name: レジストリへログイン（OIDC）
@@ -69,7 +78,19 @@ jobs:
         working-directory: packages/mcp-server
         run: ../../mcp-publisher publish
 
+      # 応答を grep しない。整形が変わるだけで落ちる検査は、登録の失敗と
+      # 見分けがつかない。読んでから中身で確かめる。
       - name: 載ったか確かめる
         run: |
-          version=$(node -p "require('./packages/mcp-server/package.json').version")
-          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.masa-san-jp/aiko" | tee /dev/stderr | grep -q "\"version\":\"${version}\""
+          curl -fsS "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.masa-san-jp/aiko" -o found.json
+          node -e '
+            const want = require("./packages/mcp-server/package.json").version;
+            const { servers = [] } = require("./found.json");
+            const mine = servers.filter((s) => (s.name ?? s.server?.name) === "io.github.masa-san-jp/aiko");
+            const versions = mine.map((s) => s.version ?? s.server?.version);
+            if (!versions.includes(want)) {
+              console.error(`${want} が見つかりません。返ってきたもの: ${JSON.stringify(versions)}`);
+              process.exit(1);
+            }
+            console.log(`登録を確認: io.github.masa-san-jp/aiko ${want}`);
+          '
