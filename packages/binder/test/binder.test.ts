@@ -225,3 +225,58 @@ test("Binder: 契約が無い Profile の hash は契約導入前と変わらな
     }),
   );
 });
+
+// --- provenance（Threat Model §5-7） ---
+
+test("Binder: 適用した人格の checksum を provenance に残す", async () => {
+  // 合成後の hash だけでは、材料がすり替わったことを検知できない（T2）。
+  // 材料そのものの checksum を別に残す。
+  const binder = new RuntimeProfileBinder({ personaRepository: repo() });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.match(profile.provenance.persona_package_hash, /^[0-9a-f]{64}$/);
+});
+
+test("Binder: 人格が変われば provenance の checksum も変わる", async () => {
+  const binder = new RuntimeProfileBinder({ personaRepository: repo() });
+  const swapped = new RuntimeProfileBinder({
+    personaRepository: repo({ identityCore: "すり替えられた人格" }),
+  });
+  const request = {
+    persona: { id: "aiko" },
+    runtime: { id: "codex" as const, injectionMethod: "codex:base-instructions" as const },
+  };
+  const [a, b] = await Promise.all([binder.bind(request, user), swapped.bind(request, user)]);
+  assert.notEqual(a.provenance.persona_package_hash, b.provenance.persona_package_hash);
+});
+
+test("Binder: 人格をどこから読んだかを残す", async () => {
+  // すり替えの調査は「どこから読んだか」が分からないと始まらない。
+  const binder = new RuntimeProfileBinder({
+    personaRepository: repo({
+      sources: [{ part: "identity-core", location: "/home/x/.aiko/persona/origin/persona.md" }],
+    }),
+  });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.deepEqual(profile.provenance.persona_sources, [
+    { part: "identity-core", location: "/home/x/.aiko/persona/origin/persona.md" },
+  ]);
+});
+
+test("Binder: provenance の時刻は固定できる", async () => {
+  // 決定性の検証で時刻が揺れると、hash 以外の差分で落ちる。
+  const binder = new RuntimeProfileBinder({
+    personaRepository: repo(),
+    clock: () => new Date("2026-08-02T00:00:00.000Z"),
+  });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.equal(profile.provenance.created_at, "2026-08-02T00:00:00.000Z");
+});
