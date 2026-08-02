@@ -38,3 +38,4 @@ __pycache__/
 # 各パッケージ配下の .gitignore は残すが、ルートでも押さえる。
 node_modules/
 packages/mcp-server/persona/
+packages/mcp-server/LICENSE

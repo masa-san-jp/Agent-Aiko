@@ -19,7 +19,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { PersonaRepository } from "@agent-aiko/core";
 import { prepareLaunch } from "@agent-aiko/adapter-claude-code";
 import { prepareThread } from "@agent-aiko/adapter-codex";
-import { createAikoServer } from "@agent-aiko/mcp-server";
+import { createAikoServer } from "aiko-mcp";
 import { createRuntimeSdk } from "@agent-aiko/runtime-sdk";
 
 /** 3経路へ渡す共通の入力。ここを1つにしないと比較にならない。 */

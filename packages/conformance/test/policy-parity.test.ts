@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { PersonaRepository } from "@agent-aiko/core";
-import { createAikoServer } from "@agent-aiko/mcp-server";
+import { createAikoServer } from "aiko-mcp";
 import {
   createRuntimeSdk,
   SemanticBudget,
