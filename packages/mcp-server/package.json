@@ -6,7 +6,6 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "dist/index.js",
   "bin": {
     "aiko-mcp": "dist/server.js"
   },
@@ -45,5 +44,6 @@
     "aiko",
     "persona",
     "ai-agent"
-  ]
+  ],
+  "main": "dist/index.js"
 }

@@ -8,6 +8,7 @@
 // 宣言する——広く使われているものを二重に抱えると、利用者側と版が食い違う。
 
 import { build } from "esbuild";
+import { readdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,10 +29,28 @@ for (const [entry, out] of [
     target: "node20",
     format: "esm",
     external,
-    // 元の行がどこか分かるように残す。落ちたとき素の bundle だけだと追えない。
-    sourcemap: true,
+    // source map は作らない。**中に元のソースが丸ごと入る**（実測: 33ファイル分の
+    // 本文が sourcesContent に埋まっていた）。開発の内輪のコメントごと配ることに
+    // なるので、追跡性より外に出さないほうを取る。落ちたときは版を指定して手元で
+    // 再現する。
+    sourcemap: false,
     logLevel: "warning",
   });
 }
 
-console.log("[bundle] dist/server.js, dist/index.js");
+// tsc が出した非 bundle の中間ファイルを消す。
+//
+// **これを残すと2つ問題が起きる。** ①中に `@agent-aiko/*` への import が残っていて、
+// 利用者の環境には無いので、触れば落ちる。②ソースのコメントがそのまま入るので、
+// 開発の内輪の記述（人の名前を含む）を配ることになる。実際に両方入っていた
+// （2026-08-02 の公開前確認で発見）。
+//
+// 配るのは bundle した2本とその map だけ。
+const keep = new Set(["server.js", "index.js"]);
+const dist = join(pkg, "dist");
+for (const entry of await readdir(dist)) {
+  if (keep.has(entry)) continue;
+  await rm(join(dist, entry), { recursive: true, force: true });
+}
+
+console.log("[bundle] dist/server.js, dist/index.js（他は削除）");
