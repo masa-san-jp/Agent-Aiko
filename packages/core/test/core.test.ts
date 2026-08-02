@@ -321,3 +321,59 @@ test("hash は値の違いを見落とさない", () => {
 test("sha256 は 16 進小文字 64 桁", () => {
   assert.match(sha256("x"), /^[0-9a-f]{64}$/);
 });
+
+// --- 同梱人格（入れた直後に何も無くても立てるように） ---
+
+test("利用者側に人格が無ければ同梱人格で立つ", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "aiko-bundled-"));
+  try {
+    const bundled = join(dir, "bundled");
+    await mkdir(join(bundled, "origin"), { recursive: true });
+    await writeFile(join(bundled, "origin", "persona.md"), "同梱のアイコ\n");
+    await writeFile(join(bundled, "INVARIANTS.md"), "同梱の不変条項\n");
+
+    const repo = new FileSystemPersonaRepository({
+      aikoHome: join(dir, "empty", ".aiko"),
+      bundledDir: bundled,
+    });
+    const snapshot = await repo.load({ id: "aiko" });
+    assert.equal(snapshot.identityCore.trim(), "同梱のアイコ");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("利用者側に人格があれば同梱より優先される", async () => {
+  // 同梱は「初期値」であって、置いたものを上書きするものではない。
+  const dir = await mkdtemp(join(tmpdir(), "aiko-bundled-pref-"));
+  try {
+    const bundled = join(dir, "bundled");
+    await mkdir(join(bundled, "origin"), { recursive: true });
+    await writeFile(join(bundled, "origin", "persona.md"), "同梱のアイコ\n");
+    await writeFile(join(bundled, "INVARIANTS.md"), "同梱の不変条項\n");
+
+    const aikoHome = join(dir, ".aiko");
+    await mkdir(join(aikoHome, "persona", "origin"), { recursive: true });
+    await writeFile(join(aikoHome, "persona", "origin", "persona.md"), "自分のアイコ\n");
+    await writeFile(join(aikoHome, "INVARIANTS.md"), "自分の不変条項\n");
+
+    const repo = new FileSystemPersonaRepository({ aikoHome, bundledDir: bundled });
+    const snapshot = await repo.load({ id: "aiko" });
+    assert.deepEqual(
+      [snapshot.identityCore.trim(), snapshot.invariants.trim()],
+      ["自分のアイコ", "自分の不変条項"],
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("同梱が無く利用者側も無ければ、今までどおり拒否する", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "aiko-bundled-none-"));
+  try {
+    const repo = new FileSystemPersonaRepository({ aikoHome: join(dir, ".aiko") });
+    await assert.rejects(() => repo.load({ id: "aiko" }));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

@@ -24,6 +24,10 @@ export interface FileSystemPersonaRepositoryOptions {
   aikoHome?: string;
   /** 版を持たない現行レイアウトを読むときに名乗る版。既定 "0.0.0"。 */
   assumedVersion?: string;
+  /** 配布物に同梱した人格ディレクトリ（中に origin/persona.md と INVARIANTS.md）。
+   *  **利用者の側に無かったときだけ**使う。入れた直後に何も無くても起動できるように
+   *  するためのもので、利用者が置いたものを上書きする用途ではない。 */
+  bundledDir?: string;
 }
 
 type Mode = "origin" | "override";
@@ -31,10 +35,17 @@ type Mode = "origin" | "override";
 export class FileSystemPersonaRepository implements PersonaRepository {
   readonly #aikoHome: string;
   readonly #assumedVersion: string;
+  readonly #bundledDir: string | undefined;
 
   constructor(options: FileSystemPersonaRepositoryOptions = {}) {
     this.#aikoHome = options.aikoHome ?? join(homedir(), ".aiko");
     this.#assumedVersion = options.assumedVersion ?? "0.0.0";
+    this.#bundledDir = options.bundledDir;
+  }
+
+  /** 同梱側の候補。利用者側の候補をすべて外したあとに続ける。 */
+  #bundled(...parts: string[]): string[] {
+    return this.#bundledDir === undefined ? [] : [join(this.#bundledDir, ...parts)];
   }
 
   async load(ref: PersonaRef): Promise<PersonaSnapshot> {
@@ -52,7 +63,11 @@ export class FileSystemPersonaRepository implements PersonaRepository {
 
     // 不変条項はモードや人格に依らず共通。欠落は起動させない（§6.5）。
     const invariants = await this.#readFirst(
-      [join(this.#aikoHome, "INVARIANTS.md"), join(this.#aikoHome, "persona", "INVARIANTS.md")],
+      [
+        join(this.#aikoHome, "INVARIANTS.md"),
+        join(this.#aikoHome, "persona", "INVARIANTS.md"),
+        ...this.#bundled("INVARIANTS.md"),
+      ],
       ref,
       "invariants",
     );
@@ -115,7 +130,11 @@ export class FileSystemPersonaRepository implements PersonaRepository {
   #candidatePersonaFiles(mode: Mode, activePersona: string): string[] {
     const personaRoot = join(this.#aikoHome, "persona");
     if (mode !== "override") {
-      return [join(personaRoot, "origin", "persona.md"), join(personaRoot, "aiko-origin.md")];
+      return [
+        join(personaRoot, "origin", "persona.md"),
+        join(personaRoot, "aiko-origin.md"),
+        ...this.#bundled("origin", "persona.md"),
+      ];
     }
     const paths: string[] = [];
     // 指定された人格を、ディレクトリ型・旧フラット型の順で先に使い切る。既定
@@ -126,6 +145,9 @@ export class FileSystemPersonaRepository implements PersonaRepository {
     }
     paths.push(join(personaRoot, "override", "persona.md"));
     paths.push(join(personaRoot, "aiko-override.md"));
+    // override を名乗っていても、利用者側に1つも無ければ同梱の人格で立つ。
+    // 「人格が無い」で止めるより、オリジナルで動くほうが直しようがある。
+    paths.push(...this.#bundled("origin", "persona.md"));
     return paths;
   }
 
