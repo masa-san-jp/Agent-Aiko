@@ -50,3 +50,11 @@ export {
   resolveUserProfilePath,
   USER_PROFILE_SCHEMA_VERSION,
 } from "@agent-aiko/user-context";
+
+// user.md（呼び名・記憶の場所）。利用側が user-context を直接見ないための口（§1）。
+export {
+  readUserMarkdown,
+  userMarkdownCandidates,
+  writeUserMarkdown,
+} from "@agent-aiko/user-context";
+export type { UserMarkdown } from "@agent-aiko/user-context";

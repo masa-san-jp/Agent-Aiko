@@ -10,7 +10,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { FileSystemPersonaRepository } from "@agent-aiko/core";
-import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
+import {
+  readUserMarkdown,
+  resolveUserProfilePath,
+  userMarkdownCandidates,
+  UserContextProvider,
+} from "@agent-aiko/user-context";
 import { createAikoServer } from "./aiko-server.js";
 
 const personaId = process.env["AIKO_PERSONA_ID"] ?? "aiko";
@@ -28,13 +33,20 @@ async function main(): Promise<void> {
   const provider = new UserContextProvider();
   // User Profile を解決できないのは §6.5 の fail-closed 条件。既定値で埋めて
   // 起動すると、誰のものか分からない関係情報で人格が立ち上がる。
-  const user = userProfilePath
+  const base = userProfilePath
     ? await provider.loadFromFile(userProfilePath)
     : provider.resolve({ schema_version: 1, user_id: "default" });
+
+  // user.md があれば重ねる。無ければ何も足さない——**呼び名を知らないまま起動する**
+  // のが既定で、名前は利用者が教えたときだけ持つ。
+  const home = aikoHome ?? join(homedir(), ".aiko");
+  const md = await readUserMarkdown(userMarkdownCandidates(home));
+  const user = md ? provider.withMarkdown(base, md.user) : base;
 
   const server = createAikoServer({
     // 同梱人格の場所。利用者側に何も無くても起動できるようにする（入れた直後の
     // 「人格が読めません」を無くす）。利用者が置いていればそちらが必ず優先される。
+    aikoHome: home,
     personaRepository: new FileSystemPersonaRepository({
       ...(aikoHome ? { aikoHome } : {}),
       bundledDir: join(dirname(fileURLToPath(import.meta.url)), "..", "persona"),
