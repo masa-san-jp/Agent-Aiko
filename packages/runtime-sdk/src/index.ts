@@ -41,6 +41,18 @@ export type {
   RuntimeId as BinderRuntimeId,
 } from "@agent-aiko/binder";
 export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
+
+// 人格の一覧・切り替え・保存。利用側が core を直接見ないための口（§1）。
+export {
+  deletePersona,
+  listPersonas,
+  PersonaStoreError,
+  readActivePersona,
+  readMode,
+  savePersona,
+  switchPersona,
+} from "@agent-aiko/core";
+export type { PersonaEntry } from "@agent-aiko/core";
 export type { ResolvedUserContext } from "@agent-aiko/user-context";
 
 // User Profile の置き場と版。利用側（CLI）が user-context を直接見ずに済むよう

@@ -15,7 +15,11 @@ import { CapabilityRegistry } from "@agent-aiko/capability-registry";
 import {
   createRuntimeSdk,
   EvaluateActionRequestSchema,
+  deletePersona,
+  listPersonas,
   readUserMarkdown,
+  savePersona,
+  switchPersona,
   userMarkdownCandidates,
   writeUserMarkdown,
   RuntimeSdkError,
@@ -384,6 +388,80 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
           return json({ remembered: true, path: target, user: next });
         } catch (err) {
           return json({ remembered: false, reason: reasonOf(err) }, true);
+        }
+      },
+    );
+  }
+
+  // 人格の一覧・切り替え・保存。スラッシュコマンドの代わりで、話しかけるだけで効く。
+  // 書くのは ~/.aiko の中だけ——配布物の同梱人格と不変条項には触れない（I-5）。
+  if (deps.aikoHome) {
+    const aikoHome = deps.aikoHome;
+
+    server.registerTool(
+      "aiko.list_personas",
+      {
+        title: "使える人格の一覧を返す",
+        description: "オリジナルと、ユーザーが作った人格を返す。いまどれを使っているかも分かる",
+        inputSchema: {},
+      },
+      async () => json({ personas: await listPersonas(aikoHome) }),
+    );
+
+    server.registerTool(
+      "aiko.switch_persona",
+      {
+        title: "使う人格を切り替える",
+        description:
+          "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。origin を指定するとオリジナルへ戻る",
+        inputSchema: { name: z.string().min(1) },
+      },
+      async ({ name }) => {
+        try {
+          await switchPersona(aikoHome, name);
+          return json({ switched: true, name, personas: await listPersonas(aikoHome) });
+        } catch (err) {
+          // 見つからないときは、何があるかを一緒に返す。「無い」だけだと次の一手が出ない。
+          return json(
+            { switched: false, reason: reasonOf(err), personas: await listPersonas(aikoHome) },
+            true,
+          );
+        }
+      },
+    );
+
+    server.registerTool(
+      "aiko.save_persona",
+      {
+        title: "独自の人格を保存する",
+        description:
+          "ユーザーが人格を作りたい・書き換えたいときに使う。origin は書き換えられないので別名で保存する",
+        inputSchema: { name: z.string().min(1), content: z.string().min(1) },
+      },
+      async ({ name, content }) => {
+        try {
+          const path = await savePersona(aikoHome, name, content);
+          return json({ saved: true, name, path });
+        } catch (err) {
+          return json({ saved: false, reason: reasonOf(err) }, true);
+        }
+      },
+    );
+
+    server.registerTool(
+      "aiko.delete_persona",
+      {
+        title: "独自の人格を消す",
+        description:
+          "ユーザーが消してと言ったときだけ使う。使用中の人格を消す場合はオリジナルへ戻してから消す",
+        inputSchema: { name: z.string().min(1) },
+      },
+      async ({ name }) => {
+        try {
+          await deletePersona(aikoHome, name);
+          return json({ deleted: true, name, personas: await listPersonas(aikoHome) });
+        } catch (err) {
+          return json({ deleted: false, reason: reasonOf(err) }, true);
         }
       },
     );
