@@ -31,3 +31,14 @@ export {
   acceptableVersions,
   type CompatibilityVerdict,
 } from "./schema-compatibility.js";
+
+export {
+  deletePersona,
+  listPersonas,
+  PersonaStoreError,
+  readActivePersona,
+  readMode,
+  savePersona,
+  switchPersona,
+  type PersonaEntry,
+} from "./persona-store.js";
