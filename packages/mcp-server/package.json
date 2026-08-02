@@ -1,6 +1,7 @@
 {
   "name": "aiko-mcp",
   "version": "0.2.0",
+  "mcpName": "io.github.masa-san-jp/aiko",
   "description": "アイコの人格を、どの AI エージェントからでも同じ形で取り出せる MCP サーバー",
   "type": "module",
   "engines": {

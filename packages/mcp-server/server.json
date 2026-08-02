@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.masa-san-jp/aiko",
+  "description": "Aiko — a persona you can carry into any MCP-capable AI agent",
+  "repository": {
+    "url": "https://github.com/masa-san-jp/Agent-Aiko",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "aiko-mcp",
+      "version": "0.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AIKO_HOME",
+          "description": "Where personas and user context live. Defaults to ~/.aiko",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "filepath"
+        },
+        {
+          "name": "AIKO_PERSONA_ID",
+          "description": "Which persona to load. Defaults to aiko",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "AIKO_USER_PROFILE",
+          "description": "Path to a User Profile JSON file",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "filepath"
+        }
+      ]
+    }
+  ]
+}
