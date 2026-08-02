@@ -6,7 +6,8 @@
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { FileSystemPersonaRepository } from "@agent-aiko/core";
 import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
@@ -32,7 +33,12 @@ async function main(): Promise<void> {
     : provider.resolve({ schema_version: 1, user_id: "default" });
 
   const server = createAikoServer({
-    personaRepository: new FileSystemPersonaRepository(aikoHome ? { aikoHome } : {}),
+    // 同梱人格の場所。利用者側に何も無くても起動できるようにする（入れた直後の
+    // 「人格が読めません」を無くす）。利用者が置いていればそちらが必ず優先される。
+    personaRepository: new FileSystemPersonaRepository({
+      ...(aikoHome ? { aikoHome } : {}),
+      bundledDir: join(dirname(fileURLToPath(import.meta.url)), "..", "persona"),
+    }),
     user,
     personaId,
   });
