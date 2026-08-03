@@ -1,36 +1,88 @@
 # aiko-mcp
 
-アイコの人格を、どの AI エージェントからでも同じ形で取り出せる MCP サーバー。
+**A persona you can carry between MCP clients.** Aiko is the same agent in Claude Code, Codex CLI, Cursor and VS Code — one definition, loaded over MCP, instead of the same paragraphs pasted into four different config files.
 
-使う人の端末の中で動く。人格もユーザー情報も端末の外へ出ないし、サーバーを別に立てる必要もない。
+Everything runs on your machine. The persona, the profile, whatever you tell it to remember — none of it leaves the device, and there is no server to run.
 
-## 入れる
-
-使っているクライアントを自動で探して設定を書く。
+## Install
 
 ```bash
 npx aiko-mcp install
 ```
 
-対応は Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop。入っていないクライアントには何もしない。既にある設定は残し、書き換える前に控え（`.aiko-bak-*`）を取る。
+It finds the clients you actually have and writes the config for them. Clients you don't have are left alone. Use `--dry-run` first if you want to see what it would write.
 
-| オプション | 意味 |
+Supported: Claude Code, Codex CLI, VS Code, Cursor, Claude Desktop.
+
+Node.js 20 or newer. Nothing else — the persona ships inside the package.
+
+## What changes once it's in
+
+Your client gains nine tools, four prompts and the persona itself as readable resources. Straight after installing, with nothing configured:
+
+```
+TOOLS:   aiko.bind_runtime, aiko.get_runtime_profile, aiko.remember_user,
+         aiko.list_personas, aiko.switch_persona, aiko.save_persona,
+         aiko.delete_persona, aiko.report_capabilities, aiko.health
+PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handoff
+```
+
+`aiko.activate` is the one to try first — it returns the persona so the agent answers as Aiko for the rest of the session. `aiko.health` tells you what the server can actually read:
+
+```json
+{
+  "server":  { "name": "aiko-mcp", "version": "0.2.1" },
+  "persona": { "id": "aiko", "invariantsPresent": true },
+  "status":  "ok"
+}
+```
+
+## Teaching it about you
+
+You talk to it. There are no files to write by hand.
+
+```
+"call me Taro"                 → remembers what to call you
+"my notes live in ~/notes"     → records where they are (it does not read them)
+"save this as my own persona"  → stores your variant
+"go back to the original"      → returns to the shipped one
+```
+
+What it learns is written to `~/.aiko` — that machine, that user, nobody else.
+
+## Making it yours
+
+One persona ships with the package. You can keep as many of your own as you like and switch between them.
+
+The original persona and its invariants cannot be overwritten (invariant I-5). Save under a different name instead.
+
+## Configuration
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `AIKO_HOME` | `~/.aiko` | Where personas and user context live |
+| `AIKO_PERSONA_ID` | `aiko` | Which persona to load |
+| `AIKO_USER_PROFILE` | none | Path to a User Profile JSON. Without it, `user_id: default` |
+
+## Install options
+
+| Option | Meaning |
 |---|---|
-| `--dry-run` | 何を書くかだけ表示して、実際には書かない |
-| `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
-| `--force` | 同じ名前で違う設定が入っていても置き換える |
+| `--dry-run` | Print what would be written; change nothing |
+| `--client <id>` | Limit to one client (`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`) |
+| `--force` | Replace an existing `aiko` entry that isn't ours |
 
-自動で入れたくないなら、使っているクライアントの行をコピーして実行する。
+Existing entries are kept, a backup (`.aiko-bak-*`) is written before any change, and a config the installer cannot parse is left untouched.
 
-| クライアント | コマンド |
+If you would rather do it yourself:
+
+| Client | Command |
 |---|---|
 | Claude Code | `claude mcp add aiko -- npx -y aiko-mcp` |
 | Codex CLI | `codex mcp add aiko -- npx -y aiko-mcp` |
 | VS Code | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
 
-Claude Code ですべてのプロジェクトから使うなら `-s user` を付ける。確認は `claude mcp list`（Codex は `codex mcp list`）。
-
-コマンドが無いクライアントは MCP 設定へ直接足す。
+For clients without a CLI, add this to the MCP config:
 
 ```json
 {
@@ -40,11 +92,51 @@ Claude Code ですべてのプロジェクトから使うなら `-s user` を付
 }
 ```
 
-必要なのは Node.js 20 以上だけ。人格は同梱されているので、何も用意しなくてもアイコとして立ち上がる。
+## Resources
 
-## 覚えてもらう
+| URI | Contents |
+|---|---|
+| `persona://<id>/core` | The self-definition |
+| `persona://<id>/invariants` | The invariants |
+| `persona://<id>/behavior-contract` | Decision principles |
+| `persona://<id>/version/current` | Version in effect |
+| `persona://<id>/manifest` | Composition and provenance (JSON) |
+| `runtime-profile://{profile_id}/summary` | A composed profile. `latest` for the most recent |
 
-呼び名や記憶の場所は、**話しかけるだけ**で覚える。ファイルを手で作る必要はない。
+**Reading a resource does not itself apply the persona** (§7.2). Applying it is the adapter's job, through system-level injection. What this server offers is a way to read the persona and to compose a profile.
+
+## Development
+
+From inside the repository:
+
+```bash
+npm run build -w aiko-mcp
+node packages/mcp-server/dist/server.js
+```
+
+The design documents live in [docs/](https://github.com/masa-san-jp/Agent-Aiko/tree/main/docs) and are not shipped in the package. The design document is the single source of truth.
+
+---
+
+## 日本語
+
+アイコの人格を、どの MCP クライアントからでも同じ形で取り出せるサーバー。Claude Code でも Codex でも Cursor でも VS Code でも、同じ1つの定義を読む。設定ファイル4つに同じ文章を貼って回らなくてよくなる。
+
+すべて手元で動く。人格も、覚えたことも、端末の外へ出ない。立てるサーバーも無い。
+
+### 入れる
+
+```bash
+npx aiko-mcp install
+```
+
+入っているクライアントだけを探して設定を書く。入っていないものには触らない。書く前に見たいときは `--dry-run`。
+
+対応は Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop。必要なのは Node.js 20 以上だけで、人格は同梱されている。
+
+### 覚えてもらう
+
+呼び名も記憶の場所も、**話しかけるだけ**で覚える。ファイルを手で作る必要はない。
 
 ```
 「たろうって呼んで」          → 呼び名を覚える
@@ -55,111 +147,6 @@ Claude Code ですべてのプロジェクトから使うなら `-s user` を付
 
 覚えたものは `~/.aiko` に置かれる。**その端末のその人のものだけ**で、他の利用者には届かない。
 
-## 人格を自分用にする
+### 人格を自分用にする
 
-同梱されているのはオリジナルのアイコ1人。自分用の人格はいくつでも作れて、切り替えられる。
-
-オリジナルの人格と不変条項は書き換えられない（不変条項 I-5）。書き換えたい場合は別名で保存する。
-
-## 設定
-
-| 環境変数 | 既定 | 意味 |
-|---|---|---|
-| `AIKO_HOME` | `~/.aiko` | 人格やユーザー情報の場所 |
-| `AIKO_PERSONA_ID` | `aiko` | 読み込む人格の識別子 |
-| `AIKO_USER_PROFILE` | なし | User Profile（JSON）のパス。未指定なら `user_id: default` |
-
-## 開発
-
-このリポジトリの中から動かす場合。
-
-```bash
-npm run build -w aiko-mcp
-node packages/mcp-server/dist/server.js
-```
-
-設計書は [リポジトリの docs/](https://github.com/masa-san-jp/Agent-Aiko/tree/main/docs) にある（配布物には含めていない）。設計書が唯一の正本。
-
-## Resources（§7.2）
-
-| URI | 内容 |
-|---|---|
-| `persona://<id>/core` | 自己認識の中核 |
-| `persona://<id>/invariants` | 不変条項 |
-| `persona://<id>/behavior-contract` | 判断原則 |
-| `persona://<id>/version/current` | 適用中の版 |
-| `persona://<id>/manifest` | 構成と由来（JSON） |
-| `runtime-profile://{profile_id}/summary` | 合成済み Profile の要約。`latest` で直近のもの |
-
-**Resource を取得しただけでは人格適用を保証しない**（§7.2 明記）。人格を効かせるのは Adapter による system 級注入であって、このサーバーではない。ここが提供するのは「人格の内容を読める口」と「Profile を合成する口」。
-
-## Tools
-
-| ツール | 役割 | 書き込み |
-|---|---|---|
-| `aiko.health` | 人格を読めているか、Profile を何件持っているか | しない |
-| `aiko.bind_runtime` | 人格・ユーザー・能力を合成して Runtime Profile を作る | しない |
-| `aiko.get_runtime_profile` | 合成済みの Profile を取得する | しない |
-| `aiko.report_capabilities` | Capability Manifest を使える／使えないに分ける | しない |
-| `aiko.list_personas` | 使える人格と、いまどれを使っているか | しない |
-| `aiko.remember_user` | 呼び名・記憶の場所を覚える | `~/.aiko/user.md` |
-| `aiko.switch_persona` | 使う人格を切り替える | `~/.aiko/mode`・`active-persona` |
-| `aiko.save_persona` | 独自の人格を保存する | `~/.aiko/persona/overrides/<名前>/persona.md` |
-| `aiko.delete_persona` | **独自の人格をディレクトリごと削除する** | 同上を**削除** |
-
-`aiko.evaluate_action` / `aiko.validate_response` は、判定器を渡して起動したときだけ現れる。渡していなければ一覧にも出ない。
-
-### 書き込みについて知っておくこと
-
-**このサーバーを繋ぐと、モデルが `~/.aiko` の中を書き換えられるようになる。** 何を書くかは会話の内容で決まる。
-
-- 書く先は `~/.aiko` の中だけ。外へは出ない（人格名に区切り文字を使えない・リンクを辿らない）
-- **`aiko.delete_persona` はディレクトリを再帰的に消す。** 確認は求めない。消せるのは `persona.md` を持つ独自人格のみで、同梱のオリジナルと不変条項は消せない
-- `aiko.save_persona` は同じ名前があれば黙って上書きする
-- 書き換えられて困るものを `~/.aiko` に置かない
-
-不安なら、判定器を渡さずに起動して読み取り用のツールだけ使う、という運用もできる（書き込み系は `AIKO_HOME` を渡した場合のみ登録される）。
-
-結果には Persona version と hash を必ず載せる（§7.4）。載せないとクライアント側は自分が何版の人格で動いているかを追えない（§16 の追跡性）。
-
-## Prompts（§7.3）
-
-| 名前 | 何を返すか | 引数 |
-|---|---|---|
-| `aiko.activate` | 合成した人格をそのまま | なし |
-| `aiko.activate_for_task` | 人格＋いま取り組む作業 | `task` |
-| `aiko.review_as_aiko` | 人格＋レビュー対象 | `subject` |
-| `aiko.handoff` | 人格＋引き継ぐ内容 | `context` |
-
-**Prompt は正式 Adapter の代わりではない。** §7.3 が「正式Adapterは Prompt に依存せず、Compiler 出力を system/developer 級指示へ注入する」と定めている。Prompt が要るのは §8.4 の Generic MCP Host——system 級に注入する手段が無いホストで、会話の先頭に置く以外に手が無い場合。
-
-引数は設計書に書かれていない（名前だけが定められている）。`task` は §6.1 の Binding Request が task_context を持つことに合わせ、他は各 Prompt の役割から決めた。
-
-## 設計上の判断
-
-**Prompt では黙って空を返さない。** 人格を合成できないとき、Prompt には「返さない」という選択肢が無い（返さなければホスト側では人格なしの会話が静かに始まる）。合成できなければ、その旨と「Aiko として応答してはいけない」を本文にして返す。Resource / Tool の fail closed に対応する扱い。
-
-**合成できないときも「成功と同じ形」で理由を返す** — 例外をそのまま投げると、クライアントには通信断と区別が付かない。`bound: false` と理由を返し、併せて `isError` を立てる。fail closed で止めることと、止まった理由を伝えないことは別。
-
-**instructions 本文は既定で返さない** — Profile の本文は長く、要求されていない場面で毎回流すものではない。`includeInstructions: true` のときだけ返す。
-
-**名前と URI は設計書に合わせる** — Tool 名は §7.4 の `aiko.bind_runtime` 等をそのまま使い、Profile の Resource は §7.2 の `runtime-profile://{profile_id}/summary` をテンプレートとして登録する。実装側で読みやすい名前に変えると、設計書どおりに呼んだクライアントが失敗する。固定 URI にすると、bind が返した profile_id で参照できない口になる。
-
-**Profile はプロセス内にのみ保持する** — ディスクへ書くと §11.3 の権限（0600）とライフサイクルの話が増える。stdio サーバーはクライアントと同じ寿命なので持ち越す意味も薄い。件数に上限を設けて、bind を繰り返すセッションで際限なく増えないようにしている。
-
-**stdout に人間向けの文字列を書かない** — MCP のフレームが流れる経路なので、混ざるとプロトコルが壊れる。診断は stderr へ出す。
-
-## この段階で入れていないもの
-
-`aiko.get_relationship_context` は、どのクライアントへ何を渡してよいかの権限モデルが決まっていないため保留している（§11.2）。
-
-## テスト
-
-```bash
-cd packages/mcp-server
-npm ci
-npm run typecheck
-npm test
-```
-
-`InMemoryTransport` で実クライアントと繋いで MCP の往復をさせる。`registerTool` を呼んだかどうかを見るだけでは、スキーマ不整合や結果の形の誤りが素通りするため。加えて、`node dist/server.js` を実際に起動して stdio 越しに読む試験を1本置いている（stdout にゴミが混ざるとフレームが壊れるが、それは InMemory では絶対に出ない）。
+同梱されているのはオリジナルのアイコ1人。自分用の人格はいくつでも作れて、切り替えられる。オリジナルの人格と不変条項は書き換えられない（不変条項 I-5）。書き換えたい場合は別名で保存する。
