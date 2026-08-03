@@ -38,7 +38,7 @@ import { ProfileStore } from "./profile-store.js";
 import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
-export const SERVER_VERSION = "0.2.0";
+export const SERVER_VERSION = "0.2.1";
 
 export interface AikoServerDeps {
   personaRepository: PersonaRepository;
