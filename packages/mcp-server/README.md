@@ -31,9 +31,17 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 
 ```json
 {
-  "server":  { "name": "aiko-mcp", "version": "0.2.1" },
-  "persona": { "id": "aiko", "invariantsPresent": true },
-  "status":  "ok"
+  "server": {
+    "name": "aiko-mcp",
+    "version": "0.2.1"
+  },
+  "persona": {
+    "id": "aiko",
+    "version": "0.0.0",
+    "invariantsPresent": true
+  },
+  "profiles": 0,
+  "status": "ok"
 }
 ```
 
