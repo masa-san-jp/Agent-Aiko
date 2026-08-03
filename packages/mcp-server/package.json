@@ -1,8 +1,8 @@
 {
   "name": "aiko-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "mcpName": "io.github.masa-san-jp/aiko",
-  "description": "アイコの人格を、どの AI エージェントからでも同じ形で取り出せる MCP サーバー",
+  "description": "A portable persona for MCP clients — the same agent in Claude Code, Codex, Cursor and VS Code. Runs locally; nothing leaves your machine.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -44,9 +44,15 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "aiko",
+    "claude-code",
+    "codex",
+    "cursor",
+    "vscode",
     "persona",
-    "ai-agent"
+    "memory",
+    "ai-agent",
+    "local-first",
+    "aiko"
   ],
   "main": "dist/index.js"
 }

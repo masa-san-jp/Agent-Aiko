@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.masa-san-jp/aiko",
-  "description": "Aiko — a persona you can carry into any MCP-capable AI agent",
+  "description": "A portable persona for MCP clients — the same agent in Claude Code, Codex, Cursor and VS Code",
   "repository": {
     "url": "https://github.com/masa-san-jp/Agent-Aiko",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "aiko-mcp",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "transport": {
         "type": "stdio"
       },
