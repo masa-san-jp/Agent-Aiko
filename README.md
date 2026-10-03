@@ -19,6 +19,8 @@ Agent-Aiko は、Claude Code・Codex・Gemini CLI など複数のエージェン
 
 Aiko は 3 つの実行環境で動きます。**ご自身が使っているエージェント／サブスクリプションに合わせて選んでください。**
 
+<img src="docs/install-flow.svg" alt="どの入り口から入っても、人格はひとつ">
+
 | 版 | 対象ユーザー | 認証 | インストール先 | 起動方法 |
 |----|------------|------|--------------|---------|
 | **[Claude Code 版](claude-code/)** | Anthropic Claude Code を使っている方 | Anthropic API（Claude Code 標準） | `~/.aiko/` ＋ プロジェクトの `.claude/skills/` | `claude` コマンドの中で `/aiko` |
