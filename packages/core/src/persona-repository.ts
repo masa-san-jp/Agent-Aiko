@@ -29,7 +29,18 @@ export interface PersonaSnapshot {
    *  「一人称が違う」を判定できない。判定できる形で書かれたものだけをここに持つ。
    *  持たない人格がある——無い項目は検査せず、検査していないと返す。 */
   responseContract?: Record<string, unknown>;
+  /** 話し方の上書き。人格（何者か）は変えず、口調だけを差し替える。
+   *  original（人格本文のままの話し方）のときは持たない。 */
+  speechStyle?: SpeechStyle;
 }
+
+export interface SpeechStyle {
+  /** friend / servant など。 */
+  id: string;
+  /** 話し方の定義本文。 */
+  content: string;
+}
+
 
 export interface PersonaSource {
   /** 論理名（identity-core / invariants / behavioral-contract など）。 */

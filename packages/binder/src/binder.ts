@@ -158,7 +158,11 @@ export class RuntimeProfileBinder {
     // Compiler にランタイムを持ち込まないのは §5.3（core は runtime を知らない）。
     // 応答契約は人格の宣言に利用者側の呼び名・言語を重ねたもの。呼び名は
     // 人格ではなく利用者に属するので、人格側の宣言では決まらない。
-    const responseContract = mergeResponseContract(persona.responseContract, user.context);
+    const responseContract = mergeResponseContract(
+      withoutSpeechItems(persona.responseContract, persona.speechStyle !== undefined),
+      user.context,
+    );
+
 
     // 適用した人格そのものの checksum。合成結果ではなく**材料**を指す。
     // Threat Model T2（Persona Package のすり替え）は、合成後の hash だけでは
@@ -170,7 +174,9 @@ export class RuntimeProfileBinder {
       invariants: persona.invariants,
       behavioralContract: persona.behavioralContract,
       ...(persona.responseContract ? { responseContract: persona.responseContract } : {}),
+      ...(persona.speechStyle ? { speechStyle: persona.speechStyle } : {}),
     });
+
 
     const profileHash = hashObject({
       instructions: compiled.instructions,
@@ -225,7 +231,23 @@ export class RuntimeProfileBinder {
 /** 人格の宣言と利用者の設定を重ねる。どちらも何も持たなければ undefined。
  *  利用者側が上書きするのは呼び名と言語だけ——人格の禁止表現を利用者が
  *  外せてしまうと、人格の宣言が宣言でなくなる。 */
+/** 話し方を差し替えているとき、人格側の一人称の宣言は効かせない。
+ *  一人称は話し方が決める（servant は「アイコ」、friend は「私」）。人格の宣言を
+ *  残すと、正しく話し方に従った応答が「一人称が違う」として差し戻される。 */
+const SPEECH_ITEMS = ["firstPerson", "prohibitedFirstPersons"] as const;
+
+function withoutSpeechItems(
+  contract: Record<string, unknown> | undefined,
+  styled: boolean,
+): Record<string, unknown> | undefined {
+  if (!styled || contract === undefined) return contract;
+  const rest = { ...contract };
+  for (const key of SPEECH_ITEMS) delete rest[key];
+  return rest;
+}
+
 function mergeResponseContract(
+
   personaContract: Record<string, unknown> | undefined,
   user: UserContext,
 ): Record<string, unknown> | undefined {

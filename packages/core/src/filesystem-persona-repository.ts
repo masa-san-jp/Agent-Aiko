@@ -7,9 +7,10 @@
 // 読めなかったものは黙って空にせず、必須なら PersonaResolutionError を投げる。
 // 人格の一部が欠けたまま起動するのは §6.5 の fail-closed 条件に当たる。
 
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
+
 import { assertWithinLimit } from "./limits.js";
 import {
   PersonaResolutionError,
@@ -31,6 +32,20 @@ export interface FileSystemPersonaRepositoryOptions {
 }
 
 type Mode = "origin" | "override";
+
+/** 人格本文の話し方をそのまま使う、という指定。定義ファイルを持たない。 */
+export const ORIGINAL_SPEECH_STYLE = "original";
+
+/** 選べる話し方。読む側と書く側で同じ一覧を使う——読む側だけ広いと、
+ *  実際に効いている話し方と一覧・health の表示が食い違う。 */
+export const SPEECH_STYLES = [ORIGINAL_SPEECH_STYLE, "friend", "servant"] as const;
+export type SpeechStyleId = (typeof SPEECH_STYLES)[number];
+
+export function isSpeechStyleId(name: string): name is SpeechStyleId {
+  return (SPEECH_STYLES as readonly string[]).includes(name);
+}
+
+
 
 export class FileSystemPersonaRepository implements PersonaRepository {
   readonly #aikoHome: string;
@@ -99,6 +114,20 @@ export class FileSystemPersonaRepository implements PersonaRepository {
       }
     }
 
+    // 話し方。人格とは独立に選ぶので、mode / active-persona とは別に読む。
+    // 定義が見つからなくても起動は止めない——口調の設定ミスで人格そのものが
+    // 立たなくなるより、人格本文の話し方で動くほうが直しようがある。
+    const styleId = await this.#readSpeechStyle();
+    const style =
+      styleId === ""
+        ? undefined
+        : ((await readContained(this.#aikoHome, "speech-styles", `${styleId}.md`)) ??
+          (this.#bundledDir === undefined
+            ? undefined
+            : await readContained(this.#bundledDir, "speech-styles", `${styleId}.md`)));
+
+    if (style) sources.push({ part: "speech-style", location: style.path });
+
     return {
       id: ref.id,
       version: ref.version ?? this.#assumedVersion,
@@ -107,8 +136,19 @@ export class FileSystemPersonaRepository implements PersonaRepository {
       behavioralContract: contract?.content ?? "",
       sources,
       ...(parsedContract ? { responseContract: parsedContract } : {}),
+      ...(style ? { speechStyle: { id: styleId, content: style.content } } : {}),
     };
   }
+
+  /** 選ばれている話し方。original・未設定・不正値は「上書きしない」（空文字）。 */
+  async #readSpeechStyle(): Promise<string> {
+    const raw = (await readOptional(join(this.#aikoHome, "speech-style")))?.trim() ?? "";
+    // active-persona と同じく、値がそのままパスの一部になる。置き場の外を読ませない。
+    if (raw === ORIGINAL_SPEECH_STYLE || !isSpeechStyleId(raw)) return "";
+    return raw;
+  }
+
+
 
   /** mode / active-persona から人格ディレクトリの候補を優先順に並べる。
    *  active-persona が消えていた場合に既定 override へ落ちられるよう、候補は複数返す。 */
@@ -214,7 +254,34 @@ export function isSafePersonaName(name: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
 }
 
+/** base の中にある実体だけを読む。リンクを辿った先が base の外なら読まない。
+ *
+ *  話し方の本文はそのまま指示文に入る。`speech-styles/friend.md`（あるいは
+ *  `speech-styles` 自体）が外のファイルへのリンクだと、その中身が人格として
+ *  クライアントへ渡る。名前の検査だけではリンクは止まらない。 */
+async function readContained(
+  base: string,
+  ...parts: string[]
+): Promise<{ path: string; content: string } | undefined> {
+  const path = join(base, ...parts);
+  let real: string;
+  let realBase: string;
+  try {
+    [real, realBase] = await Promise.all([realpath(path), realpath(base)]);
+  } catch (err) {
+    if (isNotFound(err)) return undefined;
+    throw err;
+  }
+  const rel = relative(realBase, real);
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return undefined;
+  const content = await readOptional(real);
+  if (content === undefined) return undefined;
+  assertWithinLimit("personaPackage", content);
+  return { path, content };
+}
+
 /** 不在なら undefined。それ以外の失敗（権限など）は握りつぶさず投げる。 */
+
 async function readOptional(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, "utf8");

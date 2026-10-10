@@ -16,9 +16,13 @@ import {
   PersonaStoreError,
   readActivePersona,
   readMode,
+  listSpeechStyles,
+  readSpeechStyle,
   savePersona,
   switchPersona,
+  switchSpeechStyle,
 } from "../src/persona-store.js";
+
 
 async function write(path: string, text: string) {
   await mkdir(dirname(path), { recursive: true });
@@ -314,6 +318,58 @@ test("使用中の人格を消したら、指定も残らない", async () => {
     await switchPersona(s.aikoHome, "aiko-dev");
     await deletePersona(s.aikoHome, "aiko-dev");
     assert.equal(await readActivePersona(s.aikoHome), "");
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("話し方: 未設定なら original", async () => {
+  const s = await sandbox();
+  try {
+    assert.equal(await readSpeechStyle(s.aikoHome), "original");
+    assert.deepEqual(await listSpeechStyles(s.aikoHome), [
+      { name: "original", active: true },
+      { name: "friend", active: false },
+      { name: "servant", active: false },
+    ]);
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("話し方: 切り替えても人格（mode / active-persona）には触れない", async () => {
+  const s = await sandbox();
+  try {
+    await switchPersona(s.aikoHome, "aiko-dev");
+    await switchSpeechStyle(s.aikoHome, "servant");
+    assert.equal(await readSpeechStyle(s.aikoHome), "servant");
+    assert.equal(await readMode(s.aikoHome), "override");
+    assert.equal(await readActivePersona(s.aikoHome), "aiko-dev");
+
+    await switchSpeechStyle(s.aikoHome, "original");
+    assert.equal(await readSpeechStyle(s.aikoHome), "original");
+    assert.equal(await readActivePersona(s.aikoHome), "aiko-dev");
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("話し方: 知らない名前は書かずに断る", async () => {
+  const s = await sandbox();
+  try {
+    await assert.rejects(() => switchSpeechStyle(s.aikoHome, "../x"), PersonaStoreError);
+    await assert.rejects(() => switchSpeechStyle(s.aikoHome, "maid"), PersonaStoreError);
+    assert.equal(existsSync(join(s.aikoHome, "speech-style")), false);
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("話し方: ファイルに知らない値があれば original として扱う", async () => {
+  const s = await sandbox();
+  try {
+    await write(join(s.aikoHome, "speech-style"), "../../etc/passwd\n");
+    assert.equal(await readSpeechStyle(s.aikoHome), "original");
   } finally {
     await s.cleanup();
   }
