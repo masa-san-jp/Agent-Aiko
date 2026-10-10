@@ -231,8 +231,9 @@ export function createRuntimeSdk(options: CreateRuntimeSdkOptions): AikoRuntimeS
         request.runtime.id,
         undefined,
         undefined,
-        undefined,
+        request.outputPrefix,
       );
+
       return {
         targetRuntime: request.runtime.id,
         content: profile.instructions,

@@ -32,6 +32,10 @@ export interface FileSystemPersonaRepositoryOptions {
 
 type Mode = "origin" | "override";
 
+/** 人格本文の話し方をそのまま使う、という指定。定義ファイルを持たない。 */
+export const ORIGINAL_SPEECH_STYLE = "original";
+
+
 export class FileSystemPersonaRepository implements PersonaRepository {
   readonly #aikoHome: string;
   readonly #assumedVersion: string;
@@ -99,6 +103,19 @@ export class FileSystemPersonaRepository implements PersonaRepository {
       }
     }
 
+    // 話し方。人格とは独立に選ぶので、mode / active-persona とは別に読む。
+    // 定義が見つからなくても起動は止めない——口調の設定ミスで人格そのものが
+    // 立たなくなるより、人格本文の話し方で動くほうが直しようがある。
+    const styleId = await this.#readSpeechStyle();
+    const style =
+      styleId === ""
+        ? undefined
+        : await this.#readOptionalFirst([
+            join(this.#aikoHome, "speech-styles", `${styleId}.md`),
+            ...this.#bundled("speech-styles", `${styleId}.md`),
+          ]);
+    if (style) sources.push({ part: "speech-style", location: style.path });
+
     return {
       id: ref.id,
       version: ref.version ?? this.#assumedVersion,
@@ -107,8 +124,18 @@ export class FileSystemPersonaRepository implements PersonaRepository {
       behavioralContract: contract?.content ?? "",
       sources,
       ...(parsedContract ? { responseContract: parsedContract } : {}),
+      ...(style ? { speechStyle: { id: styleId, content: style.content } } : {}),
     };
   }
+
+  /** 選ばれている話し方。original・未設定・不正値は「上書きしない」（空文字）。 */
+  async #readSpeechStyle(): Promise<string> {
+    const raw = (await readOptional(join(this.#aikoHome, "speech-style")))?.trim() ?? "";
+    // active-persona と同じく、値がそのままパスの一部になる。置き場の外を読ませない。
+    if (raw === ORIGINAL_SPEECH_STYLE || !isSafePersonaName(raw)) return "";
+    return raw;
+  }
+
 
   /** mode / active-persona から人格ディレクトリの候補を優先順に並べる。
    *  active-persona が消えていた場合に既定 override へ落ちられるよう、候補は複数返す。 */

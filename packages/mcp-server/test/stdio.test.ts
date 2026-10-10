@@ -39,11 +39,14 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
       "aiko.get_runtime_profile",
       "aiko.health",
       "aiko.list_personas",
+      "aiko.list_speech_styles",
       "aiko.remember_user",
       "aiko.report_capabilities",
       "aiko.save_persona",
       "aiko.switch_persona",
+      "aiko.switch_speech_style",
     ]);
+
 
     const health = await client.callTool({ name: "aiko.health", arguments: {} });
     const content = (health as { content: Array<{ text: string }> }).content;
@@ -53,6 +56,60 @@ test("実バイナリを stdio で起動して人格を読める", async () => {
     const core = await client.readResource({ uri: "persona://aiko/core" });
     const first = core.contents[0] as { text?: unknown } | undefined;
     assert.equal(first?.text, "あたしはアイコ。");
+  } finally {
+    await client.close();
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("実バイナリ: 話し方を切り替えると、同梱の定義が人格に重なり、名乗りは Aiko のまま", async () => {
+  const home = await mkdtemp(join(tmpdir(), "aiko-mcp-stdio-"));
+  await mkdir(join(home, "persona", "origin"), { recursive: true });
+  await writeFile(join(home, "persona", "origin", "persona.md"), "あたしはアイコ。", "utf8");
+  await writeFile(join(home, "INVARIANTS.md"), "取り繕わない。", "utf8");
+
+  const client = new Client({ name: "stdio-test", version: "0.0.0" });
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [serverEntry],
+    env: { ...process.env, AIKO_HOME: home } as Record<string, string>,
+  });
+  const activate = async () => {
+    const prompt = await client.getPrompt({ name: "aiko.activate" });
+    return (prompt.messages[0]?.content as { text: string }).text;
+  };
+
+  try {
+    await client.connect(transport);
+
+    const original = await activate();
+    assert.equal(original.includes("# 話し方"), false);
+    assert.match(original, /「Aiko: 」/);
+
+    for (const style of ["friend", "servant"]) {
+      const switched = await client.callTool({
+        name: "aiko.switch_speech_style",
+        arguments: { name: style },
+      });
+      assert.equal(switched.isError, undefined);
+      const text = await activate();
+      assert.match(text, new RegExp(`# 話し方（${style}）`));
+      // 同梱の定義本文まで入っている（見出しだけで中身が空、を通さない）。
+      assert.match(text, new RegExp(`# 話し方：${style}`));
+      assert.match(text, /「Aiko: 」/);
+    }
+
+    const health = await client.callTool({ name: "aiko.health", arguments: {} });
+    const body = JSON.parse(
+      String((health as { content: Array<{ text: string }> }).content[0]?.text),
+    ) as Record<string, unknown>;
+    assert.equal(body["speechStyle"], "servant");
+
+    const rejected = await client.callTool({
+      name: "aiko.switch_speech_style",
+      arguments: { name: "maid" },
+    });
+    assert.equal(rejected.isError, true);
   } finally {
     await client.close();
     await rm(home, { recursive: true, force: true });

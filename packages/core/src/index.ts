@@ -6,11 +6,15 @@ export {
   type PersonaRepository,
   type PersonaSnapshot,
   type PersonaSource,
+  type SpeechStyle,
 } from "./persona-repository.js";
+
 
 export {
   FileSystemPersonaRepository,
   isSafePersonaName,
+  ORIGINAL_SPEECH_STYLE,
+
   type FileSystemPersonaRepositoryOptions,
 } from "./filesystem-persona-repository.js";
 
@@ -35,10 +39,17 @@ export {
 export {
   deletePersona,
   listPersonas,
+  listSpeechStyles,
   PersonaStoreError,
   readActivePersona,
   readMode,
+  readSpeechStyle,
   savePersona,
+  SPEECH_STYLES,
   switchPersona,
+  switchSpeechStyle,
   type PersonaEntry,
+  type SpeechStyleEntry,
+  type SpeechStyleId,
 } from "./persona-store.js";
+

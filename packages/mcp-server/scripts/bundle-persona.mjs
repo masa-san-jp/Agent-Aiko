@@ -25,6 +25,11 @@ await cp(join(source, "origin", "persona.md"), join(dest, "origin", "persona.md"
 });
 await cp(join(source, "INVARIANTS.md"), join(dest, "INVARIANTS.md"));
 
+// 話し方の定義。人格ではなく口調だけなので、テンプレートではなくこのパッケージに
+// 元を置く（Claude Code 版の配布物には入れない）。
+await cp(join(here, "..", "speech-styles"), join(dest, "speech-styles"), { recursive: true });
+
+
 // LICENSE も一緒に運ぶ。package.json に MIT と書いてあっても、本体が入っていなければ
 // 受け取った人は条文を読めない。
 await cp(join(repoRoot, "LICENSE"), join(here, "..", "LICENSE"));
