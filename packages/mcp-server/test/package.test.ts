@@ -25,7 +25,7 @@ const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"))
 };
 
 test("公開する名前と版が意図どおり", () => {
-  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.2.1"]);
+  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.3.0"]);
 });
 
 test("レジストリに出す名前と版が、package.json と食い違わない", () => {
