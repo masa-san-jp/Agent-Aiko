@@ -44,7 +44,7 @@ import { ProfileStore } from "./profile-store.js";
 import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
-export const SERVER_VERSION = "0.3.0";
+export const SERVER_VERSION = "0.3.1";
 
 /** Prompt（aiko.activate など）で人格を置くときの名乗り。人格や話し方を切り替えても
  *  変えない——「Aiko-<人格名>」のように中身の都合が名前に出ると、同じ Aiko に見えなくなる。
