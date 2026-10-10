@@ -46,13 +46,18 @@ export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
 export {
   deletePersona,
   listPersonas,
+  listSpeechStyles,
   PersonaStoreError,
   readActivePersona,
   readMode,
+  readSpeechStyle,
   savePersona,
+  SPEECH_STYLES,
   switchPersona,
+  switchSpeechStyle,
 } from "@agent-aiko/core";
-export type { PersonaEntry } from "@agent-aiko/core";
+export type { PersonaEntry, SpeechStyleEntry, SpeechStyleId } from "@agent-aiko/core";
+
 export type { ResolvedUserContext } from "@agent-aiko/user-context";
 
 // User Profile の置き場と版。利用側（CLI）が user-context を直接見ずに済むよう

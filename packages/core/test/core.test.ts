@@ -6,7 +6,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
+
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSystemPersonaRepository } from "../src/filesystem-persona-repository.js";
@@ -375,5 +376,125 @@ test("同梱が無く利用者側も無ければ、今までどおり拒否す�
     await assert.rejects(() => repo.load({ id: "aiko" }));
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("話し方: speech-style に friend があれば利用者側の定義を読む", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    "persona/origin/persona.md": "あたしはアイコ。",
+    "INVARIANTS.md": "取り繕わない。",
+    "speech-style": "friend\n",
+    "speech-styles/friend.md": "くだけて話す。",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.deepEqual(snapshot.speechStyle, { id: "friend", content: "くだけて話す。" });
+    assert.ok(snapshot.sources.some((s) => s.part === "speech-style"));
+  } finally {
+    await cleanup();
+  }
+});
+
+test("話し方: 利用者側に無ければ同梱の定義を使う", async () => {
+  const user = await makeAikoHome({
+    "persona/origin/persona.md": "あたしはアイコ。",
+    "INVARIANTS.md": "取り繕わない。",
+    "speech-style": "servant\n",
+  });
+  const bundled = await makeAikoHome({ "speech-styles/servant.md": "はいっ。" });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({
+      aikoHome: user.home,
+      bundledDir: bundled.home,
+    }).load(REF);
+    assert.deepEqual(snapshot.speechStyle, { id: "servant", content: "はいっ。" });
+  } finally {
+    await user.cleanup();
+    await bundled.cleanup();
+  }
+});
+
+test("話し方: original・未設定・定義なし・置き場の外を指す値では上書きしない", async () => {
+  for (const value of [undefined, "original\n", "friend\n", "../../secret\n"]) {
+    const layout: Record<string, string> = {
+      "persona/origin/persona.md": "あたしはアイコ。",
+      "INVARIANTS.md": "取り繕わない。",
+      "secret.md": "読まれてはいけない",
+    };
+    if (value !== undefined) layout["speech-style"] = value;
+    const { home, cleanup } = await makeAikoHome(layout);
+    try {
+      const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+      assert.equal(snapshot.speechStyle, undefined, `speech-style=${String(value)}`);
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test("話し方: 人格と運用ルールの後ろに、優先する旨つきで置く", () => {
+  const { instructions } = compile({
+    persona: { ...persona, speechStyle: { id: "friend", content: "くだけて話す。" } },
+    user: { id: "default" },
+  });
+  const at = instructions.indexOf("# 話し方（friend）");
+  assert.ok(at > instructions.indexOf("# 人格"));
+  assert.ok(at > instructions.indexOf("# 運用ルール"));
+  assert.ok(instructions.includes("くだけて話す。"));
+  assert.ok(instructions.includes("この節を優先してください"));
+});
+
+test("話し方: 変えれば configurationHash も変わる", () => {
+  const base = compile({ persona, user: { id: "default" } });
+  const friend = compile({
+    persona: { ...persona, speechStyle: { id: "friend", content: "くだけて話す。" } },
+    user: { id: "default" },
+  });
+  const servant = compile({
+    persona: { ...persona, speechStyle: { id: "servant", content: "はいっ。" } },
+    user: { id: "default" },
+  });
+  assert.notEqual(base.configurationHash, friend.configurationHash);
+  assert.notEqual(friend.configurationHash, servant.configurationHash);
+});
+
+test("話し方: 定義が置き場の外へのリンクなら読まない（ファイル・ディレクトリとも）", async () => {
+  const outside = await makeAikoHome({ "secret.md": "外の秘密" });
+  for (const linkDir of [false, true]) {
+    const { home, cleanup } = await makeAikoHome({
+      "persona/origin/persona.md": "あたしはアイコ。",
+      "INVARIANTS.md": "取り繕わない。",
+      "speech-style": "friend\n",
+    });
+    try {
+      if (linkDir) {
+        await mkdir(join(outside.home, "styles"), { recursive: true });
+        await writeFile(join(outside.home, "styles", "friend.md"), "外の秘密", "utf8");
+        await symlink(join(outside.home, "styles"), join(home, "speech-styles"));
+      } else {
+        await mkdir(join(home, "speech-styles"), { recursive: true });
+        await symlink(join(outside.home, "secret.md"), join(home, "speech-styles", "friend.md"));
+      }
+      const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+      assert.equal(snapshot.speechStyle, undefined, `linkDir=${linkDir}`);
+    } finally {
+      await cleanup();
+    }
+  }
+  await outside.cleanup();
+});
+
+test("話し方: 一覧に無い名前は、定義ファイルがあっても適用しない", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    "persona/origin/persona.md": "あたしはアイコ。",
+    "INVARIANTS.md": "取り繕わない。",
+    "speech-style": "custom\n",
+    "speech-styles/custom.md": "独自の口調",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.speechStyle, undefined);
+  } finally {
+    await cleanup();
   }
 });

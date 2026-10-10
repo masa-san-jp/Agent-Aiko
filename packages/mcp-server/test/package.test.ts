@@ -124,7 +124,14 @@ test("人格を同梱している", () => {
   assert.equal(existsSync(join(pkgRoot, "persona", "INVARIANTS.md")), true);
 });
 
+test("話し方の定義を同梱している", () => {
+  for (const style of ["friend", "servant"]) {
+    assert.equal(existsSync(join(pkgRoot, "persona", "speech-styles", `${style}.md`)), true);
+  }
+});
+
 test("LICENSE を同梱している", () => {
+
   // package.json に MIT と書いてあっても、本体が無ければ受け取った人は条文を読めない。
   assert.equal(existsSync(join(pkgRoot, "LICENSE")), true);
 });

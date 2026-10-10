@@ -10,7 +10,15 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { isSafePersonaName } from "./filesystem-persona-repository.js";
+import {
+  isSafePersonaName,
+  isSpeechStyleId,
+  ORIGINAL_SPEECH_STYLE,
+  SPEECH_STYLES,
+  type SpeechStyleId,
+} from "./filesystem-persona-repository.js";
+
+
 import { assertWithinLimit } from "./limits.js";
 
 export class PersonaStoreError extends Error {
@@ -152,4 +160,36 @@ export async function deletePersona(aikoHome: string, name: string): Promise<voi
     await writeAtomic(join(aikoHome, "active-persona"), "\n");
   }
   await rm(dir, { recursive: true, force: true });
+}
+
+// 選べる話し方の一覧（SPEECH_STYLES）は読む側と共有する。original は人格本文の
+// 話し方のままで、friend / servant は同梱の定義を使う（~/.aiko/speech-styles/<id>.md
+// を置けば、そちらが優先される）。
+export { SPEECH_STYLES, type SpeechStyleId };
+
+export interface SpeechStyleEntry {
+  name: SpeechStyleId;
+  active: boolean;
+}
+
+
+/** いま選ばれている話し方。未設定・知らない値は original として扱う。 */
+export async function readSpeechStyle(aikoHome: string): Promise<SpeechStyleId> {
+  const raw = (await readOptional(join(aikoHome, "speech-style")))?.trim() ?? "";
+  return isSpeechStyleId(raw) ? raw : ORIGINAL_SPEECH_STYLE;
+}
+
+export async function listSpeechStyles(aikoHome: string): Promise<SpeechStyleEntry[]> {
+  const active = await readSpeechStyle(aikoHome);
+  return SPEECH_STYLES.map((name) => ({ name, active: name === active }));
+}
+
+/** 話し方を変える。人格（mode / active-persona）には触れない。 */
+export async function switchSpeechStyle(aikoHome: string, name: string): Promise<void> {
+  if (!isSpeechStyleId(name)) {
+    throw new PersonaStoreError(
+      `話し方 ${name} はありません。${SPEECH_STYLES.join(" / ")} から選んでください`,
+    );
+  }
+  await writeAtomic(join(aikoHome, "speech-style"), `${name}\n`);
 }

@@ -57,6 +57,21 @@ export function compile(input: CompileInput): CompiledInstructions {
     sections.push("", "# 運用ルール", contract);
   }
 
+  // 話し方は人格本文の「話し方」を差し替えるだけで、何者かと判断の仕方は変えない。
+  // 後ろに置いて上書きであることを明記する——前に置くと、人格本文の口調指定が
+  // 後から読まれて勝つ。
+  const style = input.persona.speechStyle;
+  if (style && style.content.trim().length > 0) {
+    sections.push(
+      "",
+      `# 話し方（${style.id}）`,
+      "人格本文に書かれた話し方（語調・一人称・呼びかけ・口調サンプル）より、この節を優先してください。不変条項と運用ルールの判断は変えません。",
+      "",
+      style.content.trim(),
+    );
+  }
+
+
   sections.push("", "# ユーザー", ...userLines(input.user));
 
   const capabilities = input.capabilities ?? [];
@@ -88,7 +103,9 @@ export function compile(input: CompileInput): CompiledInstructions {
       "",
       "# 出力プレフィックス",
       `すべての応答冒頭に「${input.outputPrefix}: 」を付けてください。`,
+      "人格や話し方の本文に別のプレフィックスが書かれていても、こちらを使ってください。",
     );
+
   }
 
   // §6.4 の10段の優先順位のうち、ここで注入する範囲だけを順序どおりに書く。
@@ -115,6 +132,15 @@ export function compile(input: CompileInput): CompiledInstructions {
       invariants: sha256(input.persona.invariants),
       identityCore: sha256(input.persona.identityCore),
       behavioralContract: sha256(input.persona.behavioralContract),
+      ...(input.persona.speechStyle
+        ? {
+            speechStyle: {
+              id: input.persona.speechStyle.id,
+              content: sha256(input.persona.speechStyle.content),
+            },
+          }
+        : {}),
+
       user: input.user,
       capabilities: [...capabilities].sort(),
       excluded,
