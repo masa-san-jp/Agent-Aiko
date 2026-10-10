@@ -36,7 +36,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.2.1"
+    "version": "0.3.0"
   },
   "persona": {
     "id": "aiko",

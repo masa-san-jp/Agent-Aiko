@@ -1,6 +1,6 @@
 {
   "name": "aiko-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "mcpName": "io.github.masa-san-jp/aiko",
   "description": "A portable persona for MCP clients — the same agent in Claude Code, Codex, Cursor and VS Code. Runs locally; nothing leaves your machine.",
   "type": "module",
