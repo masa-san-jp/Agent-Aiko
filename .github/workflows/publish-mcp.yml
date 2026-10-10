@@ -94,9 +94,18 @@ jobs:
 
       # NODE_AUTH_TOKEN は渡さない。渡すとトークン認証が優先されて OIDC が使われない。
       # prepack がビルドするので、ここで別途 build は要らない。
+      # 公開済みの版なら飛ばす。後段（レジストリ登録）だけをやり直すために
+      # 同じタグで再実行できるようにする。npm は同じ版を二度出せない。
       - name: npm へ公開
         working-directory: packages/mcp-server
-        run: npm publish --access public
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} は公開済み。npm publish は飛ばす"
+          else
+            npm publish --access public
+          fi
 
       # 名前も版も package.json から取る。ここだけ名前を書き写すと、名前を変えた
       # ときに古いほうを見に行って「公開できていない」と誤って落ちる。
@@ -104,7 +113,15 @@ jobs:
         run: |
           name=$(node -p "require('./packages/mcp-server/package.json').name")
           version=$(node -p "require('./packages/mcp-server/package.json').version")
-          npm view "${name}@${version}" version
+          # 公開直後は registry に反映されるまで時間がかかる。1回で見ると、
+          # 公開できているのに落ちて後段のレジストリ登録が飛ぶ（0.3.0 / 0.3.1 で実測）。
+          for i in $(seq 1 12); do
+            if npm view "${name}@${version}" version; then exit 0; fi
+            echo "まだ見えない（${i}/12）。10秒待つ"
+            sleep 10
+          done
+          echo "${name}@${version} が npm に見つかりません"
+          exit 1
 
       # 版を固定して照合する。latest を引くと、こちらが何も変えていないのに
       # 上流の更新だけで動きが変わる。**その差分は誰もレビューしない**。
