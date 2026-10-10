@@ -280,3 +280,24 @@ test("Binder: provenance の時刻は固定できる", async () => {
   );
   assert.equal(profile.provenance.created_at, "2026-08-02T00:00:00.000Z");
 });
+
+test("Binder: 話し方を差し替えているときは、人格側の一人称の宣言を応答契約から外す", async () => {
+  const binder = new RuntimeProfileBinder({
+    personaRepository: repo({
+      responseContract: {
+        firstPerson: "あたし",
+        prohibitedFirstPersons: ["私は"],
+        prohibitedExpressions: ["絶対に安全"],
+      },
+      speechStyle: { id: "friend", content: "一人称は「私」。" },
+    }),
+  });
+  const profile = await binder.bind(
+    { persona: { id: "aiko" }, runtime: { id: "codex", injectionMethod: "codex:base-instructions" } },
+    user,
+  );
+  assert.equal(profile.response_contract?.["firstPerson"], undefined);
+  assert.equal(profile.response_contract?.["prohibitedFirstPersons"], undefined);
+  // 口調と関係の無い宣言は残す。
+  assert.deepEqual(profile.response_contract?.["prohibitedExpressions"], ["絶対に安全"]);
+});

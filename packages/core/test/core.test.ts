@@ -6,7 +6,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
+
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSystemPersonaRepository } from "../src/filesystem-persona-repository.js";
@@ -455,4 +456,45 @@ test("話し方: 変えれば configurationHash も変わる", () => {
   });
   assert.notEqual(base.configurationHash, friend.configurationHash);
   assert.notEqual(friend.configurationHash, servant.configurationHash);
+});
+
+test("話し方: 定義が置き場の外へのリンクなら読まない（ファイル・ディレクトリとも）", async () => {
+  const outside = await makeAikoHome({ "secret.md": "外の秘密" });
+  for (const linkDir of [false, true]) {
+    const { home, cleanup } = await makeAikoHome({
+      "persona/origin/persona.md": "あたしはアイコ。",
+      "INVARIANTS.md": "取り繕わない。",
+      "speech-style": "friend\n",
+    });
+    try {
+      if (linkDir) {
+        await mkdir(join(outside.home, "styles"), { recursive: true });
+        await writeFile(join(outside.home, "styles", "friend.md"), "外の秘密", "utf8");
+        await symlink(join(outside.home, "styles"), join(home, "speech-styles"));
+      } else {
+        await mkdir(join(home, "speech-styles"), { recursive: true });
+        await symlink(join(outside.home, "secret.md"), join(home, "speech-styles", "friend.md"));
+      }
+      const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+      assert.equal(snapshot.speechStyle, undefined, `linkDir=${linkDir}`);
+    } finally {
+      await cleanup();
+    }
+  }
+  await outside.cleanup();
+});
+
+test("話し方: 一覧に無い名前は、定義ファイルがあっても適用しない", async () => {
+  const { home, cleanup } = await makeAikoHome({
+    "persona/origin/persona.md": "あたしはアイコ。",
+    "INVARIANTS.md": "取り繕わない。",
+    "speech-style": "custom\n",
+    "speech-styles/custom.md": "独自の口調",
+  });
+  try {
+    const snapshot = await new FileSystemPersonaRepository({ aikoHome: home }).load(REF);
+    assert.equal(snapshot.speechStyle, undefined);
+  } finally {
+    await cleanup();
+  }
 });
