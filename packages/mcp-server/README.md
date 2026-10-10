@@ -18,16 +18,19 @@ Node.js 20 or newer. Nothing else — the persona ships inside the package.
 
 ## What changes once it's in
 
-Your client gains nine tools, four prompts and the persona itself as readable resources. Straight after installing, with nothing configured:
+Your client gains eleven tools, four prompts and the persona itself as readable resources. Straight after installing, with nothing configured:
 
 ```
 TOOLS:   aiko.bind_runtime, aiko.get_runtime_profile, aiko.remember_user,
          aiko.list_personas, aiko.switch_persona, aiko.save_persona,
-         aiko.delete_persona, aiko.report_capabilities, aiko.health
+         aiko.delete_persona, aiko.list_speech_styles, aiko.switch_speech_style,
+         aiko.report_capabilities, aiko.health
+
 PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handoff
 ```
 
-`aiko.activate` is the one to try first — it returns the persona so the agent answers as Aiko for the rest of the session. `aiko.health` tells you what the server can actually read:
+`aiko.activate` is the one to try first — it returns the persona so the agent answers as Aiko for the rest of the session. Replies start with `Aiko:` whichever persona or speech style is in use. `aiko.health` tells you what the server can actually read:
+
 
 ```json
 {
@@ -40,7 +43,9 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
     "version": "0.0.0",
     "invariantsPresent": true
   },
+  "speechStyle": "original",
   "profiles": 0,
+
   "status": "ok"
 }
 ```
@@ -54,7 +59,9 @@ You talk to it. There are no files to write by hand.
 "my notes live in ~/notes"     → records where they are (it does not read them)
 "save this as my own persona"  → stores your variant
 "go back to the original"      → returns to the shipped one
+"talk to me like a friend"     → switches to the friend speech style
 ```
+
 
 What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 
@@ -63,6 +70,19 @@ What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 One persona ships with the package. You can keep as many of your own as you like and switch between them.
 
 The original persona and its invariants cannot be overwritten (invariant I-5). Save under a different name instead.
+
+### Speech styles
+
+How Aiko talks is chosen separately from who Aiko is. Switching the style changes the tone only; the persona, the invariants and the way decisions are made stay as they are.
+
+| Style | Tone |
+|---|---|
+| `original` | The persona's own way of speaking (default) |
+| `friend` | Casual, close — the way a friend working next to you talks |
+| `servant` | Polite and eager to serve, first person 「アイコ」 |
+
+The choice is kept in `~/.aiko/speech-style` and takes effect the next time the persona is loaded (`aiko.activate`). To change how a style sounds, put your own `~/.aiko/speech-styles/<style>.md`; it takes precedence over the shipped one.
+
 
 ## Configuration
 
@@ -151,10 +171,25 @@ npx aiko-mcp install
 「記憶は ~/notes にある」     → 場所を控える（中身は読まない）
 「自分用の人格を保存して」     → 独自人格として保存する
 「オリジナルに戻して」        → 元の人格へ戻る
+「friend モードで話して」     → 話し方を友だち口調にする
 ```
 
-覚えたものは `~/.aiko` に置かれる。**その端末のその人のものだけ**で、他の利用者には届かない。
+覚えたものは `~/.aiko` に置かれる。
+**その端末のその人のものだけ**で、他の利用者には届かない。
 
 ### 人格を自分用にする
 
 同梱されているのはオリジナルのアイコ1人。自分用の人格はいくつでも作れて、切り替えられる。オリジナルの人格と不変条項は書き換えられない（不変条項 I-5）。書き換えたい場合は別名で保存する。
+
+### 話し方を選ぶ
+
+話し方は人格とは別に選べる。変わるのは口調だけで、人格・不変条項・判断の仕方はそのまま。どれを選んでも応答の頭は `Aiko:` で変わらない。
+
+| 話し方 | 口調 |
+|---|---|
+| `original` | 人格本来の話し方（既定） |
+| `friend` | 隣で作業を見ている友だちの距離のくだけた口調 |
+| `servant` | 一人称「アイコ」で、控えめに一生懸命仕える丁寧な口調 |
+
+選んだものは `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
+

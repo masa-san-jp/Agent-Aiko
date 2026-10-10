@@ -83,7 +83,9 @@ export interface CompileInstructionsRequest {
   personaRef: { personaId: string };
   userRef: { userId: string };
   runtime: RuntimeDescriptor;
+  outputPrefix?: string;
 }
+
 
 export interface HealthRequest {
   requestId?: string;

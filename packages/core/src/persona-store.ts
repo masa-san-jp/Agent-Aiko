@@ -10,7 +10,8 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { isSafePersonaName } from "./filesystem-persona-repository.js";
+import { isSafePersonaName, ORIGINAL_SPEECH_STYLE } from "./filesystem-persona-repository.js";
+
 import { assertWithinLimit } from "./limits.js";
 
 export class PersonaStoreError extends Error {
@@ -152,4 +153,40 @@ export async function deletePersona(aikoHome: string, name: string): Promise<voi
     await writeAtomic(join(aikoHome, "active-persona"), "\n");
   }
   await rm(dir, { recursive: true, force: true });
+}
+
+/** 選べる話し方。original は人格本文の話し方のままで、定義ファイルを持たない。
+ *  friend / servant は配布物に同梱した定義を使う（~/.aiko/speech-styles/<id>.md を
+ *  置けば、そちらが優先される）。 */
+export const SPEECH_STYLES = [ORIGINAL_SPEECH_STYLE, "friend", "servant"] as const;
+export type SpeechStyleId = (typeof SPEECH_STYLES)[number];
+
+export interface SpeechStyleEntry {
+  name: SpeechStyleId;
+  active: boolean;
+}
+
+function isSpeechStyleId(name: string): name is SpeechStyleId {
+  return (SPEECH_STYLES as readonly string[]).includes(name);
+}
+
+/** いま選ばれている話し方。未設定・知らない値は original として扱う。 */
+export async function readSpeechStyle(aikoHome: string): Promise<SpeechStyleId> {
+  const raw = (await readOptional(join(aikoHome, "speech-style")))?.trim() ?? "";
+  return isSpeechStyleId(raw) ? raw : ORIGINAL_SPEECH_STYLE;
+}
+
+export async function listSpeechStyles(aikoHome: string): Promise<SpeechStyleEntry[]> {
+  const active = await readSpeechStyle(aikoHome);
+  return SPEECH_STYLES.map((name) => ({ name, active: name === active }));
+}
+
+/** 話し方を変える。人格（mode / active-persona）には触れない。 */
+export async function switchSpeechStyle(aikoHome: string, name: string): Promise<void> {
+  if (!isSpeechStyleId(name)) {
+    throw new PersonaStoreError(
+      `話し方 ${name} はありません。${SPEECH_STYLES.join(" / ")} から選んでください`,
+    );
+  }
+  await writeAtomic(join(aikoHome, "speech-style"), `${name}\n`);
 }

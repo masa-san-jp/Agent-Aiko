@@ -17,9 +17,15 @@ import {
   EvaluateActionRequestSchema,
   deletePersona,
   listPersonas,
+  listSpeechStyles,
+  readSpeechStyle,
   readUserMarkdown,
+
   savePersona,
+  SPEECH_STYLES,
   switchPersona,
+  switchSpeechStyle,
+
   userMarkdownCandidates,
   writeUserMarkdown,
   RuntimeSdkError,
@@ -39,6 +45,16 @@ import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
 export const SERVER_VERSION = "0.2.1";
+
+/** Prompt（aiko.activate など）で人格を置くときの名乗り。人格や話し方を切り替えても
+ *  変えない——「Aiko-<人格名>」のように中身の都合が名前に出ると、同じ Aiko に見えなくなる。
+ *
+ *  **bind_runtime には足さない。** あちらは Adapter と同じ入力なら同じ Profile を返す
+ *  約束（§16.3）があり、MCP だけ名乗りを足すと hash が割れる。名乗りが要る
+ *  呼び出し側は outputPrefix を明示する。 */
+export const DISPLAY_NAME = "Aiko";
+
+
 
 export interface AikoServerDeps {
   personaRepository: PersonaRepository;
@@ -119,8 +135,10 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       requestedConsistencyLevel: REQUESTED_LEVEL[runtime],
       ...(capabilityManifest === undefined ? {} : { capabilityManifest }),
       ...(outputPrefix ? { outputPrefix } : {}),
+
     });
     return bundle.profile;
+
   };
 
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
@@ -138,8 +156,10 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
         personaRef: { personaId },
         userRef: { userId: deps.user.context.id },
         runtime: { id: "generic-mcp", version: SERVER_VERSION },
+        outputPrefix: DISPLAY_NAME,
       });
       return { instructions: compiled.content, personaVersion: compiled.personaVersion };
+
     },
   });
 
@@ -435,8 +455,46 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       },
     );
 
+    // 話し方は人格とは別の軸。人格（何者か）はそのままに、口調だけを選ぶ。
+    server.registerTool(
+      "aiko.list_speech_styles",
+      {
+        title: "選べる話し方の一覧を返す",
+        description:
+          "original（人格本来の話し方）/ friend（くだけた友だち口調）/ servant（仕える丁寧な口調）と、いまどれを使っているかを返す",
+        inputSchema: {},
+      },
+      async () => json({ speechStyles: await listSpeechStyles(aikoHome) }),
+    );
+
+    server.registerTool(
+      "aiko.switch_speech_style",
+      {
+        title: "話し方を切り替える",
+        description:
+          "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。人格は変えず口調だけを変える。反映は次に人格を読み込んだとき（aiko.activate など）",
+        inputSchema: { name: z.enum(SPEECH_STYLES) },
+      },
+      async ({ name }) => {
+        try {
+          await switchSpeechStyle(aikoHome, name);
+          return json({
+            switched: true,
+            name,
+            speechStyles: await listSpeechStyles(aikoHome),
+          });
+        } catch (err) {
+          return json(
+            { switched: false, reason: reasonOf(err), speechStyles: await listSpeechStyles(aikoHome) },
+            true,
+          );
+        }
+      },
+    );
+
     server.registerTool(
       "aiko.save_persona",
+
       {
         title: "独自の人格を保存する",
         description:
@@ -513,6 +571,9 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       return json({
         server: { name: SERVER_NAME, version: SERVER_VERSION },
         persona: health.persona,
+        ...(deps.aikoHome ? { speechStyle: await readSpeechStyle(deps.aikoHome) } : {}),
+
+
         profiles: store.size,
         status: "ok",
       });

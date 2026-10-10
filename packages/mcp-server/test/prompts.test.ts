@@ -63,7 +63,18 @@ test("設計書 §7.3 の4つが、その名前のまま並ぶ", async () => {
   }
 });
 
+test("activate は人格や話し方に関わらず Aiko と名乗らせる", async () => {
+  const { client, close } = await connect();
+  try {
+    const text = firstText(await client.getPrompt({ name: "aiko.activate" }));
+    assert.match(text, /すべての応答冒頭に「Aiko: 」を付けてください。/);
+  } finally {
+    await close();
+  }
+});
+
 test("activate は人格の中身を返す", async () => {
+
   const { client, close } = await connect();
   try {
     const text = firstText(await client.getPrompt({ name: "aiko.activate" }));
