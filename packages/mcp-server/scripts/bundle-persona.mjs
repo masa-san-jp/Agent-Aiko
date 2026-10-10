@@ -27,7 +27,11 @@ await cp(join(source, "INVARIANTS.md"), join(dest, "INVARIANTS.md"));
 
 // 話し方の定義。人格ではなく口調だけなので、テンプレートではなくこのパッケージに
 // 元を置く（Claude Code 版の配布物には入れない）。
-await cp(join(here, "..", "speech-styles"), join(dest, "speech-styles"), { recursive: true });
+// ディレクトリごとは写さない。後から置いた私的なファイルまで npm に出てしまう。
+for (const style of ["friend", "servant"]) {
+  await cp(join(here, "..", "speech-styles", `${style}.md`), join(dest, "speech-styles", `${style}.md`));
+}
+
 
 
 // LICENSE も一緒に運ぶ。package.json に MIT と書いてあっても、本体が入っていなければ
