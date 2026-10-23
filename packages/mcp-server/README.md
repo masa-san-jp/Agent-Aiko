@@ -218,6 +218,7 @@ node dist/server.js http --port 3000
 クライアントごとにMCPセッションとRuntime Profileを分離し、最大32セッション、無操作15分で破棄します。
 セッションIDだけではアクセスできません。ただし、同じトークンを持つ全接続はこのプロセスを起動した同じローカルユーザーのデータを使います。
 この共有トークンはOAuthやtenant分離の代替ではなく、同じOSユーザー権限を持つ不正なプロセスから秘密を隔離するものでもありません。
+処理中のHTTPリクエストは認証処理を含め最大32件、TCP接続は最大128件です。上限超過は503で拒否します。
 POST本文は1 MiBまでです。終了はCtrl+CまたはSIGTERMで行えます。
 
 実装は [Issue #103](https://github.com/masa-san-jp/Agent-Aiko/issues/103) のPhase 1を対象としています。

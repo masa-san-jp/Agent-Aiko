@@ -13,6 +13,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { createAikoServer } from "../src/aiko-server.js";
 import { startLocalHttpServer, type LocalHttpOptions } from "../src/http.js";
+import type { OAuthResource } from "../src/oauth.js";
 
 const deps = {
   personaRepository: { load: async () => ({
@@ -37,6 +38,72 @@ async function connect(url: URL) {
 function body(result: unknown): Record<string, unknown> {
   return JSON.parse((result as { content: { text: string }[] }).content[0]!.text) as Record<string, unknown>;
 }
+
+test("HTTP: limits work before OAuth verification and recovers capacity", async () => {
+  let releaseVerification!: () => void;
+  let startedVerification!: () => void;
+  let verified = 0;
+  const held = new Promise<void>((resolve) => { releaseVerification = resolve; });
+  const started = new Promise<void>((resolve) => { startedVerification = resolve; });
+  // Hold the externally supplied verifier; no body parsing or server construction
+  // should be reached by additional requests while this request occupies the slot.
+  const gateway = await startLocalHttpServer(() => createAikoServer(deps), {
+    port: 0, maxConcurrentRequests: 1,
+    oauth: {
+      verify: async () => { verified++; startedVerification(); await held; return "owner"; },
+      challenge: () => "Bearer", metadataPath: "/metadata", metadata: {},
+    } as unknown as OAuthResource,
+  });
+  try {
+    const first = fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
+    await started;
+    const blocked = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
+    assert.equal(blocked.status, 503);
+    assert.equal(blocked.headers.get("retry-after"), "1");
+    assert.equal(verified, 1);
+    releaseVerification();
+    const completed = await first;
+    assert.equal(completed.status, 200);
+    assert.equal(completed.headers.get("cache-control"), "no-store");
+    await completed.text();
+    const next = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
+    assert.equal(next.status, 200);
+    await next.text();
+    assert.equal(verified, 2);
+  } finally { releaseVerification(); await gateway.close(); }
+});
+
+test("HTTP: aborting a request cannot bypass the verification work limit", async () => {
+  let releaseVerification!: () => void;
+  let startedVerification!: () => void;
+  const held = new Promise<void>((resolve) => { releaseVerification = resolve; });
+  const started = new Promise<void>((resolve) => { startedVerification = resolve; });
+  let created = 0;
+  const gateway = await startLocalHttpServer(() => { created++; return createAikoServer(deps); }, {
+    port: 0, maxConcurrentRequests: 1,
+    oauth: {
+      verify: async () => { startedVerification(); await held; return "owner"; },
+      challenge: () => "Bearer", metadataPath: "/metadata", metadata: {},
+    } as unknown as OAuthResource,
+  });
+  const first = request(gateway.url, { method: "POST", headers }, (res) => res.resume());
+  first.on("error", () => {});
+  try {
+    first.end(JSON.stringify(initialize));
+    await started;
+    const closed = new Promise<void>((resolve) => { first.once("close", resolve); });
+    first.destroy();
+    await closed;
+    const blocked = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
+    assert.equal(blocked.status, 503);
+    releaseVerification();
+    await new Promise<void>((resolve) => { setImmediate(resolve); });
+    assert.equal(created, 0, "aborted requests must not allocate MCP servers");
+    const next = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
+    assert.equal(next.status, 200);
+    await next.text();
+  } finally { releaseVerification(); first.destroy(); await gateway.close(); }
+});
 
 test("HTTP: absent, wrong and malformed credentials cannot initialize or use an existing session", async () => {
   let created = 0;
