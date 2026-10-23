@@ -254,3 +254,27 @@ export async function switchSpeechStyle(aikoHome: string, name: string): Promise
   }
   await writeAtomic(join(aikoHome, "speech-style"), `${name}\n`);
 }
+
+/** 話し方も system 級の指示に入るため、MCP は提案だけを残す。 */
+export async function proposeSpeechStyle(aikoHome: string, name: string): Promise<string> {
+  if (!isSpeechStyleId(name)) {
+    throw new PersonaStoreError(`話し方 ${name} はありません`);
+  }
+  const path = join(aikoHome, "speech-style-proposal");
+  await writeAtomic(path, `${name}\n`);
+  return path;
+}
+
+/** CLI の明示操作でのみ、提案された話し方を反映する。 */
+export async function acceptSpeechStyleProposal(aikoHome: string): Promise<SpeechStyleId | undefined> {
+  const path = join(aikoHome, "speech-style-proposal");
+  const requested = await readOptional(path);
+  if (requested === undefined) return undefined;
+  const name = requested.trim();
+  if (!isSpeechStyleId(name)) {
+    throw new PersonaStoreError(`話し方の提案が不正です: ${name}`);
+  }
+  await switchSpeechStyle(aikoHome, name);
+  await rm(path, { force: true });
+  return name;
+}
