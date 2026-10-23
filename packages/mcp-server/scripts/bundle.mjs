@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const pkg = join(here, "..");
 
-const external = ["@modelcontextprotocol/sdk", "@modelcontextprotocol/sdk/*", "zod"];
+const external = ["@modelcontextprotocol/sdk", "@modelcontextprotocol/sdk/*", "zod", "jose"];
 
 for (const [entry, out] of [
   ["src/server.ts", "dist/server.js"],

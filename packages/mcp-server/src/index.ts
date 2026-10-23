@@ -4,3 +4,5 @@ export { createAikoServer, SERVER_NAME, SERVER_VERSION, type AikoServerDeps } fr
 export { ProfileStore } from "./profile-store.js";
 
 export { startLocalHttpServer, type LocalHttpOptions } from "./http.js";
+
+export { OAuthResource, OAuthAccessError, type OAuthResourceOptions } from "./oauth.js";
