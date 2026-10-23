@@ -239,10 +239,26 @@ PY
 #           AIKO_TELEGRAM_BOT_TOKEN environment variable. First that delivers wins.
 # Hourly-throttled, best-effort; alerting failures never affect the stop decision.
 if [ -s "$ALERT" ]; then
-  THROTTLE="/tmp/tg-reply-guard.alert-throttle"
+  THROTTLE="${AIKO_HOME:-$HOME/.aiko}/tg-reply-guard.alert-throttle"
+  mkdir -p "$(dirname "$THROTTLE")" 2>/dev/null || true
   now=$(date +%s)
-  last=0
-  [ -f "$THROTTLE" ] && last=$(cat "$THROTTLE" 2>/dev/null || echo 0)
+  # 固定の /tmp に echo > すると、リンクの先を上書きする。自分のディレクトリへ、リンクは辿らずに書く。
+  last=$(python3 - "$THROTTLE" <<'PY' || true
+import errno, os, sys
+path = sys.argv[1]
+flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+try:
+    fd = os.open(path, flags)
+except OSError:
+    print(0)
+    sys.exit(0)
+data = os.read(fd, 64)
+os.close(fd)
+text = data.decode("utf-8", "replace").strip()
+print(text if text.isdigit() else 0)
+PY
+)
+  last="${last:-0}"
   if [ $((now - last)) -ge 3600 ]; then
     CHAT="${TG_GUARD_CHAT:-}"
     [ -z "$CHAT" ] && [ -f "$ALERT.chat" ] && CHAT=$(cat "$ALERT.chat" 2>/dev/null || true)
@@ -267,12 +283,24 @@ if [ -s "$ALERT" ]; then
       [ -n "${AIKO_TELEGRAM_BOT_TOKEN:-}" ] && tokens+=("${AIKO_TELEGRAM_BOT_TOKEN}")
       for tok in "${tokens[@]:-}"; do
         [ -z "$tok" ] && continue
-        resp=$(curl -sS --max-time 10 -X POST \
-          "https://api.telegram.org/bot${tok}/sendMessage" \
-          --data-urlencode "chat_id=${CHAT}" \
-          --data-urlencode "text=${body}" 2>/dev/null | head -c 2000 || true)
+        # トークンを curl の引数に載せない。ps に出る。
+        resp=$(printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$tok" \
+          | curl -sS --max-time 10 -K - -X POST \
+            --data-urlencode "chat_id=${CHAT}" \
+            --data-urlencode "text=${body}" 2>/dev/null | head -c 2000 || true)
         if printf '%s' "$resp" | grep -q '"ok":true'; then
-          echo "$now" > "$THROTTLE"
+          python3 - "$THROTTLE" "$now" <<'PY' || true
+import errno, os, sys
+path, now = sys.argv[1], sys.argv[2]
+if not hasattr(os, "O_NOFOLLOW"):
+    sys.exit(2)
+try:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+except OSError as err:
+    sys.exit(2 if err.errno == errno.ELOOP else 1)
+os.write(fd, (now + "\n").encode())
+os.close(fd)
+PY
           break
         fi
       done

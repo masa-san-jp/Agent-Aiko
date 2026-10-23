@@ -1,7 +1,8 @@
 #!/bin/bash
 # Agent-Aiko Claude Code 版 installer
 # 経路：
-#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
+#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
+#   ラッパーの PINNED_REF は、そのリリースのタグに合わせる。
 #   bash scripts/install.sh                                                                              # 互換ラッパー経由
 #   bash claude-code/scripts/install.sh                                                                  # 直接実行
 
@@ -54,7 +55,7 @@ printf "%s\n\n" "$RESET"
 
 # ─────────────────────────────────────
 # テンプレートの場所を決定
-# curl | bash の場合はリポジトリをクローン
+# curl | bash の場合は Release を取得する。main の clone には落ちない。
 # ─────────────────────────────────────
 TEMP_DIR=""
 CLEANUP_TEMP=false
@@ -155,9 +156,21 @@ fetch_verified_release() {
   expected="$(grep -F "${name}.tar.gz" "${work}/SHA256SUMS" | awk '{print $1}' | head -1)"
   [ -n "$expected" ] || return 4
   [ "$actual" = "$expected" ] || return 4
+  # file:// は試験用。https の Release は checksum のあと attestation も見る。
+  verify_release_attestation "${work}/${name}.tar.gz" || return 6
 
   tar -xzf "${work}/${name}.tar.gz" -C "$dest" || return 5
   printf '%s' "${dest}/${name}"
+}
+
+verify_release_attestation() {
+  case "$RELEASE_DL" in
+    file:*) return 0 ;;
+  esac
+  if ! command -v gh >/dev/null 2>&1; then
+    return 6
+  fi
+  gh attestation verify "$1" --repo masa-san-jp/Agent-Aiko >/dev/null 2>&1 || return 6
 }
 
 if [ ! -d "$TEMPLATE_DIR" ]; then
@@ -166,49 +179,55 @@ if [ ! -d "$TEMPLATE_DIR" ]; then
   RELEASE_TAG=""
   EXTRACTED=""
 
-  if [ -z "${AGENT_AIKO_REF:-}" ]; then
-    printf "  配布物を取得しています...  "
-    RELEASE_TAG="$(resolve_release_tag "${TEMP_DIR}/releases.json" || true)"
-    if [ -n "$RELEASE_TAG" ]; then
-      set +e
-      EXTRACTED="$(fetch_verified_release "$TEMP_DIR" "$RELEASE_TAG")"
-      fetch_status=$?
-      set -e
-      case "$fetch_status" in
-        0) printf "%s✓%s %s（checksum 照合済み）\n" "$CYAN" "$RESET" "$RELEASE_TAG" ;;
-        3)
-          printf "\n  %sエラー: sha256 を計算する道具がありません（sha256sum / shasum）%s\n" "$BOLD" "$RESET" >&2
-          printf "  検証できないものは入れません。\n" >&2
-          cleanup_temp_dir; exit 1 ;;
-        4)
-          printf "\n  %sエラー: 配布物の checksum が一致しません（%s）%s\n" "$BOLD" "$RELEASE_TAG" "$RESET" >&2
-          printf "  取得したものが壊れているか、途中で差し替えられています。中止します。\n" >&2
-          cleanup_temp_dir; exit 1 ;;
-        *)
-          printf "\n  %s· 配布物を取得できませんでした。リポジトリから取得します%s\n" "$DIM" "$RESET"
-          EXTRACTED="" ;;
-      esac
-    else
-      printf "\n  %s· %s の配布物が見つかりません。リポジトリから取得します%s\n" "$DIM" "$RELEASE_CHANNEL" "$RESET"
-      printf "  %s（beta を使うなら AGENT_AIKO_CHANNEL=beta）%s\n" "$DIM" "$RESET"
-    fi
+  if [ -n "${AGENT_AIKO_REF:-}" ]; then
+    case "$AGENT_AIKO_REF" in
+      v*)
+        RELEASE_TAG="$AGENT_AIKO_REF"
+        ;;
+      *)
+        printf "  %sエラー: AGENT_AIKO_REF はリリースタグ（v...）だけです: %s%s\n" "$BOLD" "$AGENT_AIKO_REF" "$RESET" >&2
+        printf "  ブランチの取得はしません。\n" >&2
+        cleanup_temp_dir
+        exit 1
+        ;;
+    esac
   fi
 
-  if [ -n "$EXTRACTED" ]; then
-    TEMPLATE_DIR="$EXTRACTED/claude-code/template/.claude"
-  else
-    # checksum を照合できない経路。ここを通ったことは黙らない。
-    printf "  リポジトリを取得しています...  "
-    if git clone --depth=1 --quiet --branch "${AGENT_AIKO_REF:-main}" \
-      https://github.com/masa-san-jp/Agent-Aiko.git "${TEMP_DIR}/repo" 2>/dev/null; then
-      printf "%s✓%s %s（checksum 照合なし）\n" "$CYAN" "$RESET" "${AGENT_AIKO_REF:-main}"
-    else
-      printf "\n  %sエラー: リポジトリの取得に失敗しました%s\n" "$BOLD" "$RESET"
-      cleanup_temp_dir
-      exit 1
-    fi
-    TEMPLATE_DIR="${TEMP_DIR}/repo/claude-code/template/.claude"
+  printf "  配布物を取得しています...  "
+  if [ -z "$RELEASE_TAG" ]; then
+    RELEASE_TAG="$(resolve_release_tag "${TEMP_DIR}/releases.json" || true)"
   fi
+  if [ -z "$RELEASE_TAG" ]; then
+    printf "\n  %s· %s の配布物が見つかりません。リポジトリからの取得はしません%s\n" "$DIM" "$RELEASE_CHANNEL" "$RESET" >&2
+    printf "  %s（beta を使うなら AGENT_AIKO_CHANNEL=beta）%s\n" "$DIM" "$RESET" >&2
+    cleanup_temp_dir
+    exit 1
+  fi
+
+  set +e
+  EXTRACTED="$(fetch_verified_release "$TEMP_DIR" "$RELEASE_TAG")"
+  fetch_status=$?
+  set -e
+  case "$fetch_status" in
+    0) printf "%s✓%s %s（checksum 照合済み）\n" "$CYAN" "$RESET" "$RELEASE_TAG" ;;
+    3)
+      printf "\n  %sエラー: sha256 を計算する道具がありません（sha256sum / shasum）%s\n" "$BOLD" "$RESET" >&2
+      printf "  検証できないものは入れません。\n" >&2
+      cleanup_temp_dir; exit 1 ;;
+    4)
+      printf "\n  %sエラー: 配布物の checksum が一致しません（%s）%s\n" "$BOLD" "$RELEASE_TAG" "$RESET" >&2
+      printf "  取得したものが壊れているか、途中で差し替えられています。中止します。\n" >&2
+      cleanup_temp_dir; exit 1 ;;
+    6)
+      printf "\n  %sエラー: 配布物の attestation を検証できません（%s）%s\n" "$BOLD" "$RELEASE_TAG" "$RESET" >&2
+      printf "  https の Release には gh attestation verify が要ります。\n" >&2
+      cleanup_temp_dir; exit 1 ;;
+    *)
+      printf "\n  %sエラー: 配布物を取得できませんでした（%s）%s\n" "$BOLD" "$RELEASE_TAG" "$RESET" >&2
+      printf "  リポジトリからの取得はしません。\n" >&2
+      cleanup_temp_dir; exit 1 ;;
+  esac
+  TEMPLATE_DIR="$EXTRACTED/claude-code/template/.claude"
 fi
 
 PROJECT_CLAUDE_DIR="$(pwd)/.claude"
@@ -271,6 +290,10 @@ HAD_PROJECT_SETTINGS=0
 [ -e "$PROJECT_CLAUDE_DIR/settings.json" ] && HAD_PROJECT_SETTINGS=1
 
 mkdir -p "$PROJECT_CLAUDE_DIR" "$AIKO_HOME"
+if [ -L "$PROJECT_CLAUDE_DIR" ]; then
+  printf "  %sエラー: .claude がシンボリックリンクです。中止します。%s\n" "$BOLD" "$RESET" >&2
+  exit 1
+fi
 
 path_exists() {
   [ -e "$1" ] || [ -L "$1" ]
@@ -287,11 +310,42 @@ backup_existing_path() {
   printf "  %s· %s を %s に退避%s\n" "$DIM" "$dst" "$backup" "$RESET"
 }
 
+# 親がシンボリックリンクだと、その先（ホームのファイルなど）へ書いてしまう。
+# 見るのはインストール先の根から下だけ。/tmp 自体がリンクの環境で全部止まらないようにする。
+assert_parents_are_not_symlinks() {
+  local path="$1"
+  local stop="$2"
+  local walk
+  walk=$(dirname "$path")
+  while [ "$walk" != "$stop" ] && [ "$walk" != "/" ] && [ "$walk" != "." ]; do
+    if [ -L "$walk" ]; then
+      printf "  %sエラー: インストール先の親がシンボリックリンクです: %s%s\n" "$BOLD" "$walk" "$RESET" >&2
+      printf "  リンク先のファイルをテンプレートで上書きしないため、中止します。\n" >&2
+      exit 1
+    fi
+    walk=$(dirname "$walk")
+  done
+}
+
 prepare_destination_for_template() {
   local src="$1"
   local dst="$2"
+  local stop="/"
+
+  case "$dst" in
+    "$PROJECT_CLAUDE_DIR"/*) stop="$PROJECT_CLAUDE_DIR" ;;
+    "$AIKO_HOME"/*) stop="$AIKO_HOME" ;;
+  esac
+  assert_parents_are_not_symlinks "$dst" "$stop"
 
   path_exists "$dst" || return 0
+
+  # chmod も cp もリンクを辿って、指しているファイルを書き換える。
+  # リンク自体を退避してから、普通のファイルとして置く。
+  if [ -L "$dst" ]; then
+    backup_existing_path "$dst"
+    return 0
+  fi
 
   if [ -d "$src" ]; then
     if [ ! -d "$dst" ]; then
@@ -316,9 +370,9 @@ copy_template_item_to_project() {
   prepare_destination_for_template "$src" "$dst"
   if [ -d "$src" ]; then
     mkdir -p "$dst"
-    cp -R "$src/." "$dst/"
+    cp -RP "$src/." "$dst/"
   else
-    cp "$src" "$dst"
+    cp -P "$src" "$dst"
   fi
 }
 
@@ -336,16 +390,20 @@ copy_project_children() {
     prepare_destination_for_template "$child" "$dst_child"
     if [ -d "$child" ]; then
       mkdir -p "$dst_child"
-      cp -R "$child/." "$dst_child/"
+      cp -RP "$child/." "$dst_child/"
     else
-      cp "$child" "$dst_child"
+      cp -P "$child" "$dst_child"
     fi
   done
 }
 
+# プロジェクトの .claude/aiko は、他人のリポジトリに仕込まれた人格であることがある。
+# 初回導入で ~/.aiko（全プロジェクト共有）へコピーしない。移すのは
+# /aiko-migrate-to-shared を利用者が明示したときだけ。
 STATE_SOURCE="$AIKO_HOME"
 if [ ! -e "$AIKO_HOME/mode" ] && [ -d "$PROJECT_CLAUDE_DIR/aiko" ]; then
-  STATE_SOURCE="$PROJECT_CLAUDE_DIR/aiko"
+  printf "  %s· プロジェクトの .claude/aiko は共有ストアへ取り込みません。%s\n" "$DIM" "$RESET"
+  printf "  %s  中身を確認してから /aiko-migrate-to-shared を実行してください。%s\n" "$DIM" "$RESET"
 fi
 
 copy_state_if_missing() {
@@ -353,7 +411,7 @@ copy_state_if_missing() {
   [ -e "$STATE_SOURCE/$rel" ] || return 0
   [ ! -e "$AIKO_HOME/$rel" ] || return 0
   mkdir -p "$(dirname "$AIKO_HOME/$rel")"
-  cp -R "$STATE_SOURCE/$rel" "$AIKO_HOME/$rel"
+  cp -RP "$STATE_SOURCE/$rel" "$AIKO_HOME/$rel"
   printf "  %s· %s を保持%s\n" "$DIM" "$rel" "$RESET"
 }
 
@@ -370,6 +428,13 @@ copy_aiko_template_tree() {
     rel="${item#./}"
     case "$rel" in
       mode|user.md|override-history.jsonl|active-persona|persona/aiko-override.md|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
+        # 利用者のものは上書きせず、uninstall の記録にも残さない。
+        # rules-base だけは、共有ストアに無いときテンプレートから置く。
+        # プロジェクト側の rules-base はコピーしない。
+        if [ "$rel" = "capability/rules/rules-base.md" ] && [ ! -e "$AIKO_HOME/$rel" ]; then
+          mkdir -p "$(dirname "$AIKO_HOME/$rel")"
+          cp -P "$TEMPLATE_DIR/aiko/$rel" "$AIKO_HOME/$rel"
+        fi
         continue
         ;;
     esac
@@ -382,7 +447,7 @@ copy_aiko_template_tree() {
     elif [ -f "$src" ]; then
       mkdir -p "$(dirname "$dst")"
       prepare_destination_for_template "$src" "$dst"
-      cp "$src" "$dst"
+      cp -P "$src" "$dst"
       # 何を置いたかを残す。これが無いと、`aiko uninstall` は「配布物のもの」と
       # 「利用者が後から置いたもの」を推測で分けることになる——推測で消すのは
       # やってはいけないことの筆頭。
@@ -479,11 +544,13 @@ VOICE_SRC="$REPO_ROOT/voice"
 VOICE_DST="$AIKO_HOME/voice"
 if [ -d "$VOICE_SRC/hooks" ] && [ -d "$VOICE_SRC/engines" ]; then
   mkdir -p "$VOICE_DST/hooks" "$VOICE_DST/engines"
-  cp "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
+  prepare_destination_for_template "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
+  cp -P "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
   chmod +x "$VOICE_DST/hooks/stop.sh"
   for engine in say.sh auto.sh voicevox.sh irodori.sh avatar.sh; do
     [ -f "$VOICE_SRC/engines/$engine" ] || continue
-    cp "$VOICE_SRC/engines/$engine" "$VOICE_DST/engines/$engine"
+    prepare_destination_for_template "$VOICE_SRC/engines/$engine" "$VOICE_DST/engines/$engine"
+    cp -P "$VOICE_SRC/engines/$engine" "$VOICE_DST/engines/$engine"
     chmod +x "$VOICE_DST/engines/$engine"
   done
   printf "  %s· voice モードを %s に配置%s\n" "$DIM" "$VOICE_DST" "$RESET"

@@ -10,10 +10,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  acceptUserProposal,
   parseUserMarkdown,
+  proposeUserMarkdown,
   readUserMarkdown,
   renderUserMarkdown,
   userMarkdownCandidates,
+  userProposalPath,
   writeUserMarkdown,
 } from "../src/user-markdown.js";
 import { UserContextProvider } from "../src/user-context-provider.js";
@@ -206,6 +209,26 @@ test("改行を含む値を書こうとしても、ファイルは作られな�
     await assert.rejects(() => writeUserMarkdown(path, { name: "たろう\nmemory: /etc/passwd" }));
     const { readdir } = await import("node:fs/promises");
     assert.deepEqual(await readdir(dir), []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("提案は user.md に入らず、accept でだけ重なる", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "aiko-usermd-proposal-"));
+  try {
+    await writeUserMarkdown(join(dir, "user.md"), { name: "既存" });
+    const path = await proposeUserMarkdown(dir, { address: "たろう" });
+    assert.equal(path, userProposalPath(dir));
+    assert.equal((await readUserMarkdown([join(dir, "user.md")]))?.user.address, undefined);
+    assert.equal(userMarkdownCandidates(dir).includes(path), false);
+
+    assert.equal(await acceptUserProposal(dir), true);
+    assert.deepEqual((await readUserMarkdown([join(dir, "user.md")]))?.user, {
+      name: "既存",
+      address: "たろう",
+    });
+    assert.equal(await readUserMarkdown([path]), undefined);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

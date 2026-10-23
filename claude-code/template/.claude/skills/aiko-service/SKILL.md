@@ -38,4 +38,5 @@ bash .claude/scripts/aiko-service.sh uninstall
 ## 注意事項
 
 - macOS では --daemon を使用してください（systemd 非対応）
-- --telegram フラグは --dangerously-skip-permissions を使用します
+- --telegram は既定で --permission-mode dontAsk。動くのは settings.json の permissions.allow と返信ツールだけ
+- 全ツールを確認なしで動かすのは AIKO_TELEGRAM_SKIP_PERMISSIONS=1 のときだけ。bot に話しかけられる相手がシェルを実行できてしまうので、普段は付けない

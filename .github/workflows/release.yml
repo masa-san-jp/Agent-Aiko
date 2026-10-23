@@ -21,15 +21,17 @@ on:
         description: '成果物を作るタグ（例: v0.1.0）'
         required: true
 
+# 権限はジョブごと。verify が依存の install script を動かしても、
+# Release の書き換えや OIDC での公開はできない。
 permissions:
-  contents: write        # Release の作成
-  id-token: write        # attestation の署名
-  attestations: write    # attestation の登録
+  contents: read
 
 jobs:
   verify:
     name: verify / Node ${{ matrix.node }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: true
       matrix:
@@ -39,6 +41,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+          persist-credentials: false
+
+      # dispatch は任意の ref を渡せる。main に含まれないコミットを、
+      # レビュー前にこのワークフローへ載せない。
+      - name: Dispatch tag must already be on main
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          case "$RELEASE_TAG" in
+            v[0-9]*) ;;
+            *) echo "refusing ref: ${RELEASE_TAG}" >&2; exit 1 ;;
+          esac
+          case "$RELEASE_TAG" in
+            *[!A-Za-z0-9._-]*) echo "refusing ref: ${RELEASE_TAG}" >&2; exit 1 ;;
+          esac
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$RELEASE_TAG" FETCH_HEAD
 
       - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
@@ -49,7 +70,7 @@ jobs:
 
       # 落ちたものを配らない。CI と同じ手順をタグに対してもう一度通す。
       - name: Install
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build
         run: npm run build
@@ -67,17 +88,41 @@ jobs:
     name: release
     needs: verify
     runs-on: ubuntu-latest
+    # GitHub の Environment に required reviewers を付けると、公開前に人が止まれる。
+    # 環境の保護ルール自体はリポジトリ設定側で有効にする。
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Resolve tag
         id: meta
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          set -euo pipefail
+          tag="${INPUT_TAG:-$REF_NAME}"
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "refusing ref: ${tag}" >&2; exit 1 ;;
+          esac
+          case "$tag" in
+            *[!A-Za-z0-9._-]*) echo "refusing ref: ${tag}" >&2; exit 1 ;;
+          esac
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            git fetch --no-tags origin main
+            git merge-base --is-ancestor "$tag" FETCH_HEAD
+          fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           # 設計書 §10.2 の channel。v1.2.3 は stable、v1.2.3-beta.1 のように
           # ハイフンが付くものは beta として prerelease で出す。
@@ -91,9 +136,11 @@ jobs:
 
       - name: Build distribution archive
         id: archive
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
         run: |
           set -euo pipefail
-          tag="${{ steps.meta.outputs.tag }}"
+          tag="$RELEASE_TAG"
           name="agent-aiko-${tag}"
           mkdir -p dist-release
           # git archive はタグの中身をそのまま固める。ビルド成果物を含まないので、
@@ -108,12 +155,14 @@ jobs:
       # 依存の汚染（T7）が起きたとき、影響範囲を「入っているかどうか」で引けるようにする。
       # npm 標準の出力なので追加の道具を入れない。
       - name: Build SBOM
+        env:
+          ARCHIVE_NAME: ${{ steps.archive.outputs.name }}
         run: |
           set -euo pipefail
           npm ci --ignore-scripts
-          npm sbom --sbom-format spdx --omit dev > "dist-release/${{ steps.archive.outputs.name }}.spdx.json"
+          npm sbom --sbom-format spdx --omit dev > "dist-release/${ARCHIVE_NAME}.spdx.json"
           node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" \
-            "dist-release/${{ steps.archive.outputs.name }}.spdx.json"
+            "dist-release/${ARCHIVE_NAME}.spdx.json"
           ls -la dist-release/
 
       # 署名。GitHub の attestation は鍵の管理が要らず、「この成果物はこのリポジトリの
@@ -128,22 +177,27 @@ jobs:
       # バッククォートがシェルのコマンド置換として実行される。GitHub の ${{ }} は
       # シェルより前に展開されるので、引用しても値は入る。
       - name: Write release notes
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_CHANNEL: ${{ steps.meta.outputs.channel }}
+          ARCHIVE_NAME: ${{ steps.archive.outputs.name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           cat > release-notes.md <<'EOF'
-          channel: ${{ steps.meta.outputs.channel }}
+          channel: __CHANNEL__
 
           ## 取得したものが本物か確かめる
 
           ```bash
           # 1. 成果物と checksum を落とす
-          gh release download ${{ steps.meta.outputs.tag }} --repo ${{ github.repository }} \
+          gh release download __TAG__ --repo __REPO__ \
             --pattern '*.tar.gz' --pattern 'SHA256SUMS'
 
           # 2. 中身が置いたものと同じか
           sha256sum -c SHA256SUMS
 
           # 3. このリポジトリのワークフローが作ったものか（gh 2.49 以上が必要）
-          gh attestation verify ${{ steps.archive.outputs.name }}.tar.gz --repo ${{ github.repository }}
+          gh attestation verify __ARCHIVE__.tar.gz --repo __REPO__
           ```
 
           `gh attestation` は gh 2.49 で入ったサブコマンド。それより古いと 3 は実行できない
@@ -155,15 +209,25 @@ jobs:
           この成果物は `git archive` でタグの中身をそのまま固めたもの。ビルド結果を
           含まないので、同じ git で作り直せば同じ checksum が出る。
           EOF
+          # タグは Resolve tag で v* かつ記号を弾いてある。プレースホルダの置換だけをする。
+          sed -i \
+            -e "s/__CHANNEL__/${RELEASE_CHANNEL}/g" \
+            -e "s/__TAG__/${RELEASE_TAG}/g" \
+            -e "s/__REPO__/${REPOSITORY//\//\\/}/g" \
+            -e "s/__ARCHIVE__/${ARCHIVE_NAME}/g" \
+            release-notes.md
 
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+          ARCHIVE_NAME: ${{ steps.archive.outputs.name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag="${{ steps.meta.outputs.tag }}"
-          name="${{ steps.archive.outputs.name }}"
+          tag="$RELEASE_TAG"
+          name="$ARCHIVE_NAME"
           # set -e の下で `cond && cmd` を単独文に置くと、cond が偽のときに
           # スクリプトごと終了する（stable リリースが必ずここで死ぬ）。if で書く。
           extra=""
@@ -175,7 +239,7 @@ jobs:
             "dist-release/${name}.tar.gz" \
             "dist-release/${name}.spdx.json" \
             dist-release/SHA256SUMS \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --title "$tag" \
             --notes-file release-notes.md \
             $extra

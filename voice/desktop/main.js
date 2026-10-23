@@ -1,6 +1,7 @@
 const { app, BrowserWindow, screen } = require('electron')
 const path = require('path')
 const { WebSocketServer } = require('ws')
+const { acceptLocalAvatar } = require('./origin-check')
 
 const PORT = parseInt(process.env.AIKO_AVATAR_PORT || '7749', 10)
 
@@ -35,7 +36,11 @@ function createWindow() {
 }
 
 function startWebSocketServer() {
-  wss = new WebSocketServer({ host: '127.0.0.1', port: PORT })
+  wss = new WebSocketServer({
+    host: '127.0.0.1',
+    port: PORT,
+    verifyClient: (info) => acceptLocalAvatar(info),
+  })
 
   wss.on('connection', (ws) => {
     ws.on('message', (data) => {

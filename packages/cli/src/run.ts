@@ -7,7 +7,11 @@ import { renderChecks, renderStatus } from "./render.js";
 import { collectStatus } from "./status.js";
 import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from "./update.js";
 import { configure, renderConfigured, type Ask } from "./configure.js";
-import { defaultUserProfilePath } from "@agent-aiko/runtime-sdk";
+import {
+  acceptPersonaProposals,
+  acceptUserProposal,
+  defaultUserProfilePath,
+} from "@agent-aiko/runtime-sdk";
 import { applyUpdate, listBackups, rollback } from "./apply-update.js";
 import { downloadVerifiedRelease, DownloadError, type FetchBytes } from "./download.js";
 import {
@@ -45,6 +49,7 @@ const USAGE = `使い方: aiko <コマンド>
   doctor                構成を点検する
   doctor --fix          点検で見つかったもののうち、直し方が分かっているものを直す
   configure             呼び名などを設定して User Profile を作る
+  accept                会話で提案された人格・切り替え・呼び名を反映する
   update --check        新しい版が出ていないかを見る（何も書き換えない）
   update --check --channel beta   試用版も対象に含める
   update                新しい版を取得して照合してから入れる（利用者の設定は触らない）
@@ -102,6 +107,34 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     const after: CheckResult[] = wantFix ? await runChecks(env) : results;
     io.out(renderChecks(after, fixed));
     return worstLevel(after) === "fail" ? 1 : 0;
+  }
+
+  if (command === "accept") {
+    if (rest.length > 0) {
+      io.err(`accept に引数はありません\n\n${USAGE}`);
+      return 2;
+    }
+    try {
+      const personas = await acceptPersonaProposals(env.aikoHome);
+      const userAccepted = await acceptUserProposal(env.aikoHome);
+      if (personas.saved.length === 0 && personas.switched === undefined && !userAccepted) {
+        io.out("受け入れる提案はありません\n");
+        return 0;
+      }
+      if (personas.saved.length > 0) {
+        io.out(`人格を保存しました: ${personas.saved.join(", ")}\n`);
+      }
+      if (personas.switched !== undefined) {
+        io.out(`人格を切り替えました: ${personas.switched}\n`);
+      }
+      if (userAccepted) {
+        io.out("呼び名を user.md に反映しました\n");
+      }
+      return 0;
+    } catch (err) {
+      io.err(`${err instanceof Error ? err.message : String(err)}\n`);
+      return 1;
+    }
   }
 
   if (command === "configure") {

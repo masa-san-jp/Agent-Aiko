@@ -183,6 +183,33 @@ describe("installer: 配布物の取得と照合", () => {
     }
 
     assert.match(combined, /配布物が見つかりません/);
+    assert.equal(/clone|照合なし/.test(combined), false);
+    assert.equal(existsSync(join(project, ".claude", "skills")), false);
+  });
+
+  it("AGENT_AIKO_REF=main は clone せず拒否する", async () => {
+    const project = join(root, "project");
+    await mkdir(project, { recursive: true });
+    let combined = "";
+    try {
+      combined = execFileSync("bash", [installerCopy, "--yes"], {
+        cwd: project,
+        env: { ...process.env, HOME: root, AGENT_AIKO_REF: "main" },
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (err) {
+      combined = String(err.stdout ?? "") + String(err.stderr ?? "");
+    }
+    assert.match(combined, /リリースタグ/);
+    assert.equal(/git clone|照合なし/.test(combined), false);
+    assert.equal(existsSync(join(project, ".claude", "skills")), false);
+  });
+
+  it("curl ラッパーは main を既定にしない", async () => {
+    const wrapper = await readFile(join(REPO_ROOT, "scripts", "install.sh"), "utf8");
+    assert.equal(wrapper.includes("AGENT_AIKO_REF:-main"), false);
+    assert.match(wrapper, /PINNED_REF="v0\.3\.2"/);
   });
 });
 
@@ -219,7 +246,9 @@ describe("installer: 導入時の記録", () => {
     const manifest = await readFile(join(root, ".aiko", ".install-manifest"), "utf8");
     const entries = manifest.split("\n").filter(Boolean);
     assert.deepEqual(
-      entries.filter((e) => ["user.md", "mode", "persona/aiko-override.md"].includes(e)),
+      entries.filter((e) =>
+        ["user.md", "mode", "persona/aiko-override.md", "capability/rules/rules-base.md"].includes(e),
+      ),
       []
     );
   });

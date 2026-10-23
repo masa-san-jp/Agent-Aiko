@@ -42,7 +42,7 @@ Re-running the installer is the supported update path.
 
 ```bash
 cd <project>
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash
 ```
 
 For non-interactive environments:

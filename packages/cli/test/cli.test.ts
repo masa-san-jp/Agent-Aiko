@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chmod, mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { run } from "../src/run.js";
@@ -147,6 +147,51 @@ test("doctor: User Profile の権限が緩いと --fix で 0600 に直る", asyn
   } finally {
     await cleanup();
   }
+});
+
+test("accept: 提案が無ければ何も書かずに 0 を返す", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    const c = capture({ AIKO_HOME: home, PATH: "" });
+    const code = await run(["accept"], VERSION, c.io);
+    assert.equal(code, 0);
+    assert.match(c.out(), /受け入れる提案はありません/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("accept: 人格の提案と呼び名を反映する", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await mkdir(join(home, "persona", "proposals", "trial"), { recursive: true });
+    await writeFile(join(home, "persona", "proposals", "trial", "persona.md"), "試用のアイコ\n");
+    await writeFile(join(home, "persona", "proposals", "trial", "source"), "mcp\nunapproved\n");
+    await writeFile(join(home, "persona", "proposals", ".pending-switch"), "trial\n");
+    await writeFile(
+      join(home, "user-proposal.md"),
+      "# ユーザー設定\n\nname: 太郎\naddress: たろう\n",
+    );
+
+    const c = capture({ AIKO_HOME: home, PATH: "" });
+    const code = await run(["accept"], VERSION, c.io);
+    assert.equal(code, 0);
+    assert.match(c.out(), /人格を保存しました: trial/);
+    assert.match(c.out(), /人格を切り替えました: trial/);
+    assert.match(c.out(), /呼び名を user.md に反映しました/);
+    assert.match(await readFile(join(home, "persona", "overrides", "trial", "persona.md"), "utf8"), /試用のアイコ/);
+    assert.equal((await readFile(join(home, "mode"), "utf8")).trim(), "override");
+    assert.match(await readFile(join(home, "user.md"), "utf8"), /address: たろう/);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("accept: 引数があると 2 を返す", async () => {
+  const c = capture({ PATH: "" });
+  const code = await run(["accept", "--yes"], VERSION, c.io);
+  assert.equal(code, 2);
+  assert.match(c.err(), /引数はありません/);
 });
 
 test("配布に属するコマンドは、黙って何もしないのではなく理由を返す", async () => {

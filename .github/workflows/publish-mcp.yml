@@ -14,6 +14,10 @@ name: Publish to npm and MCP Registry
 #   Organization or user: masa-san-jp / Repository: Agent-Aiko
 #   Workflow filename: publish-mcp.yml / Allowed actions: npm publish
 # **このファイル名を変えると公開が止まる**（npm 側は名前で照合している）。
+#
+# 依存の install script は、OIDC を持つジョブでは動かさない。build と test は
+# contents: read だけのジョブで行い、公開ジョブは出来上がったファイルだけを受け取る。
+# Environment `npm-publish` に required reviewers を付けると、公開の前に人が止まれる。
 
 on:
   push:
@@ -22,24 +26,46 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: '公開するタグ（例: v0.2.0）'
+        description: '公開するタグ（例: v0.2.0）。main に含まれるタグだけ'
         required: true
 
+permissions:
+  contents: read
+
 jobs:
-  publish:
-    name: publish
+  verify:
+    name: verify
     runs-on: ubuntu-latest
     permissions:
-      id-token: write   # OIDC。npm・レジストリ双方の認証がこれだけで済む
       contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+          persist-credentials: false
+          fetch-depth: 0
 
-      # 食い違ったまま公開すると、一覧に出ても実体へ辿れない項目ができる。先に見る。
+      - name: Tag must be a release tag on main
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-$REF_NAME}"
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "refusing ref: ${tag}" >&2; exit 1 ;;
+          esac
+          case "$tag" in
+            *[!A-Za-z0-9._-]*) echo "refusing ref: ${tag}" >&2; exit 1 ;;
+          esac
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            git fetch --no-tags origin main
+            git merge-base --is-ancestor "$tag" FETCH_HEAD
+          fi
+
       - name: server.json と package.json の食い違いが無いか確かめる
         working-directory: packages/mcp-server
         run: |
@@ -56,20 +82,17 @@ jobs:
             if (mismatch.length) { console.error(mismatch.join("\n")); process.exit(1); }
           '
 
-      # trusted publishing は npm 11.5.1 以上・Node 22.14 以上。24 系を使う。
-      # package-manager-cache: false は npm の要求（キャッシュを挟むと OIDC が通らない）。
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false
 
       - name: 版の前提を満たしているか確かめる
         run: |
           echo "node $(node -v) / npm $(npm -v)"
           node -e '
-            const [maj, min, pat] = process.versions.node.split(".").map(Number);
+            const [maj, min] = process.versions.node.split(".").map(Number);
             if (maj < 22 || (maj === 22 && (min < 14))) {
               console.error(`Node 22.14 以上が要る: ${process.versions.node}`);
               process.exit(1);
@@ -83,19 +106,55 @@ jobs:
           ' "$npm_v"
 
       - name: Install
-        run: npm ci
+        run: npm ci --ignore-scripts
 
-      # 落ちたものを配らない。タグに対してもう一度通す。
       - name: Build
         run: npm run build
 
       - name: Test
         run: npm test
 
-      # NODE_AUTH_TOKEN は渡さない。渡すとトークン認証が優先されて OIDC が使われない。
-      # prepack がビルドするので、ここで別途 build は要らない。
-      # 公開済みの版なら飛ばす。後段（レジストリ登録）だけをやり直すために
-      # 同じタグで再実行できるようにする。npm は同じ版を二度出せない。
+      - name: Pack the built files
+        run: tar -czf mcp-pack.tgz -C packages/mcp-server dist persona LICENSE
+
+      - name: Upload built package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-pack
+          path: mcp-pack.tgz
+
+  publish:
+    name: publish
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Download built package
+        uses: actions/download-artifact@v4
+        with:
+          name: mcp-pack
+
+      - name: Unpack built package
+        run: tar -xzf mcp-pack.tgz -C packages/mcp-server
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      # 依存は入れない。install script を、OIDC を持つジョブで動かさない。
+      # --ignore-scripts は prepack の再ビルドも止める。verify が作った dist をそのまま出す。
       - name: npm へ公開
         working-directory: packages/mcp-server
         run: |
@@ -104,17 +163,13 @@ jobs:
           if npm view "${name}@${version}" version >/dev/null 2>&1; then
             echo "${name}@${version} は公開済み。npm publish は飛ばす"
           else
-            npm publish --access public
+            npm publish --ignore-scripts --access public
           fi
 
-      # 名前も版も package.json から取る。ここだけ名前を書き写すと、名前を変えた
-      # ときに古いほうを見に行って「公開できていない」と誤って落ちる。
       - name: npm に載ったか確かめる
         run: |
           name=$(node -p "require('./packages/mcp-server/package.json').name")
           version=$(node -p "require('./packages/mcp-server/package.json').version")
-          # 公開直後は registry に反映されるまで時間がかかる。1回で見ると、
-          # 公開できているのに落ちて後段のレジストリ登録が飛ぶ（0.3.0 / 0.3.1 で実測）。
           for i in $(seq 1 12); do
             if npm view "${name}@${version}" version; then exit 0; fi
             echo "まだ見えない（${i}/12）。10秒待つ"
@@ -123,9 +178,6 @@ jobs:
           echo "${name}@${version} が npm に見つかりません"
           exit 1
 
-      # 版を固定して照合する。latest を引くと、こちらが何も変えていないのに
-      # 上流の更新だけで動きが変わる。**その差分は誰もレビューしない**。
-      # 値は上流の registry_1.8.0_checksums.txt と突き合わせて確認済み。
       - name: mcp-publisher を入れる
         env:
           MCP_PUBLISHER_VERSION: v1.8.0
@@ -144,8 +196,6 @@ jobs:
         working-directory: packages/mcp-server
         run: ../../mcp-publisher publish
 
-      # 応答を grep しない。整形が変わるだけで落ちる検査は、登録の失敗と
-      # 見分けがつかない。読んでから中身で確かめる。
       - name: レジストリに載ったか確かめる
         run: |
           name=$(node -p "require('./packages/mcp-server/package.json').mcpName")

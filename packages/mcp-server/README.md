@@ -36,7 +36,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.3.1"
+    "version": "0.3.2"
   },
   "persona": {
     "id": "aiko",
@@ -55,13 +55,14 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 You talk to it. There are no files to write by hand.
 
 ```
-"call me Taro"                 → remembers what to call you
-"my notes live in ~/notes"     → records where they are (it does not read them)
-"save this as my own persona"  → stores your variant
-"go back to the original"      → returns to the shipped one
+"call me Taro"                 → proposes what to call you
+"my notes live in ~/notes"     → proposes where they are (it does not read them)
+"save this as my own persona"  → proposes your variant
+"go back to the original"      → proposes a return to the shipped one
 "talk to me like a friend"     → switches to the friend speech style
 ```
 
+Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Speech style still changes immediately.
 
 What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 
@@ -102,20 +103,17 @@ The choice is kept in `~/.aiko/speech-style` and takes effect the next time the 
 
 Existing entries are kept, a backup (`.aiko-bak-*`) is written before any change, and a config the installer cannot parse is left untouched.
 
-If you would rather do it yourself:
+If you would rather do it yourself, point the client at the installed `server.js` with an absolute path. Do not use `npx -y aiko-mcp`. npx runs `node_modules/.bin/aiko-mcp` from the project you have open, so a repository can ship a fake binary that starts as soon as the MCP server does.
 
-| Client | Command |
-|---|---|
-| Claude Code | `claude mcp add aiko -- npx -y aiko-mcp` |
-| Codex CLI | `codex mcp add aiko -- npx -y aiko-mcp` |
-| VS Code | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
-
-For clients without a CLI, add this to the MCP config:
+```bash
+# the path printed by `npx aiko-mcp install`, or the real file from your install
+claude mcp add aiko -s user -- "$(command -v node)" /absolute/path/to/aiko-mcp/dist/server.js
+```
 
 ```json
 {
   "mcpServers": {
-    "aiko": { "command": "npx", "args": ["-y", "aiko-mcp"] }
+    "aiko": { "command": "/absolute/path/to/node", "args": ["/absolute/path/to/aiko-mcp/dist/server.js"] }
   }
 }
 ```

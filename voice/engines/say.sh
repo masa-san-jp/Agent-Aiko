@@ -12,9 +12,18 @@ TEXT="$(cat)"
 
 [ -z "$TEXT" ] && exit 0
 
+# 先頭の "-" は say のオプションになる。整形で落とし切れなかった分もここで落とす。
+while :; do
+  case "$TEXT" in
+    -*) TEXT="${TEXT#-}" ;;
+    *) break ;;
+  esac
+done
+
 if ! command -v say >/dev/null 2>&1; then
   echo "[aiko-voice] say コマンドが見つかりません。macOS 以外では使えません。" >&2
   exit 1
 fi
 
-say -v "$VOICE" -r "$RATE" "$TEXT"
+# -- より後ろは本文。出力先オプションとして解釈させない。
+say -v "$VOICE" -r "$RATE" -- "$TEXT"

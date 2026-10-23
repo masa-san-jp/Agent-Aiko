@@ -218,6 +218,7 @@ test("SHA256SUMS に無いファイルは期待値を返さない", () => {
 // --- CLI 経由（run） ---
 
 import { execFileSync } from "node:child_process";
+import { DownloadError, downloadVerifiedRelease, wantsAttestation } from "../src/download.js";
 import { run } from "../src/run.js";
 
 test("aiko update は照合に失敗したら何も入れない", async () => {
@@ -275,6 +276,41 @@ test("aiko update は照合が通れば入れて、退避を残す", async () =>
     );
   } finally {
     await s.cleanup();
+  }
+});
+
+test("file:// と注入した取得口は attestation を省略する", () => {
+  assert.equal(wantsAttestation({ tag: "v1", destDir: "/tmp", baseUrl: "file:///tmp/dl" }), false);
+  assert.equal(
+    wantsAttestation({ tag: "v1", destDir: "/tmp", fetchBytes: async () => new Uint8Array() }),
+    false,
+  );
+  assert.equal(wantsAttestation({ tag: "v1", destDir: "/tmp" }), true);
+});
+
+test("attestation を要求した配布物は検証できないまま展開しない", async () => {
+  const dest = await mkdtemp(join(tmpdir(), "aiko-attest-"));
+  try {
+    const bytes = new TextEncoder().encode("not-a-real-archive");
+    const digest = createHash("sha256").update(bytes).digest("hex");
+    await assert.rejects(
+      () =>
+        downloadVerifiedRelease({
+          tag: "v1.0.0",
+          destDir: dest,
+          verifyAttestation: "verify",
+          fetchBytes: async (url) =>
+            url.endsWith("SHA256SUMS")
+              ? new TextEncoder().encode(`${digest}  agent-aiko-v1.0.0.tar.gz\n`)
+              : bytes,
+        }),
+      (err: unknown) =>
+        err instanceof DownloadError &&
+        (err.reason === "attestation-failed" || err.reason === "attestation-unavailable"),
+    );
+    assert.equal(await readFile(join(dest, "agent-aiko-v1.0.0", "claude-code")).then(() => true, () => false), false);
+  } finally {
+    await rm(dest, { recursive: true, force: true });
   }
 });
 

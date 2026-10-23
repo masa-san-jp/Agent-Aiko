@@ -16,7 +16,17 @@
 
 set -euo pipefail
 
-REF="${AGENT_AIKO_REF:-main}"   # ブランチ／タグを上書き可能（CI・dev 用）
+# 既定は公開済みのリリースタグ。ブランチ名や main は取らない。
+# インストーラを変えたリリースでは、タグを打つ前に PINNED_REF をそのタグへ合わせる。
+PINNED_REF="v0.3.2"
+REF="${AGENT_AIKO_REF:-$PINNED_REF}"
+case "$REF" in
+  v*) ;;
+  *)
+    echo "ERROR: AGENT_AIKO_REF must be a release tag (v...), got: ${REF}" >&2
+    exit 1
+    ;;
+esac
 RAW_BASE="https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/${REF}"
 
 if [ -f "$0" ]; then

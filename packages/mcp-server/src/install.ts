@@ -9,11 +9,38 @@
 
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** MCP 設定に書き込む1件。ここを変えたら README の手書き手順も合わせる。 */
 const SERVER_KEY = "aiko";
-const ENTRY = { command: "npx", args: ["-y", "aiko-mcp"] };
+
+/**
+ * クライアントが後から起動するコマンド。
+ *
+ * `npx -y aiko-mcp` は、作業ディレクトリの `node_modules/.bin/aiko-mcp` を先に見る。
+ * 偽のバイナリを置いたリポジトリを開いただけで、そのコードが動く。版を固定しても
+ * 同じなので、インストール済みの server.js を node の絶対パスで起動する。
+ */
+export function resolveMcpEntry(moduleUrl: string = import.meta.url): {
+  command: string;
+  args: string[];
+} {
+  const self = fileURLToPath(moduleUrl);
+  const candidates = [
+    self.endsWith(`${sep}server.js`) ? self : "",
+    join(dirname(self), "server.js"),
+    resolve(dirname(self), "..", "dist", "server.js"),
+  ].filter((path) => path.length > 0);
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return { command: process.execPath, args: [resolve(candidate)] };
+    }
+  }
+  throw new Error(
+    "aiko-mcp の実体（server.js）が見つかりません。npx は作業ディレクトリの偽バイナリを実行するので、設定には書きません。",
+  );
+}
 
 export interface InstallIO {
   out: (text: string) => void;
@@ -88,7 +115,10 @@ function claudeDesktopDir(deps: InstallDeps): string | undefined {
   return join(deps.home, ".config", "Claude");
 }
 
-function targets(deps: InstallDeps): Target[] {
+function targets(
+  deps: InstallDeps,
+  entry: { command: string; args: string[] },
+): Target[] {
   const list: Target[] = [
     {
       id: "claude",
@@ -96,7 +126,7 @@ function targets(deps: InstallDeps): Target[] {
       kind: "cli",
       command: "claude",
       // -s user を付けるのは、プロジェクトごとに入れ直さなくて済むようにするため。
-      args: ["mcp", "add", SERVER_KEY, "-s", "user", "--", ENTRY.command, ...ENTRY.args],
+      args: ["mcp", "add", SERVER_KEY, "-s", "user", "--", entry.command, ...entry.args],
       verify: "claude mcp list",
     },
     {
@@ -104,7 +134,7 @@ function targets(deps: InstallDeps): Target[] {
       label: "Codex CLI",
       kind: "cli",
       command: "codex",
-      args: ["mcp", "add", SERVER_KEY, "--", ENTRY.command, ...ENTRY.args],
+      args: ["mcp", "add", SERVER_KEY, "--", entry.command, ...entry.args],
       verify: "codex mcp list",
     },
     {
@@ -112,7 +142,7 @@ function targets(deps: InstallDeps): Target[] {
       label: "VS Code",
       kind: "cli",
       command: "code",
-      args: ["--add-mcp", JSON.stringify({ name: SERVER_KEY, ...ENTRY })],
+      args: ["--add-mcp", JSON.stringify({ name: SERVER_KEY, ...entry })],
       verify: "VS Code を開き直して MCP の一覧を見る",
     },
     {
@@ -173,6 +203,7 @@ async function writeFileTarget(
   target: FileTarget,
   deps: InstallDeps,
   options: { force: boolean; dryRun: boolean },
+  entry: { command: string; args: string[] },
 ): Promise<Outcome> {
   const existed = existsSync(target.path);
   let config: Record<string, unknown> = {};
@@ -204,7 +235,7 @@ async function writeFileTarget(
   const servers = (config["mcpServers"] ?? {}) as Record<string, unknown>;
   const current = servers[SERVER_KEY];
   if (current !== undefined) {
-    if (sameValue(current, ENTRY)) {
+    if (sameValue(current, entry)) {
       return { target, state: "already", detail: target.path };
     }
     if (!options.force) {
@@ -224,7 +255,7 @@ async function writeFileTarget(
     await writeFile(`${target.path}.aiko-bak-${stamp}`, await readFile(target.path, "utf8"), "utf8");
   }
 
-  const next = { ...config, mcpServers: { ...servers, [SERVER_KEY]: ENTRY } };
+  const next = { ...config, mcpServers: { ...servers, [SERVER_KEY]: entry } };
   // 同じディレクトリに書いてから差し替える。途中で落ちても半分書けた設定は残らない。
   await mkdir(target.dir, { recursive: true });
   const tmp = `${target.path}.aiko-tmp`;
@@ -277,7 +308,15 @@ export async function runInstall(argv: readonly string[], deps: InstallDeps): Pr
     }
   }
 
-  const all = targets(deps);
+  let entry: { command: string; args: string[] };
+  try {
+    entry = resolveMcpEntry();
+  } catch (err) {
+    io.err(`${err instanceof Error ? err.message : String(err)}\n`);
+    return 1;
+  }
+
+  const all = targets(deps, entry);
   const known = new Set(all.map((t) => t.id));
   const unknown = only.filter((id) => !known.has(id));
   if (unknown.length > 0) {
@@ -294,7 +333,7 @@ export async function runInstall(argv: readonly string[], deps: InstallDeps): Pr
   if (present.length === 0) {
     io.err("設定を書けるクライアントが見つかりませんでした。\n");
     io.err("手で入れるなら、使っているクライアントの MCP 設定にこれを足してください:\n");
-    io.err(`  ${SERVER_KEY}: ${ENTRY.command} ${ENTRY.args.join(" ")}\n`);
+    io.err(`  ${SERVER_KEY}: ${entry.command} ${entry.args.join(" ")}\n`);
     return 1;
   }
 
@@ -305,7 +344,7 @@ export async function runInstall(argv: readonly string[], deps: InstallDeps): Pr
     const outcome =
       target.kind === "cli"
         ? await runCliTarget(target, deps, { dryRun })
-        : await writeFileTarget(target, deps, { dryRun, force });
+        : await writeFileTarget(target, deps, { dryRun, force }, entry);
     outcomes.push(outcome);
 
     const mark = { added: dryRun ? "→" : "✓", already: "・", conflict: "✗", failed: "✗" }[

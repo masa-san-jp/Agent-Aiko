@@ -195,7 +195,7 @@ aiko-gemini delete --yes           # 現在の名前付き人格を削除
 | 項目 | Claude Code 版 | Antigravity / Gemini CLI 版 |
 |---|---|---|
 | 人格注入のタイミング | セッション開始時に手動で `/aiko` | SessionStart hook で**自動** |
-| ファイル保護 | OS chmod + pre-tool-use hook | OS chmod + BeforeTool hook |
+| ファイル保護 | OS chmod + pre-tool-use hook | OS chmod + BeforeTool hook。シェル拒否リストはコマンド文字列に保護パスが見えるときだけ。python / node の書き込みは止まらない。JSON が読めない入力は拒否する |
 | prefix 強制 | instruction のみ | instruction + AfterAgent hook（自動リトライ） |
 | reset/delete の確認 | 会話内で確認 | `confirm` または `--yes` を明示 |
 | `/clear` 後の挙動 | 自動で再注入 | `/aiko` を手動実行が必要 |

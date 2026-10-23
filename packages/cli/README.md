@@ -8,6 +8,7 @@
 
 ```bash
 aiko configure     # 呼び名などを設定して User Profile を作る
+aiko accept       # 会話で提案された人格・切り替え・呼び名を反映する
 aiko status        # いま何が読めていて、何が起動できるか
 aiko doctor        # 構成を点検する
 aiko doctor --fix  # 見つかったもののうち、直し方が分かっているものを直す
