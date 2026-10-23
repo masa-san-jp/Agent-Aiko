@@ -7,9 +7,14 @@
 // 件数は 40 種 × 3 環境 = 120。環境を変えて増やしているのは、environment を見る規則が
 // 入ったときに「local では通るが development で落ちる」を拾えるようにするため。
 
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import type { CandidateAction, Environment } from "../../src/index.js";
 
-export const FIXTURE_PROJECT_ROOT = "/home/masa/dev/project";
+// macOS の /home は automount の対象で、存在しないパスの照合にも待ち時間が入る。
+// OS ごとの一時領域を使い、外部マウントの応答時間を性能測定に混ぜない。
+export const FIXTURE_PROJECT_ROOT = join(tmpdir(), "aiko-policy-fixture");
 export const FIXTURE_ALLOWED_HOST = "api.github.com";
 
 const none = {
