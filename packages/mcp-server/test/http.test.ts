@@ -1,7 +1,8 @@
+import { randomBytes } from "node:crypto";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { request } from "node:http";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -20,20 +21,63 @@ const deps = {
   }) },
   user: { context: { id: "test" }, privacy: { allowRemotePersonaService: false, allowUsageTelemetry: false } },
 };
-const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
+const token = randomBytes(32).toString("base64url");
+const auth = { Authorization: `Bearer ${token}` };
+const headers = { ...auth, "Content-Type": "application/json", Accept: "application/json, text/event-stream" };
 const initialize = { jsonrpc: "2.0", id: 1, method: "initialize", params: {
   protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "http-test", version: "1" },
 } };
-const start = (options: LocalHttpOptions = {}) => startLocalHttpServer(() => createAikoServer(deps), { port: 0, ...options });
+const start = (options: Omit<LocalHttpOptions, "token"> = {}) => startLocalHttpServer(() => createAikoServer(deps), { port: 0, token, ...options });
 async function connect(url: URL) {
   const client = new Client({ name: "http-test", version: "1" });
-  const transport = new StreamableHTTPClientTransport(url);
+  const transport = new StreamableHTTPClientTransport(url, { requestInit: { headers: auth } });
   await client.connect(transport as Transport);
   return { client, transport };
 }
 function body(result: unknown): Record<string, unknown> {
   return JSON.parse((result as { content: { text: string }[] }).content[0]!.text) as Record<string, unknown>;
 }
+
+test("HTTP: absent, wrong and malformed credentials cannot initialize or use an existing session", async () => {
+  let created = 0;
+  const gateway = await startLocalHttpServer(() => { created++; return createAikoServer(deps); }, { port: 0, token, maxSessions: 1 });
+  const { Authorization: _authorization, ...publicHeaders } = headers;
+  try {
+    for (const authorization of [undefined, `Bearer ${"x".repeat(43)}`, "Basic abc", "Bearer short"]) {
+      const response = await fetch(gateway.url, { method: "POST", headers: {
+        ...publicHeaders, ...(authorization ? { Authorization: authorization } : {}),
+      }, body: JSON.stringify(initialize) });
+      assert.equal(response.status, 401);
+      assert.equal(response.headers.get("www-authenticate"), 'Bearer realm="aiko-local"');
+      assert.equal(response.headers.get("mcp-session-id"), null);
+      assert.ok(!(await response.text()).includes(token));
+    }
+    assert.equal(created, 0);
+    const { client, transport } = await connect(gateway.url);
+    try {
+      const id = transport.sessionId!;
+      const call = await fetch(gateway.url, { method: "POST", headers: { ...publicHeaders, "mcp-session-id": id },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "aiko.health", arguments: {} } }),
+      });
+      assert.equal(call.status, 401);
+      assert.equal((await fetch(gateway.url, { method: "DELETE", headers: { "mcp-session-id": id } })).status, 401);
+      assert.equal(body(await client.callTool({ name: "aiko.health", arguments: {} }))["status"], "ok");
+    } finally { await client.close(); }
+  } finally { await gateway.close(); }
+});
+
+test("HTTP: CLI refuses to start without a valid token and never echoes it", () => {
+  const entry = fileURLToPath(new URL("../dist/server.js", import.meta.url));
+  for (const invalid of ["", "short", "sensitive-invalid-value!"]) {
+    const result = spawnSync(process.execPath, [entry, "http", "--port", "0"], {
+      env: { ...process.env, AIKO_HTTP_TOKEN: invalid }, encoding: "utf8", timeout: 5000,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /AIKO_HTTP_TOKEN/);
+    if (invalid) assert.ok(!result.stderr.includes(invalid));
+    assert.equal(result.stdout, "");
+  }
+});
 
 test("HTTP: SDK client initializes, lists tools, invokes and reads resources", async () => {
   const gateway = await start();
@@ -45,7 +89,7 @@ test("HTTP: SDK client initializes, lists tools, invokes and reads resources", a
     const resource = await client.readResource({ uri: "persona://aiko/core" });
     assert.equal((resource.contents[0] as { text: string }).text, "あたしはアイコ。");
     await transport.terminateSession();
-    const response = await fetch(gateway.url, { method: "DELETE", headers: { "mcp-session-id": transport.sessionId ?? "terminated" } });
+    const response = await fetch(gateway.url, { method: "DELETE", headers: { ...auth, "mcp-session-id": transport.sessionId ?? "terminated" } });
     assert.equal(response.status, 404);
   } finally { await client.close(); await gateway.close(); }
 });
@@ -71,7 +115,7 @@ test("HTTP: separate clients cannot read each other's runtime profiles", async (
 
 test("HTTP: rejects foreign Host/Origin before creating sessions", async () => {
   let created = 0;
-  const gateway = await startLocalHttpServer(() => { created++; return createAikoServer(deps); }, { port: 0 });
+  const gateway = await startLocalHttpServer(() => { created++; return createAikoServer(deps); }, { port: 0, token });
   try {
     // fetch may rewrite Host; send this case using the native HTTP client.
     const hostStatus = await new Promise<number | undefined>((resolve, reject) => {
@@ -88,7 +132,7 @@ test("HTTP: rejects foreign Host/Origin before creating sessions", async () => {
     }
     assert.equal(created, 0);
     assert.equal((await fetch(new URL("/other", gateway.url))).status, 404);
-    const get = await fetch(gateway.url);
+    const get = await fetch(gateway.url, { headers: auth });
     assert.equal(get.status, 405);
     assert.equal(get.headers.get("allow"), "POST, DELETE");
   } finally { await gateway.close(); }
@@ -115,14 +159,14 @@ test("HTTP: session limit, explicit deletion and idle expiry free capacity", asy
     await first.text();
     const blocked = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
     assert.equal(blocked.status, 503);
-    const deleted = await fetch(gateway.url, { method: "DELETE", headers: { "mcp-session-id": id } });
+    const deleted = await fetch(gateway.url, { method: "DELETE", headers: { ...auth, "mcp-session-id": id } });
     assert.equal(deleted.status, 200);
     const next = await fetch(gateway.url, { method: "POST", headers, body: JSON.stringify(initialize) });
     assert.equal(next.status, 200);
     const nextId = next.headers.get("mcp-session-id")!;
     await next.text();
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    assert.equal((await fetch(gateway.url, { method: "DELETE", headers: { "mcp-session-id": nextId } })).status, 404);
+    assert.equal((await fetch(gateway.url, { method: "DELETE", headers: { ...auth, "mcp-session-id": nextId } })).status, 404);
     const last = await connect(gateway.url);
     await last.client.close();
   } finally { await gateway.close(); }
@@ -131,7 +175,7 @@ test("HTTP: session limit, explicit deletion and idle expiry free capacity", asy
 test("HTTP: bundled CLI serves the bundled persona and shuts down on SIGTERM", { timeout: 10_000 }, async () => {
   const home = await mkdtemp(join(tmpdir(), "aiko-http-cli-"));
   const child = spawn(process.execPath, [fileURLToPath(new URL("../dist/server.js", import.meta.url)), "http", "--port", "0"], {
-    env: { ...process.env, AIKO_HOME: home, AIKO_USER_PROFILE: "", AIKO_PERSONA_ID: "aiko" },
+    env: { ...process.env, AIKO_HOME: home, AIKO_USER_PROFILE: "", AIKO_PERSONA_ID: "aiko", AIKO_HTTP_TOKEN: token },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";

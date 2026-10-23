@@ -64,7 +64,7 @@ async function main(): Promise<void> {
 const USAGE = `使い方: npx aiko-mcp [コマンド]
 
   （引数なし）   MCP サーバーとして起動する（クライアントが呼ぶのはこれ）
-  http [--port 3000]  ローカルHTTPで起動する（127.0.0.1 のみ、認証なし）
+  http [--port 3000]  ローカルHTTPで起動する（127.0.0.1 のみ、トークン必須）
   install        入っている AI クライアントに aiko の MCP 設定を書き込む
   --help         この使い方を表示する
   --version      版を表示する
@@ -129,8 +129,12 @@ async function cli(argv: readonly string[]): Promise<number | undefined> {
       return 2;
     }
     const port = rest.length === 0 ? 3000 : Number(rest[1]);
+    const token = process.env["AIKO_HTTP_TOKEN"] ?? "";
+    if (!/^[A-Za-z0-9_-]{43,128}$/.test(token)) {
+      throw new Error("AIKO_HTTP_TOKEN にランダムなbase64urlトークン（43〜128文字）を設定してください");
+    }
     const deps = await loadLocalServerDeps();
-    const gateway = await startLocalHttpServer(() => createAikoServer(deps), { port });
+    const gateway = await startLocalHttpServer(() => createAikoServer(deps), { port, token });
     process.stderr.write(`aiko-mcp: local HTTP listening at ${gateway.url.href}\n`);
     const stop = () => {
       process.off("SIGINT", stop);
