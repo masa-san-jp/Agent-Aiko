@@ -142,7 +142,7 @@ async function cli(argv: readonly string[]): Promise<number | undefined> {
       clientIds: (process.env["AIKO_OAUTH_CLIENT_IDS"] ?? "").split(",").filter(Boolean),
     }) : undefined;
     const deps = await loadLocalServerDeps();
-    const gateway = await startLocalHttpServer(() => createAikoServer(deps), { port, ...(oauth ? { oauth } : { token }) });
+    const gateway = await startLocalHttpServer(() => createAikoServer({ ...deps, allowLocalMutations: false }), { port, ...(oauth ? { oauth } : { token }) });
     process.stderr.write(`aiko-mcp: local HTTP listening at ${gateway.url.href}\n`);
     const stop = () => {
       process.off("SIGINT", stop);
