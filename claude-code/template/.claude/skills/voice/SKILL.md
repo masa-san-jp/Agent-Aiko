@@ -29,6 +29,7 @@ Stop hook の登録は `settings.json` の `hooks.Stop` で行う（初回セッ
 
 1. `Bash: mkdir -p ~/.claude/voice && echo "on" > ~/.claude/voice/state`
 2. 「音声モードをオンにしました。」と応答する
+3. VoiceMode MCP の `converse` ツールが利用可能な場合は、音声入力を受け付ける。利用できない場合は読み上げのみで継続する。
 
 ### off
 

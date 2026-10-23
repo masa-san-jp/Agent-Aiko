@@ -182,6 +182,7 @@
 
 - 音声読み上げモードを制御します（Aiko とは独立した汎用機能）
 - 状態は `~/.claude/voice/` に保存されます（ユーザーレベル・プロジェクト非依存）
+- 音声モードON時、VoiceMode MCP が利用可能な場合は converse ツールで音声入力を受け付けます
 - 詳細は `.claude/skills/voice/SKILL.md` を参照
 
 ---
