@@ -12,6 +12,7 @@ export interface LocalHttpOptions {
   /** Phase 1 remains loopback-only; remote OAuth is a separate phase. */
   port?: number;
   maxSessions?: number;
+  maxConcurrentRequests?: number;
   idleTimeoutMs?: number;
 }
 
@@ -22,6 +23,7 @@ export async function startLocalHttpServer(
 ): Promise<{ url: URL; close: () => Promise<void> }> {
   const port = options.port ?? 3000;
   const maxSessions = options.maxSessions ?? 32;
+  const maxConcurrentRequests = options.maxConcurrentRequests ?? 32;
   const idleTimeoutMs = options.idleTimeoutMs ?? 15 * 60_000;
   if ((options.token !== undefined) === (options.oauth !== undefined)) throw new Error("Configure exactly one HTTP authentication mode");
   if (options.token !== undefined && !/^[A-Za-z0-9_-]{43,128}$/.test(options.token)) {
@@ -30,10 +32,12 @@ export async function startLocalHttpServer(
   const tokenHash = options.token === undefined ? undefined : createHash("sha256").update(options.token).digest();
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid HTTP port");
   if (!Number.isInteger(maxSessions) || maxSessions < 1) throw new Error("Invalid session limit");
+  if (!Number.isInteger(maxConcurrentRequests) || maxConcurrentRequests < 1) throw new Error("Invalid request limit");
   if (!Number.isFinite(idleTimeoutMs) || idleTimeoutMs < 1) throw new Error("Invalid idle timeout");
 
   type Session = { server: McpServer; transport: StreamableHTTPServerTransport; touched: number; active: number; owner: string };
   const sessions = new Map<string, Session>();
+  const inFlight = new Set<ServerResponse>();
   let authority = "";
   let closing = false;
   function reply(res: ServerResponse, status: number, message: string): void {
@@ -52,6 +56,15 @@ export async function startLocalHttpServer(
       .map(([id]) => remove(id)));
   }
   const http = createServer((req, res) => {
+    // Bound work before signature verification, key fetching or body parsing.
+    res.setHeader("Cache-Control", "no-store");
+    if (closing || inFlight.size >= maxConcurrentRequests) {
+      res.setHeader("Connection", "close");
+      res.setHeader("Retry-After", "1");
+      reply(res, 503, "Server busy");
+      return;
+    }
+    inFlight.add(res);
     void (async () => {
       // Validate before creating a session or exposing local persona/user data.
       if (req.headers.host !== authority ||
@@ -79,6 +92,7 @@ export async function startLocalHttpServer(
         reply(res, status, status === 401 ? "Unauthorized" : "Insufficient access");
         return;
       }
+      if (req.destroyed || res.destroyed) return;
       if (closing) { reply(res, 503, "Server closing"); return; }
       if (req.method !== "POST" && req.method !== "DELETE") {
         res.setHeader("Allow", "POST, DELETE");
@@ -127,10 +141,15 @@ export async function startLocalHttpServer(
     })().catch(() => {
       if (!res.headersSent) reply(res, 500, "Internal server error");
       else if (!res.writableEnded) res.end();
+    }).finally(() => {
+      // A disconnected client must not free a slot while verification is
+      // still running; otherwise repeated aborts bypass the work limit.
+      inFlight.delete(res);
     });
   });
   http.requestTimeout = 30_000;
   http.headersTimeout = 10_000;
+  http.maxConnections = 128;
   await new Promise<void>((resolve, reject) => {
     http.once("error", reject);
     http.listen(port, "127.0.0.1", () => { http.off("error", reject); resolve(); });
