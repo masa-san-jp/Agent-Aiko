@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // aiko-after-agent-guard.test.mjs — tests for AfterAgent hook
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 
-const SCRIPT = new URL('../scripts/aiko-after-agent-guard.mjs', import.meta.url).pathname;
+const SCRIPT = fileURLToPath(new URL('../scripts/aiko-after-agent-guard.mjs', import.meta.url));
 
 function run(aikoHome, input) {
   const result = spawnSync('node', [SCRIPT], {

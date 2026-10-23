@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // install.sh の挙動を node:test で検証する。
 // 実機 codex / npm build をスキップ（--skip-build / --skip-auth-check）し、
 // サンドボックスの AIKO_HOME / BIN_DIR に対して installer が正しく書き出すかを確認する。
@@ -14,7 +15,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 const execFileAsync = promisify(execFile);
 
 // repo root: codex/test/install-script.test.ts → 2 階層上
-const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..", "..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const INSTALLER = join(REPO_ROOT, "codex", "scripts", "install.sh");
 const PREBUILT_DIST = join(REPO_ROOT, "codex", "dist", "aiko-shell.js");
 
