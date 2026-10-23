@@ -59,6 +59,8 @@ npx aiko-mcp install
 | `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
 | `--force` | 同じ名前で違う設定が入っていても置き換える |
 
+会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、次に人格を読み込んだときに反映されます。
+
 ### 1 つずつ入れる
 
 `npx -y aiko-mcp` をクライアントの起動コマンドに書くと、開いているプロジェクトの `node_modules/.bin/aiko-mcp` が先に動きます。偽の実行ファイルを置いたリポジトリを開くだけで、そのコードが起動します。起動コマンドは、インストール済みの `server.js` を node の絶対パスで指してください。`npx aiko-mcp install` はそう書きます。
@@ -74,13 +76,6 @@ codex mcp add aiko -- "$NODE" "$SERVER"
 ```
 
 入ったかどうかは `claude mcp list`（Codex は `codex mcp list`）で確認できます。`aiko ... ✔ Connected` と出れば完了です。
-
-### ボタンで入れる
-
-クリックするとクライアントが開いて、確認だけで入ります。このボタンは `npx -y aiko-mcp` を書くので、信頼できないリポジトリでは使わないでください。普段は `npx aiko-mcp install` を使います。
-
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Aiko-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22aiko%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22aiko-mcp%22%5D%7D)
-[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_Aiko-000000?logo=cursor&logoColor=white)](cursor://anysphere.cursor-deeplink/mcp/install?name=aiko&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImFpa28tbWNwIl19)
 
 ### 設定ファイルを直接書く場合
 
@@ -110,7 +105,7 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 「記憶は ~/notes にある」      → 場所を控える（中身は読みません）
 「自分用の人格を保存して」      → 独自人格として保存する
 「オリジナルに戻して」         → 元の人格へ戻る
-「friend モードで話して」      → 話し方を友だち口調にする（original / friend / servant）
+「friend モードで話して」      → 話し方の切り替えを提案する（original / friend / servant）
 ```
 
 

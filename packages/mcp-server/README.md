@@ -62,7 +62,7 @@ You talk to it. There are no files to write by hand.
 "talk to me like a friend"     → switches to the friend speech style
 ```
 
-Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Speech style still changes immediately.
+Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Speech style is also a proposal and requires `aiko accept`.
 
 What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 
@@ -82,7 +82,7 @@ How Aiko talks is chosen separately from who Aiko is. Switching the style change
 | `friend` | Casual, close — the way a friend working next to you talks |
 | `servant` | Polite and eager to serve, first person 「アイコ」 |
 
-The choice is kept in `~/.aiko/speech-style` and takes effect the next time the persona is loaded (`aiko.activate`). To change how a style sounds, put your own `~/.aiko/speech-styles/<style>.md`; it takes precedence over the shipped one.
+After `aiko accept`, the choice is kept in `~/.aiko/speech-style` and takes effect the next time the persona is loaded (`aiko.activate`). To change how a style sounds, put your own `~/.aiko/speech-styles/<style>.md`; it takes precedence over the shipped one.
 
 
 ## Configuration
@@ -189,7 +189,7 @@ npx aiko-mcp install
 | `friend` | 隣で作業を見ている友だちの距離のくだけた口調 |
 | `servant` | 一人称「アイコ」で、控えめに一生懸命仕える丁寧な口調 |
 
-選んだものは `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
+会話からの変更は提案だけです。`aiko accept` で受け入れると `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
 
 
 ## ローカルHTTP接続（Remote Gateway Phase 1）
