@@ -187,6 +187,23 @@ test("accept: 人格の提案と呼び名を反映する", async () => {
   }
 });
 
+test("accept: 話し方だけの提案も反映し、次回は提案なしになる", async () => {
+  const { home, cleanup } = await makeHome();
+  try {
+    await writeFile(join(home, "speech-style-proposal"), "servant\n");
+    const c = capture({ AIKO_HOME: home, PATH: "" });
+    assert.equal(await run(["accept"], VERSION, c.io), 0);
+    assert.match(c.out(), /話し方を切り替えました: servant/);
+    assert.doesNotMatch(c.out(), /受け入れる提案はありません/);
+    assert.equal((await readFile(join(home, "speech-style"), "utf8")).trim(), "servant");
+    const next = capture({ AIKO_HOME: home, PATH: "" });
+    assert.equal(await run(["accept"], VERSION, next.io), 0);
+    assert.match(next.out(), /受け入れる提案はありません/);
+  } finally {
+    await cleanup();
+  }
+});
+
 test("accept: 引数があると 2 を返す", async () => {
   const c = capture({ PATH: "" });
   const code = await run(["accept", "--yes"], VERSION, c.io);
