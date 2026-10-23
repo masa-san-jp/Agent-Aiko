@@ -9,29 +9,26 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { FileSystemPersonaRepository } from "@agent-aiko/core";
-import {
-  readUserMarkdown,
-  resolveUserProfilePath,
-  userMarkdownCandidates,
-  UserContextProvider,
-} from "@agent-aiko/user-context";
-import { createAikoServer, SERVER_VERSION } from "./aiko-server.js";
+import { readUserMarkdown, resolveUserProfilePath, userMarkdownCandidates, UserContextProvider } from "@agent-aiko/user-context";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createAikoServer, SERVER_VERSION, type AikoServerDeps } from "./aiko-server.js";
 import { runInstall } from "./install.js";
+import { startLocalHttpServer } from "./http.js";
 
-const personaId = process.env["AIKO_PERSONA_ID"] ?? "aiko";
-const aikoHome = process.env["AIKO_HOME"];
-// AIKO_USER_PROFILE が無くても、aiko configure が置いた既定のファイルを拾う。
-// 置き場の決め方は core に集約してある（ここで独自に組み立てると configure と食い違う）。
-const userProfilePath = resolveUserProfilePath(
-  aikoHome ?? join(homedir(), ".aiko"),
-  process.env["AIKO_USER_PROFILE"],
-  existsSync,
-);
-// 既定は ~/.aiko。別の場所を指せるようにしておくと、実バイナリのまま検証できる。
+/** Resolve the same local persona and user configuration for either transport. */
+async function loadLocalServerDeps(): Promise<AikoServerDeps> {
+  const personaId = process.env["AIKO_PERSONA_ID"] ?? "aiko";
+  const aikoHome = process.env["AIKO_HOME"];
+  // AIKO_USER_PROFILE が無くても、aiko configure が置いた既定のファイルを拾う。
+  // 置き場の決め方は core に集約してある（ここで独自に組み立てると configure と食い違う）。
+  const userProfilePath = resolveUserProfilePath(
+    aikoHome ?? join(homedir(), ".aiko"),
+    process.env["AIKO_USER_PROFILE"],
+    existsSync,
+  );
+  // 既定は ~/.aiko。別の場所を指せるようにしておくと、実バイナリのまま検証できる。
 
-async function main(): Promise<void> {
   const provider = new UserContextProvider();
   // User Profile を解決できないのは §6.5 の fail-closed 条件。既定値で埋めて
   // 起動すると、誰のものか分からない関係情報で人格が立ち上がる。
@@ -45,7 +42,7 @@ async function main(): Promise<void> {
   const md = await readUserMarkdown(userMarkdownCandidates(home));
   const user = md ? provider.withMarkdown(base, md.user) : base;
 
-  const server = createAikoServer({
+  return {
     // 同梱人格の場所。利用者側に何も無くても起動できるようにする（入れた直後の
     // 「人格が読めません」を無くす）。利用者が置いていればそちらが必ず優先される。
     aikoHome: home,
@@ -55,14 +52,19 @@ async function main(): Promise<void> {
     }),
     user,
     personaId,
-  });
+  };
+}
 
+
+async function main(): Promise<void> {
+  const server = createAikoServer(await loadLocalServerDeps());
   await server.connect(new StdioServerTransport());
 }
 
 const USAGE = `使い方: npx aiko-mcp [コマンド]
 
   （引数なし）   MCP サーバーとして起動する（クライアントが呼ぶのはこれ）
+  http [--port 3000]  ローカルHTTPで起動する（127.0.0.1 のみ、トークン必須）
   install        入っている AI クライアントに aiko の MCP 設定を書き込む
   --help         この使い方を表示する
   --version      版を表示する
@@ -117,6 +119,32 @@ async function cli(argv: readonly string[]): Promise<number | undefined> {
   const [command, ...rest] = argv;
   if (command === undefined) return undefined;
 
+  if (command === "http") {
+    if (rest.includes("--help") || rest.includes("-h")) {
+      process.stdout.write("使い方: aiko-mcp http [--port <0-65535>]\n接続先は 127.0.0.1 の /mcp。外部公開には未対応です。\n");
+      return 0;
+    }
+    if (rest.length !== 0 && (rest.length !== 2 || rest[0] !== "--port" || !/^\d+$/.test(rest[1] ?? ""))) {
+      process.stderr.write("使い方: aiko-mcp http [--port <0-65535>]\n");
+      return 2;
+    }
+    const port = rest.length === 0 ? 3000 : Number(rest[1]);
+    const token = process.env["AIKO_HTTP_TOKEN"] ?? "";
+    if (!/^[A-Za-z0-9_-]{43,128}$/.test(token)) {
+      throw new Error("AIKO_HTTP_TOKEN にランダムなbase64urlトークン（43〜128文字）を設定してください");
+    }
+    const deps = await loadLocalServerDeps();
+    const gateway = await startLocalHttpServer(() => createAikoServer(deps), { port, token });
+    process.stderr.write(`aiko-mcp: local HTTP listening at ${gateway.url.href}\n`);
+    const stop = () => {
+      process.off("SIGINT", stop);
+      process.off("SIGTERM", stop);
+      void gateway.close().catch(() => { process.exitCode = 1; });
+    };
+    process.once("SIGINT", stop);
+    process.once("SIGTERM", stop);
+    return 0;
+  }
   if (command === "install") {
     return runInstall(rest, {
       home: homedir(),
