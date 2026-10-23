@@ -53,6 +53,8 @@ export const DISPLAY_NAME = "Aiko";
 
 
 export interface AikoServerDeps {
+  /** HTTP callers must not mutate the local owner's files. Defaults to true for stdio compatibility. */
+  allowLocalMutations?: boolean;
   personaRepository: PersonaRepository;
   /** User Profile の解決結果。取得の仕方（ファイル／別経路）はサーバーの外で決める。 */
   user: ResolvedUserContext;
@@ -377,7 +379,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
   // 呼び名や記憶の場所を、会話の中で覚える口。**利用者に手でファイルを作らせない**
   // ための道具（マサさん指定 2026-08-02）。書くのは ~/.aiko の中だけで、
   // 配布物side（同梱人格・不変条項）には触れない。
-  if (deps.aikoHome) {
+  if (deps.aikoHome && deps.allowLocalMutations !== false) {
     const aikoHome = deps.aikoHome;
     server.registerTool(
       "aiko.remember_user",
@@ -429,34 +431,36 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       async () => json({ personas: await listPersonas(aikoHome) }),
     );
 
-    server.registerTool(
-      "aiko.switch_persona",
-      {
-        title: "人格の切り替えを提案する",
-        description:
-          "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。すぐには切り替わらない。提案として残り、利用者が aiko accept したときに反映される",
-        inputSchema: { name: z.string().min(1) },
-      },
-      async ({ name }) => {
-        try {
-          const path = await proposePersonaSwitch(aikoHome, name);
-          return json({
-            proposed: true,
-            applied: false,
-            name,
-            path,
-            next: "aiko accept",
-            personas: await listPersonas(aikoHome),
-          });
-        } catch (err) {
-          // 見つからないときは、何があるかを一緒に返す。「無い」だけだと次の一手が出ない。
-          return json(
-            { switched: false, reason: reasonOf(err), personas: await listPersonas(aikoHome) },
-            true,
-          );
-        }
-      },
-    );
+    if (deps.allowLocalMutations !== false) {
+      server.registerTool(
+        "aiko.switch_persona",
+        {
+          title: "人格の切り替えを提案する",
+          description:
+            "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。すぐには切り替わらない。提案として残り、利用者が aiko accept したときに反映される",
+          inputSchema: { name: z.string().min(1) },
+        },
+        async ({ name }) => {
+          try {
+            const path = await proposePersonaSwitch(aikoHome, name);
+            return json({
+              proposed: true,
+              applied: false,
+              name,
+              path,
+              next: "aiko accept",
+              personas: await listPersonas(aikoHome),
+            });
+          } catch (err) {
+            // 見つからないときは、何があるかを一緒に返す。「無い」だけだと次の一手が出ない。
+            return json(
+              { switched: false, reason: reasonOf(err), personas: await listPersonas(aikoHome) },
+              true,
+            );
+          }
+        },
+      );
+    }
 
     // 話し方は人格とは別の軸。人格（何者か）はそのままに、口調だけを選ぶ。
     server.registerTool(
@@ -470,71 +474,77 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       async () => json({ speechStyles: await listSpeechStyles(aikoHome) }),
     );
 
-    server.registerTool(
-      "aiko.switch_speech_style",
-      {
-        title: "話し方の切り替えを提案する",
-        description:
-          "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。提案として残り、利用者が aiko accept した後、次に人格を読み込んだときに反映される",
-        inputSchema: { name: z.enum(SPEECH_STYLES) },
-      },
-      async ({ name }) => {
-        try {
-          const path = await proposeSpeechStyle(aikoHome, name);
-          return json({
-            proposed: true,
-            applied: false,
-            switched: false,
-            path,
-            next: "aiko accept",
-            name,
-            speechStyles: await listSpeechStyles(aikoHome),
-          });
-        } catch (err) {
-          return json(
-            { switched: false, reason: reasonOf(err), speechStyles: await listSpeechStyles(aikoHome) },
-            true,
-          );
-        }
-      },
-    );
+    if (deps.allowLocalMutations !== false) {
+      server.registerTool(
+        "aiko.switch_speech_style",
+        {
+          title: "話し方の切り替えを提案する",
+          description:
+            "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。提案として残り、利用者が aiko accept した後、次に人格を読み込んだときに反映される",
+          inputSchema: { name: z.enum(SPEECH_STYLES) },
+        },
+        async ({ name }) => {
+          try {
+            const path = await proposeSpeechStyle(aikoHome, name);
+            return json({
+              proposed: true,
+              applied: false,
+              switched: false,
+              path,
+              next: "aiko accept",
+              name,
+              speechStyles: await listSpeechStyles(aikoHome),
+            });
+          } catch (err) {
+            return json(
+              { switched: false, reason: reasonOf(err), speechStyles: await listSpeechStyles(aikoHome) },
+              true,
+            );
+          }
+        },
+      );
+    }
 
-    server.registerTool(
-      "aiko.save_persona",
+    if (deps.allowLocalMutations !== false) {
+      server.registerTool(
+        "aiko.save_persona",
 
-      {
-        title: "独自の人格を提案する",
-        description:
-          "ユーザーが人格を作りたい・書き換えたいときに使う。すぐには有効にならない。提案として残り、利用者が aiko accept したときに保存される。origin は提案できない",
-        inputSchema: { name: z.string().min(1), content: z.string().min(1) },
-      },
-      async ({ name, content }) => {
-        try {
-          const path = await proposePersona(aikoHome, name, content);
-          return json({ proposed: true, applied: false, saved: false, name, path, next: "aiko accept" });
-        } catch (err) {
-          return json({ saved: false, reason: reasonOf(err) }, true);
-        }
-      },
-    );
+        {
+          title: "独自の人格を提案する",
+          description:
+            "ユーザーが人格を作りたい・書き換えたいときに使う。すぐには有効にならない。提案として残り、利用者が aiko accept したときに保存される。origin は提案できない",
+          inputSchema: { name: z.string().min(1), content: z.string().min(1) },
+        },
+        async ({ name, content }) => {
+          try {
+            const path = await proposePersona(aikoHome, name, content);
+            return json({ proposed: true, applied: false, saved: false, name, path, next: "aiko accept" });
+          } catch (err) {
+            return json({ saved: false, reason: reasonOf(err) }, true);
+          }
+        },
+      );
+    }
 
-    server.registerTool(
-      "aiko.delete_persona",
-      {
-        title: "独自の人格を消す",
-        description:
-          "ユーザーが消してと言ったときだけ使う。使用中の人格を消す場合はオリジナルへ戻してから消す",
-        inputSchema: { name: z.string().min(1) },
-      },
-      async ({ name }) => {
-        try {
-          await deletePersona(aikoHome, name);
-          return json({ deleted: true, name, personas: await listPersonas(aikoHome) });
-        } catch (err) {
-          return json({ deleted: false, reason: reasonOf(err) }, true);
-        }
-      },
-    );
+    if (deps.allowLocalMutations !== false) {
+      server.registerTool(
+        "aiko.delete_persona",
+        {
+          title: "独自の人格を消す",
+          description:
+            "ユーザーが消してと言ったときだけ使う。使用中の人格を消す場合はオリジナルへ戻してから消す",
+          inputSchema: { name: z.string().min(1) },
+        },
+        async ({ name }) => {
+          try {
+            await deletePersona(aikoHome, name);
+            return json({ deleted: true, name, personas: await listPersonas(aikoHome) });
+          } catch (err) {
+            return json({ deleted: false, reason: reasonOf(err) }, true);
+          }
+        },
+      );
+    }
   }
 
   server.registerTool(

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { request } from "node:http";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -174,6 +174,10 @@ test("HTTP: session limit, explicit deletion and idle expiry free capacity", asy
 
 test("HTTP: bundled CLI serves the bundled persona and shuts down on SIGTERM", { timeout: 10_000 }, async () => {
   const home = await mkdtemp(join(tmpdir(), "aiko-http-cli-"));
+  await writeFile(join(home, "user.md"), "# User\nname: preserved\n");
+  const customDir = join(home, "persona", "overrides", "custom");
+  await mkdir(customDir, { recursive: true });
+  await writeFile(join(customDir, "persona.md"), "preserved persona");
   const child = spawn(process.execPath, [fileURLToPath(new URL("../dist/server.js", import.meta.url)), "http", "--port", "0"], {
     env: { ...process.env, AIKO_HOME: home, AIKO_USER_PROFILE: "", AIKO_PERSONA_ID: "aiko", AIKO_HTTP_TOKEN: token },
     stdio: ["ignore", "pipe", "pipe"],
@@ -195,6 +199,16 @@ test("HTTP: bundled CLI serves the bundled persona and shuts down on SIGTERM", {
     try {
       assert.equal(body(await client.callTool({ name: "aiko.health", arguments: {} }))["status"], "ok");
       assert.ok((await client.readResource({ uri: "persona://aiko/core" })).contents.length);
+      const listed = (await client.listTools()).tools.map((tool) => tool.name);
+      for (const name of ["aiko.remember_user", "aiko.switch_persona", "aiko.switch_speech_style", "aiko.save_persona", "aiko.delete_persona"]) {
+        assert.ok(!listed.includes(name), name);
+        const result = await client.callTool({ name, arguments: { name: "custom", content: "injected", address: "injected" } });
+        assert.equal(result.isError, true, name);
+      }
+      assert.equal(await readFile(join(home, "user.md"), "utf8"), "# User\nname: preserved\n");
+      assert.equal(await readFile(join(customDir, "persona.md"), "utf8"), "preserved persona");
+      assert.deepEqual((await readdir(home)).sort(), ["persona", "user.md"]);
+      assert.deepEqual(await readdir(join(home, "persona")), ["overrides"]);
     } finally { await client.close(); }
     const exited = once(child, "exit");
     child.kill("SIGTERM");
