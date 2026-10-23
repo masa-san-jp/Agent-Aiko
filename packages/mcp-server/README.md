@@ -220,3 +220,40 @@ HTTP経由でも人格・記憶の操作は同じローカルデータに作用�
 POST本文は1 MiBまでです。終了はCtrl+CまたはSIGTERMで行えます。
 
 実装は [Issue #103](https://github.com/masa-san-jp/Agent-Aiko/issues/103) のPhase 1を対象としています。
+
+## 外部OAuth認証基盤との連携（Phase 2・リソースサーバー）
+
+`oauth` コマンドは外部の認証サーバーが発行したアクセストークンを検証します。
+`http` コマンドの共有トークンとは独立した認証モードで、共有トークンへのフォールバックは行いません。
+
+```bash
+export AIKO_OAUTH_ISSUER='https://auth.example.com/tenant'
+export AIKO_OAUTH_RESOURCE='https://aiko.example.com/mcp'
+export AIKO_OAUTH_SUBJECTS='許可するユーザーのsub'
+export AIKO_OAUTH_CLIENT_IDS='事前登録したclient_id'
+node dist/server.js oauth --port 3000
+```
+
+`SUBJECTS` は所有者1人のsubのみ、`CLIENT_IDS` はカンマ区切りの明示的な許可リストです。設定なしでは起動しません。
+このプロセスは単一のローカル所有者のデータを提供します。複数subjectを指定した場合は起動を拒否し、ユーザー間でデータが混ざる設定を防ぎます。
+MCPセッションは `issuer + sub + client_id` に結び付け、別の認証主体によるセッションの再利用を拒否します。
+
+認証基盤には以下の設定が必要です。
+
+- HTTPSのOAuth Authorization Server Metadata（RFC 8414）。404の場合のみOIDC Discoveryを試します。
+- authorization codeフローとS256 PKCE。ログイン・同意・コード発行・コードの一回限り利用・redirect URI照合は認証基盤が担当します。
+- 事前登録クライアントと完全一致するredirect URI。DCRの提供はこの実装に含めません。
+- RFC 9068形式のJWTアクセストークン：`typ: at+jwt`、RS256またはES256の署名、公開JWKS。
+- `iss` は設定したissuer、`aud` は設定したresource。`sub` と `client_id` は許可リストに一致させます。
+- `scope` に `mcp:tools`、`exp` と `iat` を含めます。期限切れ・発行から1時間超・未来の発行時刻は拒否します。
+- MCPクライアントはauthorization/tokenリクエストにresourceを指定し、対象MCP向けのトークンを取得します。
+
+`/.well-known/oauth-protected-resource/mcp` で認証基盤と必要scopeを公開し、401の `WWW-Authenticate` でもそのURLを案内します。
+不正な署名・issuer・audience・期限・token typeは401、許可されていないユーザー・クライアント・scopeは403です。
+JWT署名検証はjoseを利用します。トークンやその本文をログに出力しません。
+
+待受は引き続き127.0.0.1固定です。上の公開resource URLはトークンの宛先設定であり、このコマンドだけで外部公開されることはありません。
+HTTPS公開、プロキシ経由のHost/Origin制御、実際の認証基盤でのPKCEログイン、Claude.ai/ChatGPT接続は別途受入確認が必要です。
+この段階でローカル共有データを多ユーザーに提供しないでください。
+
+参照：[MCP認可仕様](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068)。
