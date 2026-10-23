@@ -88,9 +88,9 @@ if not last_text:
 text = last_text
 
 # 1. コードブロック
-text = re.sub(r"```[\s\S]*?```", "コードを書きました。", text)
+text = re.sub(r"\x60{3}[\s\S]*?\x60{3}", "コードを書きました。", text)
 # 2. インラインコード
-text = re.sub(r"`[^`]*`", "", text)
+text = re.sub(r"\x60[^\x60]*\x60", "", text)
 # 3. 見出し
 text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
 # 4. 箇条書き

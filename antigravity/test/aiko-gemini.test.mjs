@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // aiko-gemini.test.mjs — unit tests for aiko-gemini.mjs subcommands
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 
-const SCRIPT = new URL('../scripts/aiko-gemini.mjs', import.meta.url).pathname;
+const SCRIPT = fileURLToPath(new URL('../scripts/aiko-gemini.mjs', import.meta.url));
 
 function setupAikoHome(base) {
   const home = join(base, '.aiko');
