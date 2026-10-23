@@ -191,3 +191,26 @@ npx aiko-mcp install
 
 選んだものは `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
 
+
+## ローカルHTTP接続（Remote Gateway Phase 1）
+
+開発用の Streamable HTTP 接続を明示的に起動できます。引数なしの起動は従来どおり stdio です。
+
+```bash
+node dist/server.js http --port 3000
+# MCP endpoint: http://127.0.0.1:3000/mcp
+```
+
+`--port 0` は空いているポートを選び、実際のURLを標準エラーへ表示します。
+人格・ユーザー設定はstdioと同じ `AIKO_HOME`、`AIKO_PERSONA_ID`、`AIKO_USER_PROFILE` を使います。
+HTTP経由でも人格・記憶の操作は同じローカルデータに作用するため、信頼できるローカルMCPクライアントで利用してください。
+
+この段階は認証なしのローカル検証用です。待受は `127.0.0.1` 固定で、HostとOriginを検証します。
+外部公開・リバースプロキシ経由の利用や、Claude.ai / ChatGPTのコネクタ登録は、後続のOAuth・HTTPS対応後に行います。
+
+`/mcp` はPOSTによるJSON応答とDELETEによるセッション終了を提供します。GETの常設SSEストリームは提供しません。
+クライアントごとにMCPセッションとRuntime Profileを分離し、最大32セッション、無操作15分で破棄します。
+セッションIDは認証やユーザー分離の代替ではなく、全接続はこのプロセスを起動した同じローカルユーザーのデータを使います。
+POST本文は1 MiBまでです。終了はCtrl+CまたはSIGTERMで行えます。
+
+実装は [Issue #103](https://github.com/masa-san-jp/Agent-Aiko/issues/103) のPhase 1を対象としています。
