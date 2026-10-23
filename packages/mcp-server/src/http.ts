@@ -1,11 +1,13 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 export interface LocalHttpOptions {
-  /** Phase 1 is deliberately loopback-only until authentication is available. */
+  /** Shared local bearer credential; generate with randomBytes(32).toString("base64url"). */
+  token: string;
+  /** Phase 1 remains loopback-only; remote OAuth is a separate phase. */
   port?: number;
   maxSessions?: number;
   idleTimeoutMs?: number;
@@ -14,11 +16,15 @@ export interface LocalHttpOptions {
 /** Each MCP session owns its server and ProfileStore; there is no shared client state. */
 export async function startLocalHttpServer(
   createServerForSession: () => McpServer,
-  options: LocalHttpOptions = {},
+  options: LocalHttpOptions,
 ): Promise<{ url: URL; close: () => Promise<void> }> {
   const port = options.port ?? 3000;
   const maxSessions = options.maxSessions ?? 32;
   const idleTimeoutMs = options.idleTimeoutMs ?? 15 * 60_000;
+  if (typeof options.token !== "string" || !/^[A-Za-z0-9_-]{43,128}$/.test(options.token)) {
+    throw new Error("AIKO_HTTP_TOKEN must be a random base64url token of 43–128 characters");
+  }
+  const tokenHash = createHash("sha256").update(options.token).digest();
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid HTTP port");
   if (!Number.isInteger(maxSessions) || maxSessions < 1) throw new Error("Invalid session limit");
   if (!Number.isFinite(idleTimeoutMs) || idleTimeoutMs < 1) throw new Error("Invalid idle timeout");
@@ -51,6 +57,14 @@ export async function startLocalHttpServer(
         return;
       }
       if (req.url !== "/mcp") { reply(res, 404, "Not found"); return; }
+      const authorization = req.headers.authorization;
+      const bearer = typeof authorization === "string" ? /^Bearer ([A-Za-z0-9_-]{43,128})$/i.exec(authorization) : null;
+      const authHeaders = req.rawHeaders.filter((_, i) => i % 2 === 0 && req.rawHeaders[i]?.toLowerCase() === "authorization").length;
+      if (authHeaders !== 1 || !bearer || !timingSafeEqual(tokenHash, createHash("sha256").update(bearer[1]!).digest())) {
+        res.setHeader("WWW-Authenticate", 'Bearer realm="aiko-local"');
+        reply(res, 401, "Unauthorized");
+        return;
+      }
       if (closing) { reply(res, 503, "Server closing"); return; }
       if (req.method !== "POST" && req.method !== "DELETE") {
         res.setHeader("Allow", "POST, DELETE");
