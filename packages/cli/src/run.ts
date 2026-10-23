@@ -9,6 +9,7 @@ import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from ".
 import { configure, renderConfigured, type Ask } from "./configure.js";
 import {
   acceptPersonaProposals,
+  acceptSpeechStyleProposal,
   acceptUserProposal,
   defaultUserProfilePath,
 } from "@agent-aiko/runtime-sdk";
@@ -49,7 +50,7 @@ const USAGE = `使い方: aiko <コマンド>
   doctor                構成を点検する
   doctor --fix          点検で見つかったもののうち、直し方が分かっているものを直す
   configure             呼び名などを設定して User Profile を作る
-  accept                会話で提案された人格・切り替え・呼び名を反映する
+  accept                会話で提案された人格・切り替え・話し方・呼び名を反映する
   update --check        新しい版が出ていないかを見る（何も書き換えない）
   update --check --channel beta   試用版も対象に含める
   update                新しい版を取得して照合してから入れる（利用者の設定は触らない）
@@ -117,7 +118,8 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     try {
       const personas = await acceptPersonaProposals(env.aikoHome);
       const userAccepted = await acceptUserProposal(env.aikoHome);
-      if (personas.saved.length === 0 && personas.switched === undefined && !userAccepted) {
+      const speechStyle = await acceptSpeechStyleProposal(env.aikoHome);
+      if (personas.saved.length === 0 && personas.switched === undefined && !userAccepted && speechStyle === undefined) {
         io.out("受け入れる提案はありません\n");
         return 0;
       }
@@ -126,6 +128,9 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
       }
       if (personas.switched !== undefined) {
         io.out(`人格を切り替えました: ${personas.switched}\n`);
+      }
+      if (speechStyle !== undefined) {
+        io.out(`話し方を切り替えました: ${speechStyle}\n`);
       }
       if (userAccepted) {
         io.out("呼び名を user.md に反映しました\n");

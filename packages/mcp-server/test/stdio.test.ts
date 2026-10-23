@@ -5,6 +5,7 @@
 // 文字列が混ざるだけでフレームが壊れるが、それは InMemory では絶対に出ない。
 
 import { test } from "node:test";
+import { acceptSpeechStyleProposal } from "@agent-aiko/runtime-sdk";
 import assert from "node:assert/strict";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -92,6 +93,12 @@ test("実バイナリ: 話し方を切り替えると、同梱の定義が人格
         arguments: { name: style },
       });
       assert.equal(switched.isError, undefined);
+      const proposal = JSON.parse(String((switched as { content: Array<{ text: string }> }).content[0]?.text));
+      assert.equal(proposal.applied, false);
+      assert.equal(proposal.next, "aiko accept");
+      const before = await activate();
+      assert.equal(before.includes(`# 話し方（${style}）`), false);
+      assert.equal(await acceptSpeechStyleProposal(home), style);
       const text = await activate();
       assert.match(text, new RegExp(`# 話し方（${style}）`));
       // 同梱の定義本文まで入っている（見出しだけで中身が空、を通さない）。
