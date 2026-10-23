@@ -204,7 +204,8 @@ node dist/server.js http --port 3000
 
 `--port 0` は空いているポートを選び、実際のURLを標準エラーへ表示します。
 人格・ユーザー設定はstdioと同じ `AIKO_HOME`、`AIKO_PERSONA_ID`、`AIKO_USER_PROFILE` を使います。
-HTTP経由でも人格・記憶の操作は同じローカルデータに作用するため、信頼できるローカルMCPクライアントで利用してください。
+`http` / `oauth` コマンドでは、人格・ユーザー情報の変更、切り替え提案、人格削除のツールを登録しません。
+一覧取得・人格の読み込み・セッション内Profileの合成だけを提供します。ローカルデータの変更はstdioまたはローカルCLIで行ってください。
 
 この段階はローカル検証用です。`AIKO_HTTP_TOKEN` は必須で、未設定・不正な形式の場合は起動しません。
 クライアントは全リクエストに `Authorization: Bearer <AIKO_HTTP_TOKENの値>` を設定してください。
