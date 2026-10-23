@@ -9,7 +9,9 @@
 // Binding に失敗したら起動用の引数を作らない（§3.4 Fail Closed）。人格が無い
 // まま claude が立ち上がったら、それは Aiko ではない。
 
-import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, mkdir, mkdtemp, open, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   createRuntimeSdk,
@@ -52,6 +54,14 @@ export class AdapterError extends Error {
   ) {
     super(message);
   }
+}
+
+/** 指示文の置き場。固定名の共有ディレクトリにはしない。 */
+export async function resolveStateDir(env: NodeJS.ProcessEnv): Promise<string> {
+  const explicit = env["AIKO_STATE_DIR"];
+  if (explicit) return explicit;
+  const parent = env["XDG_RUNTIME_DIR"] || tmpdir();
+  return mkdtemp(join(parent, "aiko-claude-code-"));
 }
 
 /** 起動に必要なものを用意する。ここでは claude を起動しない。
@@ -113,13 +123,76 @@ export async function prepareLaunch(options: PrepareOptions): Promise<PreparedLa
 }
 
 /** 指示文をファイルへ書く。§11.3 が Runtime Profile を 0600 と定めている。
- *  指示文には呼称など利用者の情報が入るため、他ユーザーから読めてはいけない。 */
+ *  指示文には呼称など利用者の情報が入るため、他ユーザーから読めてはいけない。
+ *
+ *  置き場は自分の uid で 0700 の実ディレクトリだけを使う。既にあるディレクトリの
+ *  持ち主も権限も見ずに mkdir すると、先に作っておいた共有ディレクトリへ
+ *  指示文を書かされる。ファイルは O_CREAT|O_EXCL|O_NOFOLLOW で作る。
+ *  writeFile と chmod はシンボリックリンクを辿るので使わない。 */
 async function writeInstructions(stateDir: string, profile: RuntimeProfile): Promise<string> {
-  await mkdir(stateDir, { recursive: true, mode: 0o700 });
+  await assertPrivateStateDir(stateDir);
   // profile_id をファイル名にすると、同じ合成結果は同じファイルに落ちる。
   const path = join(stateDir, `runtime-profile-${profile.profile_id}.md`);
-  await writeFile(path, profile.instructions, { encoding: "utf8", mode: 0o600 });
-  // mkdir/writeFile の mode は umask に削られる。作った後に明示的に締め直す。
-  await chmod(path, 0o600);
+  await writePrivateFile(path, profile.instructions);
   return path;
+}
+
+async function assertPrivateStateDir(stateDir: string): Promise<void> {
+  let info = await lstat(stateDir).catch((err: NodeJS.ErrnoException) => {
+    if (err.code !== "ENOENT") throw err;
+    return undefined;
+  });
+  if (info === undefined) {
+    await mkdir(stateDir, { recursive: true, mode: 0o700 });
+    info = await lstat(stateDir);
+  }
+  const uid = process.getuid?.();
+  const mode = info.mode & 0o777;
+  const owned = uid === undefined || info.uid === uid;
+  if (!info.isDirectory() || info.isSymbolicLink() || !owned || (mode & 0o077) !== 0) {
+    throw new AdapterError(
+      "指示文の置き場が自分だけのディレクトリではありません。起動を中止します",
+      { stage: "instructions" },
+    );
+  }
+}
+
+/** 新規ファイルを 0600 で作る。既存のシンボリックリンクは辿らず、中止する。
+ *  自分が所有する通常ファイルが既にあるときだけ、一度外して作り直す。 */
+async function writePrivateFile(path: string, content: string): Promise<void> {
+  const noFollow = constants.O_NOFOLLOW;
+  if (process.platform !== "win32" && !noFollow) {
+    throw new AdapterError("この OS では指示文をリンクを辿らずに書けません。起動を中止します", {
+      stage: "instructions",
+    });
+  }
+  const flags = constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (noFollow ?? 0);
+  try {
+    await createExclusive(path, flags, content);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "EEXIST") throw err;
+    const info = await lstat(path);
+    const uid = process.getuid?.();
+    const owned = uid === undefined || info.uid === uid;
+    if (!info.isFile() || info.isSymbolicLink() || !owned) {
+      throw new AdapterError(
+        "指示文の書き出し先がシンボリックリンクか、自分のファイルではありません。起動を中止します",
+        { stage: "instructions" },
+      );
+    }
+    await rm(path);
+    await createExclusive(path, flags, content);
+  }
+}
+
+async function createExclusive(path: string, flags: number, content: string): Promise<void> {
+  const handle = await open(path, flags, 0o600);
+  try {
+    // open の mode は umask で削られる。fd への chmod はリンクを辿らない。
+    await handle.chmod(0o600);
+    await handle.writeFile(content, "utf8");
+  } finally {
+    await handle.close();
+  }
 }

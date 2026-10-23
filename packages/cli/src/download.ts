@@ -16,7 +16,13 @@ export class DownloadError extends Error {
   override readonly name = "DownloadError";
   constructor(
     message: string,
-    readonly reason: "fetch-failed" | "checksum-missing" | "checksum-mismatch" | "extract-failed",
+    readonly reason:
+      | "fetch-failed"
+      | "checksum-missing"
+      | "checksum-mismatch"
+      | "attestation-failed"
+      | "attestation-unavailable"
+      | "extract-failed",
   ) {
     super(message);
   }
@@ -36,12 +42,43 @@ export interface DownloadInput {
   destDir: string;
   baseUrl?: string;
   fetchBytes?: FetchBytes;
+  /**
+   * https の GitHub Release は attestation を検証する。
+   * file:// と、テストが差し替えた fetchBytes は照合を省略する。
+   * 省略を明示するときは "skip"。
+   */
+  verifyAttestation?: "skip" | "verify";
+}
+
+const OFFICIAL_RELEASE_BASE = "https://github.com/masa-san-jp/Agent-Aiko/releases/download";
+
+/** https の取得だけ検証する。file:// の試験用と、注入した取得口は対象外。 */
+export function wantsAttestation(input: DownloadInput): boolean {
+  if (input.verifyAttestation === "skip") return false;
+  if (input.verifyAttestation === "verify") return true;
+  if (input.fetchBytes) return false;
+  const base = input.baseUrl ?? OFFICIAL_RELEASE_BASE;
+  return base.startsWith("https:");
+}
+
+async function verifyGhAttestation(archivePath: string): Promise<void> {
+  try {
+    await run("gh", ["attestation", "verify", archivePath, "--repo", "masa-san-jp/Agent-Aiko"]);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      throw new DownloadError(
+        "gh が無いので attestation を検証できません。検証できない https の配布物は入れません",
+        "attestation-unavailable",
+      );
+    }
+    throw new DownloadError("配布物の attestation を検証できません", "attestation-failed");
+  }
 }
 
 /** 取得 → 照合 → 展開。展開先の `agent-aiko-<tag>` を返す。 */
 export async function downloadVerifiedRelease(input: DownloadInput): Promise<string> {
-  const base =
-    input.baseUrl ?? "https://github.com/masa-san-jp/Agent-Aiko/releases/download";
+  const base = input.baseUrl ?? OFFICIAL_RELEASE_BASE;
   const get = input.fetchBytes ?? fetchBytesFromNetwork;
   const name = `agent-aiko-${input.tag}.tar.gz`;
 
@@ -61,6 +98,9 @@ export async function downloadVerifiedRelease(input: DownloadInput): Promise<str
 
   const archivePath = join(input.destDir, name);
   await writeFile(archivePath, archive);
+  if (wantsAttestation(input)) {
+    await verifyGhAttestation(archivePath);
+  }
   try {
     await run("tar", ["-xzf", archivePath, "-C", input.destDir]);
   } catch (err) {

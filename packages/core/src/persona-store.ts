@@ -162,6 +162,67 @@ export async function deletePersona(aikoHome: string, name: string): Promise<voi
   await rm(dir, { recursive: true, force: true });
 }
 
+const PROPOSALS = join("persona", "proposals");
+
+/** MCP が保存した人格。使う人格には入らない。`aiko accept` まで反映しない。 */
+export async function proposePersona(
+  aikoHome: string,
+  name: string,
+  content: string,
+): Promise<string> {
+  if (name === "origin") {
+    throw new PersonaStoreError("origin は書き換えられません。別の名前で保存してください");
+  }
+  if (!isSafePersonaName(name)) {
+    throw new PersonaStoreError(`人格名として使えません: ${name}`);
+  }
+  if (content.trim().length === 0) {
+    throw new PersonaStoreError("中身が空の人格は保存しません");
+  }
+  assertWithinLimit("personaPackage", content);
+  const dir = join(aikoHome, PROPOSALS, name);
+  const info = await lstat(dir).catch(() => undefined);
+  if (info?.isSymbolicLink() === true) {
+    throw new PersonaStoreError(`${name} はリンクです。実体のある場所に作り直してください`);
+  }
+  const path = join(dir, "persona.md");
+  await writeAtomic(path, content.endsWith("\n") ? content : `${content}\n`);
+  await writeAtomic(join(dir, "source"), "mcp\nunapproved\n");
+  return path;
+}
+
+/** 切り替えの希望だけを残す。mode と active-persona は変えない。 */
+export async function proposePersonaSwitch(aikoHome: string, name: string): Promise<string> {
+  if (name !== "origin" && !isSafePersonaName(name)) {
+    throw new PersonaStoreError(`人格名として使えません: ${name}`);
+  }
+  const path = join(aikoHome, PROPOSALS, ".pending-switch");
+  await writeAtomic(path, `${name}\n`);
+  return path;
+}
+
+/** 提案を、利用者が明示したときだけ本番の人格へ移す。 */
+export async function acceptPersonaProposals(
+  aikoHome: string,
+): Promise<{ saved: string[]; switched?: string }> {
+  const root = join(aikoHome, PROPOSALS);
+  const names = await readdir(root).catch(() => [] as string[]);
+  const saved: string[] = [];
+  for (const name of names.sort()) {
+    if (!isSafePersonaName(name)) continue;
+    const content = await readOptional(join(root, name, "persona.md"));
+    if (content === undefined) continue;
+    await savePersona(aikoHome, name, content);
+    saved.push(name);
+    await rm(join(root, name), { recursive: true, force: true });
+  }
+  const requested = (await readOptional(join(root, ".pending-switch")))?.trim();
+  if (!requested) return { saved };
+  await switchPersona(aikoHome, requested);
+  await rm(join(root, ".pending-switch"), { force: true });
+  return { saved, switched: requested };
+}
+
 // 選べる話し方の一覧（SPEECH_STYLES）は読む側と共有する。original は人格本文の
 // 話し方のままで、friend / servant は同梱の定義を使う（~/.aiko/speech-styles/<id>.md
 // を置けば、そちらが優先される）。

@@ -7,14 +7,14 @@
 // 追加の引数はそのまま claude へ渡す。Adapter が使う人格の引数だけを足す。
 
 import { existsSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 // 実体の生成（Repository / Provider）は入口の仕事。SDK 設計書 §1 が禁じているのは
 // 「人格を適用する通常処理」での直接呼び出しで、依存の組み立てはここで行う。
 import { FileSystemPersonaRepository } from "@agent-aiko/core";
 import { UserContextProvider, resolveUserProfilePath } from "@agent-aiko/user-context";
-import { prepareLaunch, AdapterError } from "./adapter.js";
+import { prepareLaunch, resolveStateDir, AdapterError } from "./adapter.js";
 
 async function main(): Promise<void> {
   const provider = new UserContextProvider();
@@ -30,9 +30,10 @@ const aikoHome = process.env["AIKO_HOME"];
     ? await provider.loadFromFile(userProfilePath)
     : provider.resolve({ schema_version: 1, user_id: "default" });
 
-  const stateDir =
-    process.env["AIKO_STATE_DIR"] ??
-    join(process.env["XDG_RUNTIME_DIR"] ?? tmpdir(), "aiko-claude-code");
+  // 既定は呼び出しごとの mkdtemp。固定名（/tmp/aiko-claude-code）は、
+  // 先にディレクトリを作った別ユーザーに指示文を差し替えられる。
+  // AIKO_STATE_DIR を渡したときは、そのディレクトリの持ち主と権限を確かめてから使う。
+  const stateDir = await resolveStateDir(process.env);
 
   const prepared = await prepareLaunch({
     personaRepository: new FileSystemPersonaRepository(aikoHome ? { aikoHome } : {}),

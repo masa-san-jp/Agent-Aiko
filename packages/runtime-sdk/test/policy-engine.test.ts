@@ -6,6 +6,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   ActionDecisionSchema,
@@ -110,6 +113,64 @@ test("書き込みを許されていない場所への操作は deny", () => {
     }),
   );
   assert.equal(decision.decision, "deny");
+});
+
+test(".. で writable の外へ出るパスは前方一致では通さない", () => {
+  const decision = evaluate(
+    action({
+      type: "file.write",
+      targets: [{ type: "file", identifier: "/home/masa/dev/project/../etc/passwd" }],
+    }),
+  );
+  assert.equal(decision.decision, "deny");
+  assert.ok(decision.reasons.some((reason) => reason.code === "PATH_NOT_WRITABLE"));
+});
+
+test("相対パスの書き込み先は範囲内とみなさない", () => {
+  const decision = evaluate(
+    action({
+      type: "file.write",
+      targets: [{ type: "file", identifier: "src/a.ts" }],
+    }),
+  );
+  assert.equal(decision.decision, "deny");
+  assert.ok(decision.reasons.some((reason) => reason.code === "PATH_NOT_WRITABLE"));
+});
+
+test("writable 配下のリンクの先が外なら deny", async () => {
+  const root = await mkdtemp(join(tmpdir(), "aiko-perm-"));
+  const project = join(root, "project");
+  const outside = join(root, "outside");
+  await mkdir(project);
+  await mkdir(outside);
+  await writeFile(join(outside, "secret"), "x");
+  await symlink(join(outside, "secret"), join(project, "link"));
+  try {
+    const decision = evaluate(
+      action({
+        type: "file.write",
+        targets: [{ type: "file", identifier: join(project, "link") }],
+      }),
+      {
+        permissionManifest: {
+          schema_version: 1,
+          runtime_id: "claude-code",
+          filesystem: { writable_paths: [project] },
+          sandbox: { mode: "workspace-write" },
+        },
+      },
+    );
+    assert.equal(decision.decision, "deny");
+    assert.ok(decision.reasons.some((reason) => reason.code === "PATH_NOT_WRITABLE"));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("書き込み先の申告が無い file.write は deny せず承認を求める", () => {
+  const decision = evaluate(action({ type: "file.write" }));
+  assert.equal(decision.decision, "require_approval");
+  assert.ok(decision.reasons.some((reason) => reason.code === "FILE_TARGET_UNKNOWN"));
 });
 
 // --- rule priority / 層 ---

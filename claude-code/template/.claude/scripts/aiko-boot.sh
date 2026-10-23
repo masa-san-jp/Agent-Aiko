@@ -8,6 +8,10 @@
 #   bash .claude/scripts/aiko-boot.sh --stop           # デーモン停止
 #   bash .claude/scripts/aiko-boot.sh --status         # 起動状態確認
 # 注: claude は & + wait で起動し SIGTERM/INT を子プロセスに転送します（daemon 時は HUP 無視）
+#
+# Telegram モードは既定で --permission-mode dontAsk。動くのは settings.json の
+# permissions.allow と、返信に必要なツールだけ。全ツールを確認なしで動かすのは
+# AIKO_TELEGRAM_SKIP_PERMISSIONS=1 を明示したときだけ（無人セッションでは危険）。
 
 case "${AIKO_RESTART_DELAY:-}" in
   ''|*[!0-9]*) RESTART_DELAY=5 ;;
@@ -148,19 +152,34 @@ fi
 
 _telegram_notify() {
   if [ -n "${AIKO_TELEGRAM_BOT_TOKEN}" ] && [ -n "${AIKO_TELEGRAM_CHAT_ID}" ]; then
-    curl -s --connect-timeout 3 --max-time 5 -X POST \
-      "https://api.telegram.org/bot${AIKO_TELEGRAM_BOT_TOKEN}/sendMessage" \
-      --data-urlencode "chat_id=${AIKO_TELEGRAM_CHAT_ID}" \
-      --data-urlencode "text=$1" \
-      > /dev/null 2>&1 || true
+    # トークンを curl の引数に載せない。ps に出る。
+    printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$AIKO_TELEGRAM_BOT_TOKEN" \
+      | curl -s --connect-timeout 3 --max-time 5 -K - -X POST \
+        --data-urlencode "chat_id=${AIKO_TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=$1" \
+        > /dev/null 2>&1 || true
   fi
 }
 
 _run_claude() {
   if [ "$MODE" = "telegram" ]; then
     _telegram_notify "🤖 Aiko（Telegram モード）起動しました"
-    claude --dangerously-skip-permissions \
-      --channels plugin:telegram@claude-plugins-official &
+    # 既定は確認を外さない。dontAsk はプロンプトで止まらず、許可リストに無い
+    # ツールを拒否する。全許可は環境変数で選んだときだけ。
+    if [ "${AIKO_TELEGRAM_SKIP_PERMISSIONS:-}" = "1" ]; then
+      echo "⚠ AIKO_TELEGRAM_SKIP_PERMISSIONS=1: すべてのツールを確認なしで実行します。" >&2
+      echo "  bot に話しかけられる相手は、シェルを含む任意のツールを実行させられます。" >&2
+      echo "  モデルが読んだページやファイルの指示も、そのまま実行につながります。" >&2
+      claude --dangerously-skip-permissions \
+        --channels plugin:telegram@claude-plugins-official &
+    else
+      echo "Telegram モードは権限を確認します（--permission-mode dontAsk）。" >&2
+      echo "  動くのは .claude/settings.json の permissions.allow と、返信ツールだけです。" >&2
+      echo "  全許可で動かすときだけ AIKO_TELEGRAM_SKIP_PERMISSIONS=1 を付けてください。" >&2
+      claude --permission-mode dontAsk \
+        --allowedTools mcp__plugin_telegram_telegram__reply \
+        --channels plugin:telegram@claude-plugins-official &
+    fi
   else
     claude -c &
   fi

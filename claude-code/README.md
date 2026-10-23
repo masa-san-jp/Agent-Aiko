@@ -23,7 +23,7 @@ Claude Code 環境で動く Aiko の配布物です。既存プロジェクト�
 インストールしたいプロジェクトのディレクトリで次のコマンドを実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash
 ```
 
 `scripts/install.sh` は互換ラッパーで、内部的に `claude-code/scripts/install.sh` を実行します。確認プロンプトで `Y` を入力すると、Aiko 共有ストア `~/.aiko/` が初期化され、対象プロジェクトには `.claude/skills/aiko*/` と `.claude/scripts/aiko-*.sh` が配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。
@@ -209,11 +209,23 @@ bash .claude/scripts/aiko-service.sh start
 
 ### セキュリティ注記
 
-Telegram モードは `--dangerously-skip-permissions` で起動します。これはプラグインが自律的にツールを呼び出すために必要なフラグです。以下の点に注意してください:
+Telegram モードは無人で再起動し続けます。既定では `--permission-mode dontAsk` で起動し、`.claude/settings.json` の `permissions.allow` と、返信に必要な `mcp__plugin_telegram_telegram__reply` だけを自動で許可します。一覧に無いツール（シェルを含む）は確認ダイアログを出さずに拒否します。
 
-- **信頼できるプロジェクトディレクトリ内でのみ** 使用してください
-- ボットを**パブリックグループに追加しないでください**（誰でもコマンドを送れるようになります）
-- トークンが漏洩した場合は BotFather の `/revoke` コマンドですぐに無効化してください
+`--dangerously-skip-permissions`（すべてのツールを確認なしで実行する）は、`AIKO_TELEGRAM_SKIP_PERMISSIONS=1` を明示したときだけ使います。systemd では `~/.aiko/telegram.env` にその行を書いたときだけです。install はこれを有効にしません。
+
+全許可で動かすと、次のことが起きます。
+
+- bot に話しかけられる相手は、任意のシェルコマンドを実行させられます
+- 許可した相手でも、モデルが読んだ Web ページやファイルに仕込まれた指示が、そのままコマンド実行につながります
+- `pre-tool-use.sh` は Edit/Write しか見ていないので、Bash は止まりません
+
+運用:
+
+- 追加で動かしたいツールは、プロジェクトの `.claude/settings.json` の `permissions.allow` に足す
+- **信頼できるプロジェクトディレクトリ内でのみ** 使う
+- ボットを**パブリックグループに追加しない**（誰でもメッセージを送れるようになる）
+- トークンが漏洩した場合は BotFather の `/revoke` ですぐに無効化する
+- 全許可が本当に要るときだけ `AIKO_TELEGRAM_SKIP_PERMISSIONS=1` にする。付けたら、上の危険がそのまま戻る
 
 ---
 

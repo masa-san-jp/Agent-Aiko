@@ -18,16 +18,12 @@ import {
   deletePersona,
   listPersonas,
   listSpeechStyles,
+  proposePersona,
+  proposePersonaSwitch,
+  proposeUserMarkdown,
   readSpeechStyle,
-  readUserMarkdown,
-
-  savePersona,
   SPEECH_STYLES,
-  switchPersona,
   switchSpeechStyle,
-
-  userMarkdownCandidates,
-  writeUserMarkdown,
   RuntimeSdkError,
   SemanticBudget,
   ValidateResponseRequestSchema,
@@ -44,7 +40,7 @@ import { ProfileStore } from "./profile-store.js";
 import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
-export const SERVER_VERSION = "0.3.1";
+export const SERVER_VERSION = "0.3.2";
 
 /** Prompt（aiko.activate など）で人格を置くときの名乗り。人格や話し方を切り替えても
  *  変えない——「Aiko-<人格名>」のように中身の都合が名前に出ると、同じ Aiko に見えなくなる。
@@ -386,9 +382,9 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     server.registerTool(
       "aiko.remember_user",
       {
-        title: "呼び名や記憶の場所を覚える",
+        title: "呼び名や記憶の場所を提案する",
         description:
-          "ユーザーが「〇〇と呼んで」「記憶は〇〇にある」と言ったときに使う。~/.aiko/user.md へ書く。記憶は場所を控えるだけで、中身は読まない",
+          "ユーザーが「〇〇と呼んで」「記憶は〇〇にある」と言ったときに使う。すぐには反映しない。~/.aiko/user-proposal.md に提案として残し、利用者が aiko accept したときだけ user.md に入る。記憶は場所を控えるだけで、中身は読まない",
         inputSchema: {
           name: z.string().min(1).optional(),
           address: z.string().min(1).optional(),
@@ -399,20 +395,20 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
         if (name === undefined && address === undefined && memory === undefined) {
           return json({ remembered: false, reason: "覚える内容がありません" }, true);
         }
-        const target = userMarkdownCandidates(aikoHome)[0] as string;
         try {
-          // 既にあるものを消さない。今回言われた項目だけを重ねる。
-          const current = (await readUserMarkdown([target]))?.user ?? {};
-          const next = {
-            ...current,
+          const path = await proposeUserMarkdown(aikoHome, {
             ...(name !== undefined ? { name } : {}),
             ...(address !== undefined ? { address } : {}),
             ...(memory !== undefined ? { memory } : {}),
-          };
-          await writeUserMarkdown(target, next);
-          return json({ remembered: true, path: target, user: next });
+          });
+          return json({
+            proposed: true,
+            applied: false,
+            path,
+            next: "aiko accept",
+          });
         } catch (err) {
-          return json({ remembered: false, reason: reasonOf(err) }, true);
+          return json({ proposed: false, applied: false, reason: reasonOf(err) }, true);
         }
       },
     );
@@ -436,15 +432,22 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     server.registerTool(
       "aiko.switch_persona",
       {
-        title: "使う人格を切り替える",
+        title: "人格の切り替えを提案する",
         description:
-          "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。origin を指定するとオリジナルへ戻る",
+          "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。すぐには切り替わらない。提案として残り、利用者が aiko accept したときに反映される",
         inputSchema: { name: z.string().min(1) },
       },
       async ({ name }) => {
         try {
-          await switchPersona(aikoHome, name);
-          return json({ switched: true, name, personas: await listPersonas(aikoHome) });
+          const path = await proposePersonaSwitch(aikoHome, name);
+          return json({
+            proposed: true,
+            applied: false,
+            name,
+            path,
+            next: "aiko accept",
+            personas: await listPersonas(aikoHome),
+          });
         } catch (err) {
           // 見つからないときは、何があるかを一緒に返す。「無い」だけだと次の一手が出ない。
           return json(
@@ -496,15 +499,15 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       "aiko.save_persona",
 
       {
-        title: "独自の人格を保存する",
+        title: "独自の人格を提案する",
         description:
-          "ユーザーが人格を作りたい・書き換えたいときに使う。origin は書き換えられないので別名で保存する",
+          "ユーザーが人格を作りたい・書き換えたいときに使う。すぐには有効にならない。提案として残り、利用者が aiko accept したときに保存される。origin は提案できない",
         inputSchema: { name: z.string().min(1), content: z.string().min(1) },
       },
       async ({ name, content }) => {
         try {
-          const path = await savePersona(aikoHome, name, content);
-          return json({ saved: true, name, path });
+          const path = await proposePersona(aikoHome, name, content);
+          return json({ proposed: true, applied: false, saved: false, name, path, next: "aiko accept" });
         } catch (err) {
           return json({ saved: false, reason: reasonOf(err) }, true);
         }

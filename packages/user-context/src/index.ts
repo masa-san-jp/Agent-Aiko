@@ -10,10 +10,13 @@ export {
 
 export { defaultUserProfilePath, resolveUserProfilePath } from "./user-profile-path.js";
 export {
+  acceptUserProposal,
   parseUserMarkdown,
+  proposeUserMarkdown,
   readUserMarkdown,
   renderUserMarkdown,
   userMarkdownCandidates,
+  userProposalPath,
   writeUserMarkdown,
   UserMarkdownError,
   type UserMarkdown,

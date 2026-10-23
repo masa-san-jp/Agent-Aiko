@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runInstall, type InstallDeps } from "../src/install.js";
+import { resolveMcpEntry, runInstall, type InstallDeps } from "../src/install.js";
 
 interface Harness {
   deps: InstallDeps;
@@ -52,6 +52,8 @@ function harness(
   };
 }
 
+const entry = () => resolveMcpEntry();
+
 async function fakeHome(): Promise<string> {
   return mkdtemp(join(tmpdir(), "aiko-install-"));
 }
@@ -74,7 +76,10 @@ test("PATH にあるクライアントにだけ設定を書く", async () => {
 
   assert.equal(code, 0);
   assert.deepEqual(h.calls, [
-    { command: "claude", args: ["mcp", "add", "aiko", "-s", "user", "--", "npx", "-y", "aiko-mcp"] },
+    {
+      command: "claude",
+      args: ["mcp", "add", "aiko", "-s", "user", "--", entry().command, ...entry().args],
+    },
   ]);
   // 入っていない codex / VS Code には触らない。
   assert.equal(h.out().includes("Codex"), false);
@@ -101,8 +106,11 @@ test("Cursor の設定に、既にあるサーバーを残したまま足す", a
     mcpServers: Record<string, unknown>;
   };
   assert.deepEqual(Object.keys(written.mcpServers).sort(), ["aiko", "other"]);
-  assert.deepEqual(written.mcpServers["aiko"], { command: "npx", args: ["-y", "aiko-mcp"] });
+  assert.deepEqual(written.mcpServers["aiko"], entry());
   assert.deepEqual(written.mcpServers["other"], { command: "other-server" });
+  assert.equal(entry().command.includes("npx"), false);
+  assert.equal(entry().args.some((arg) => arg === "aiko-mcp"), false);
+  assert.equal(entry().args[0]?.endsWith("/server.js"), true);
 });
 
 test("設定ファイルがまだ無いクライアントにも、置き場があれば書く", async () => {
@@ -113,7 +121,7 @@ test("設定ファイルがまだ無いクライアントにも、置き場が�
   await runInstall([], h.deps);
 
   const written = JSON.parse(await readFile(path, "utf8")) as { mcpServers: Record<string, unknown> };
-  assert.deepEqual(written.mcpServers["aiko"], { command: "npx", args: ["-y", "aiko-mcp"] });
+  assert.deepEqual(written.mcpServers["aiko"], entry());
 });
 
 test("書き換える前に控えを取る", async () => {
@@ -134,7 +142,7 @@ test("書き換える前に控えを取る", async () => {
 test("すでに同じ内容が入っていれば書き換えない", async () => {
   const home = await fakeHome();
   const path = await withCursor(home, {
-    mcpServers: { aiko: { command: "npx", args: ["-y", "aiko-mcp"] } },
+    mcpServers: { aiko: entry() },
   });
   const before = await readFile(path, "utf8");
   const h = harness(home);
@@ -173,7 +181,7 @@ test("--force なら違う設定でも置き換える", async () => {
 
   assert.equal(code, 0);
   const written = JSON.parse(await readFile(path, "utf8")) as { mcpServers: Record<string, unknown> };
-  assert.deepEqual(written.mcpServers["aiko"], { command: "npx", args: ["-y", "aiko-mcp"] });
+  assert.deepEqual(written.mcpServers["aiko"], entry());
 });
 
 test("読めない設定ファイルには触らない", async () => {
@@ -216,7 +224,7 @@ test("キーの並び順が違うだけなら、すでに入っていると見�
   // 文字列にして比べると、同じ設定でも別物と判定して --force を要求してしまう。
   const home = await fakeHome();
   const path = await withCursor(home, {
-    mcpServers: { aiko: { args: ["-y", "aiko-mcp"], command: "npx" } },
+    mcpServers: { aiko: { args: entry().args, command: entry().command } },
   });
   const before = await readFile(path, "utf8");
   const h = harness(home);
@@ -274,7 +282,7 @@ test("入っているクライアントが1つも無ければ、手で入れる�
   const code = await runInstall([], h.deps);
 
   assert.equal(code, 1);
-  assert.match(h.err(), /npx -y aiko-mcp/);
+  assert.match(h.err(), /server\.js/);
 });
 
 test("クライアントのコマンドが失敗したら、その言い分をそのまま出す", async () => {
@@ -289,6 +297,13 @@ test("クライアントのコマンドが失敗したら、その言い分を�
 
   assert.equal(code, 1);
   assert.match(h.err(), /already exists/);
+});
+
+test("実体の無い場所からは npx の起動コマンドを作らない", () => {
+  assert.throws(
+    () => resolveMcpEntry("file:///tmp/aiko-mcp-missing/install.js"),
+    /server\.js/,
+  );
 });
 
 test("--help は使い方を出して終わる", async () => {

@@ -81,6 +81,59 @@ test('AG-HOOK-BT-005: shell write to mode file is allowed', () => {
   assert.equal(parseDecision(r.stdout), 'allow');
 });
 
+test('AG-HOOK-BT-007: ./ and .. still hit INVARIANTS.md', () => {
+  const r = run(aikoHome, {
+    tool_name: 'write_file',
+    tool_input: { path: `${aikoHome}/persona/origin/../INVARIANTS.md` },
+  });
+  assert.equal(parseDecision(r.stdout), 'deny');
+});
+
+test('AG-HOOK-BT-008: project persona symlink location is denied', () => {
+  const project = join(tmpBase, 'project');
+  mkdirSync(join(project, '.claude', 'aiko', 'persona'), { recursive: true });
+  writeFileSync(join(project, '.claude', 'aiko', 'persona', 'INVARIANTS.md'), 'x');
+  const r = spawnSync('node', [SCRIPT], {
+    cwd: project,
+    env: { ...process.env, AIKO_HOME: aikoHome },
+    input: JSON.stringify({
+      tool_name: 'replace',
+      tool_input: { path: './.claude/aiko/persona/INVARIANTS.md' },
+    }),
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+  assert.equal(parseDecision(r.stdout ?? ''), 'deny');
+});
+
+test('AG-HOOK-BT-009: override persona stays writable', () => {
+  const r = run(aikoHome, {
+    tool_name: 'write_file',
+    tool_input: { path: `${aikoHome}/persona/overrides/trial/persona.md` },
+  });
+  assert.equal(parseDecision(r.stdout), 'allow');
+});
+
+test('AG-HOOK-BT-010: invalid JSON is denied', () => {
+  const result = spawnSync('node', [SCRIPT], {
+    env: { ...process.env, AIKO_HOME: aikoHome },
+    input: '{',
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+  assert.equal(parseDecision(result.stdout ?? ''), 'deny');
+});
+
+test('AG-HOOK-BT-011: empty stdin is denied', () => {
+  const result = spawnSync('node', [SCRIPT], {
+    env: { ...process.env, AIKO_HOME: aikoHome },
+    input: '',
+    encoding: 'utf8',
+    timeout: 10000,
+  });
+  assert.equal(parseDecision(result.stdout ?? ''), 'deny');
+});
+
 // AG-HOOK-BT-006: unknown input without path → allow
 test('AG-HOOK-BT-006: unknown tool input without path is allowed', () => {
   const r = run(aikoHome, {

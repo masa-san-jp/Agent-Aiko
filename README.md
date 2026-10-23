@@ -61,37 +61,38 @@ npx aiko-mcp install
 
 ### 1 つずつ入れる
 
-自動で入れたくない場合は、お使いのクライアントの行をコピーして実行してください。
+`npx -y aiko-mcp` をクライアントの起動コマンドに書くと、開いているプロジェクトの `node_modules/.bin/aiko-mcp` が先に動きます。偽の実行ファイルを置いたリポジトリを開くだけで、そのコードが起動します。起動コマンドは、インストール済みの `server.js` を node の絶対パスで指してください。`npx aiko-mcp install` はそう書きます。
 
-| クライアント | コマンド |
-|---|---|
-| **Claude Code** | `claude mcp add aiko -- npx -y aiko-mcp` |
-| **Codex CLI** | `codex mcp add aiko -- npx -y aiko-mcp` |
-| **VS Code** | `code --add-mcp '{"name":"aiko","command":"npx","args":["-y","aiko-mcp"]}'` |
-
-Claude Code で**すべてのプロジェクトから使いたい**場合は `-s user` を付けます（`npx aiko-mcp install` はこちらを使います）。
+手で入れるときは、先に実体のパスを決めてから渡します。
 
 ```bash
-claude mcp add aiko -s user -- npx -y aiko-mcp
+# 例。パスは自分の環境の node と server.js に置き換える
+NODE="$(command -v node)"
+SERVER="/absolute/path/to/aiko-mcp/dist/server.js"
+claude mcp add aiko -s user -- "$NODE" "$SERVER"
+codex mcp add aiko -- "$NODE" "$SERVER"
 ```
 
 入ったかどうかは `claude mcp list`（Codex は `codex mcp list`）で確認できます。`aiko ... ✔ Connected` と出れば完了です。
 
 ### ボタンで入れる
 
-クリックするとクライアントが開いて、確認だけで入ります。
+クリックするとクライアントが開いて、確認だけで入ります。このボタンは `npx -y aiko-mcp` を書くので、信頼できないリポジトリでは使わないでください。普段は `npx aiko-mcp install` を使います。
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Aiko-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22aiko%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22aiko-mcp%22%5D%7D)
 [![Install in Cursor](https://img.shields.io/badge/Cursor-Install_Aiko-000000?logo=cursor&logoColor=white)](cursor://anysphere.cursor-deeplink/mcp/install?name=aiko&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImFpa28tbWNwIl19)
 
 ### 設定ファイルを直接書く場合
 
-上のコマンドが使えないクライアント（Claude Desktop など）では、MCP 設定へ次を足してください。
+上のコマンドが使えないクライアント（Claude Desktop など）では、MCP 設定へ node と `server.js` の絶対パスを足してください。`npx` は書きません。
 
 ```json
 {
   "mcpServers": {
-    "aiko": { "command": "npx", "args": ["-y", "aiko-mcp"] }
+    "aiko": {
+      "command": "/absolute/path/to/node",
+      "args": ["/absolute/path/to/aiko-mcp/dist/server.js"]
+    }
   }
 }
 ```
@@ -143,20 +144,22 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 ### Claude Code 版
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash
 ```
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
-installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。**照合に失敗した場合は中止し、別経路での取得へは回りません。** 照合済みで入ったかどうかは出力に出ます。
+installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。https の Release は `gh attestation verify` も要ります（`file://` の試験用は対象外）。**照合に失敗した場合は中止し、リポジトリの clone には回りません。** 照合済みで入ったかどうかは出力に出ます。
+
+上の URL はリリース `v0.3.2` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
 
 | 環境変数 | 既定 | 用途 |
 |---|---|---|
 | `AGENT_AIKO_CHANNEL` | `stable` | `beta` を指定すると prerelease も対象にする |
 | `AGENT_AIKO_VERSION` | （未指定） | 特定のタグを固定して入れる |
-| `AGENT_AIKO_REF` | （未指定） | 指定するとリポジトリから直接取得する（開発用・**照合なし**） |
+| `AGENT_AIKO_REF` | （未指定） | `v` で始まるリリースタグだけ。checksum と attestation は省略しない。ブランチ名は拒否する |
 
-配布物がまだ無い channel を指定した場合はリポジトリから取得し、その旨（`checksum 照合なし`）を表示します。
+配布物が無い channel では中止します。`main` は取りません。
 
 インストーラ自体を実行前に確認したい場合は、次の手順で取得・照合してから実行してください。
 

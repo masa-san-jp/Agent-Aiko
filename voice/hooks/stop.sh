@@ -105,7 +105,9 @@ text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
 text = re.sub(r"https?://\S+", "", text)
 # 9. 3連続以上の改行を2改行に圧縮
 text = re.sub(r"\n{3,}", "\n\n", text)
-# 10. 500文字超なら切り詰め
+# 10. 先頭の "-" は say のオプションになるので落とす
+text = re.sub(r"^-+", "", text)
+# 11. 500文字超なら切り詰め
 text = text.strip()
 if len(text) > 500:
     text = text[:500] + "…続きがあります。"
@@ -133,7 +135,7 @@ ENGINE_SCRIPT="$ENGINES_DIR/${ENGINE}.sh"
 if [ -f "$ENGINE_SCRIPT" ]; then
   printf '%s' "$TEXT" | bash "$ENGINE_SCRIPT" &
 elif command -v say >/dev/null 2>&1; then
-  say "$TEXT" &
+  say -- "$TEXT" &
 fi
 
 exit 0

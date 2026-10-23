@@ -11,9 +11,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import {
+  acceptPersonaProposals,
   deletePersona,
   listPersonas,
   PersonaStoreError,
+  proposePersona,
+  proposePersonaSwitch,
   readActivePersona,
   readMode,
   listSpeechStyles,
@@ -360,6 +363,44 @@ test("話し方: 知らない名前は書かずに断る", async () => {
     await assert.rejects(() => switchSpeechStyle(s.aikoHome, "../x"), PersonaStoreError);
     await assert.rejects(() => switchSpeechStyle(s.aikoHome, "maid"), PersonaStoreError);
     assert.equal(existsSync(join(s.aikoHome, "speech-style")), false);
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("提案: 保存と切り替えは accept まで mode と overrides を変えない", async () => {
+  const s = await sandbox();
+  try {
+    const saved = await proposePersona(s.aikoHome, "trial", "試用のアイコ");
+    const pending = await proposePersonaSwitch(s.aikoHome, "trial");
+    assert.match(saved, /persona\/proposals\/trial\/persona\.md$/);
+    assert.match(pending, /persona\/proposals\/\.pending-switch$/);
+    assert.equal(existsSync(join(s.aikoHome, "persona", "overrides", "trial", "persona.md")), false);
+    assert.equal(await readMode(s.aikoHome), "origin");
+    assert.equal(await readActivePersona(s.aikoHome), "");
+
+    const accepted = await acceptPersonaProposals(s.aikoHome);
+    assert.deepEqual(accepted.saved, ["trial"]);
+    assert.equal(accepted.switched, "trial");
+    assert.equal(await readMode(s.aikoHome), "override");
+    assert.equal(await readActivePersona(s.aikoHome), "trial");
+    assert.match(
+      await readFile(join(s.aikoHome, "persona", "overrides", "trial", "persona.md"), "utf8"),
+      /試用のアイコ/,
+    );
+    assert.equal(existsSync(join(s.aikoHome, "persona", "proposals", "trial")), false);
+    assert.equal(existsSync(join(s.aikoHome, "persona", "proposals", ".pending-switch")), false);
+  } finally {
+    await s.cleanup();
+  }
+});
+
+test("提案: 名前にパス区切りがあると書かずに断る", async () => {
+  const s = await sandbox();
+  try {
+    await assert.rejects(() => proposePersona(s.aikoHome, "../outside", "x"), PersonaStoreError);
+    await assert.rejects(() => proposePersonaSwitch(s.aikoHome, "../outside"), PersonaStoreError);
+    assert.equal(existsSync(join(s.aikoHome, "persona", "proposals")), false);
   } finally {
     await s.cleanup();
   }

@@ -28,6 +28,44 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s .github/scripts -p "test_*.py" -v
 
+  reference:
+    name: reference / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test
+        run: node --test reference/tools/peer-inbox.test.mjs
+
+  voice:
+    name: voice / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test
+        run: node --test voice/test/*.test.mjs
+
   antigravity:
     name: antigravity / Node ${{ matrix.node }}
     runs-on: ubuntu-latest

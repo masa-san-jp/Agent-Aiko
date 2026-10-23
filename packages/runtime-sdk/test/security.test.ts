@@ -23,6 +23,17 @@ async function write(path: string, text: string) {
 
 // --- token redaction（§13.3） ---
 
+test("Anthropic と GitHub fine-grained token は秘匿される", () => {
+  const samples = [
+    `sk-ant-${"a".repeat(24)}`,
+    `sk-proj-${"b".repeat(24)}`,
+    `github_pat_${"c".repeat(22)}`,
+  ];
+  for (const secret of samples) {
+    assert.equal(redactText(`鍵 ${secret} です`).includes(secret), false, secret.slice(0, 16));
+  }
+});
+
 test("GitHub token は秘匿される", () => {
   const out = redactText("token は ghp_abcdefghijklmnopqrstuvwxyz012345 です");
   assert.equal(out.includes("ghp_abcdefghijklmnopqrstuvwxyz012345"), false);

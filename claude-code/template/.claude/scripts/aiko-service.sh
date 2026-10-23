@@ -34,6 +34,8 @@ usage() {
   echo ""
   echo "環境変数:"
   echo "  AIKO_RESTART_DELAY    install 時に unit の RestartSec へ反映（デフォルト: 5）。変更時は reinstall が必要"
+echo "  AIKO_TELEGRAM_SKIP_PERMISSIONS"
+echo "                        1 のときだけ Telegram 常駐が全ツールを確認なしで実行する（危険）。既定は off"
 }
 
 COMMAND="${1:-}"
@@ -77,9 +79,20 @@ case "$COMMAND" in
         echo "  install 前に export で設定するか、後で $TELEGRAM_ENV_FILE を直接編集してください"
         echo "  編集後は: bash $SCRIPT_DIR/$(basename "$0") start"
       fi
-      printf 'AIKO_TELEGRAM_BOT_TOKEN=%s\nAIKO_TELEGRAM_CHAT_ID=%s\n' \
-        "${AIKO_TELEGRAM_BOT_TOKEN:-}" "${AIKO_TELEGRAM_CHAT_ID:-}" > "$TELEGRAM_ENV_FILE"
+      # 再インストールで、利用者が明示した全許可の指定だけは残す。
+      # ここに 1 を書き足すのは利用者の操作。install が勝手には有効にしない。
+      _skip_line="# AIKO_TELEGRAM_SKIP_PERMISSIONS="
+      if [ -f "$TELEGRAM_ENV_FILE" ]; then
+        _existing_skip=$(grep -E '^AIKO_TELEGRAM_SKIP_PERMISSIONS=' "$TELEGRAM_ENV_FILE" || true)
+        if [ -n "$_existing_skip" ]; then
+          _skip_line="$_existing_skip"
+        fi
+      fi
+      printf 'AIKO_TELEGRAM_BOT_TOKEN=%s\nAIKO_TELEGRAM_CHAT_ID=%s\n# 全ツールを確認なしで動かす。必要なときだけ 1。既定では付けない。\n%s\n' \
+        "${AIKO_TELEGRAM_BOT_TOKEN:-}" "${AIKO_TELEGRAM_CHAT_ID:-}" "$_skip_line" > "$TELEGRAM_ENV_FILE"
       chmod 600 "$TELEGRAM_ENV_FILE"
+      echo "  Telegram 常駐は権限確認つきで起動します。"
+      echo "  全許可（危険）は $TELEGRAM_ENV_FILE の AIKO_TELEGRAM_SKIP_PERMISSIONS=1 だけです。"
     fi
     _env_file_line=""
     [ -n "$TELEGRAM_FLAG" ] && _env_file_line="EnvironmentFile=-$TELEGRAM_ENV_FILE"

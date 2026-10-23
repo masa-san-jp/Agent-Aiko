@@ -6,11 +6,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { PersonaResolutionError, type PersonaRepository } from "@agent-aiko/core";
-import { prepareLaunch, AdapterError } from "../src/adapter.js";
+import { prepareLaunch, resolveStateDir, AdapterError } from "../src/adapter.js";
 
 const persona = {
   id: "aiko",
@@ -140,6 +140,56 @@ test("人格が変われば別のファイルになる", async () => {
     });
     assert.notEqual(a.instructionsPath, b.instructionsPath);
   });
+});
+
+test("置き場が他から読める権限なら指示文を書かない", async () => {
+  await withStateDir(async (stateDir) => {
+    await chmod(stateDir, 0o755);
+    await assert.rejects(
+      () => prepareLaunch({ personaRepository: repo(), user, stateDir }),
+      (err: unknown) => err instanceof AdapterError && err.detail.stage === "instructions",
+    );
+  });
+});
+
+test("予測したファイル名のシンボリックリンクは辿らず、リンク先を上書きしない", async () => {
+  await withStateDir(async (stateDir) => {
+    const first = await prepareLaunch({ personaRepository: repo(), user, stateDir });
+    const outside = join(stateDir, "outside.txt");
+    await writeFile(outside, "keep-me");
+    await rm(first.instructionsPath);
+    await symlink(outside, first.instructionsPath);
+    await assert.rejects(
+      () => prepareLaunch({ personaRepository: repo(), user, stateDir }),
+      (err: unknown) => err instanceof AdapterError && err.detail.stage === "instructions",
+    );
+    assert.equal(await readFile(outside, "utf8"), "keep-me");
+  });
+});
+
+test("置き場自体がシンボリックリンクなら書かない", async () => {
+  await withStateDir(async (stateDir) => {
+    const real = join(stateDir, "real");
+    const link = join(stateDir, "link");
+    await mkdir(real, { mode: 0o700 });
+    await symlink(real, link);
+    await assert.rejects(
+      () => prepareLaunch({ personaRepository: repo(), user, stateDir: link }),
+      (err: unknown) => err instanceof AdapterError && err.detail.stage === "instructions",
+    );
+  });
+});
+
+test("既定の置き場は固定名 /tmp/aiko-claude-code ではない", async () => {
+  const dir = await resolveStateDir({});
+  try {
+    assert.equal(dir.endsWith(`${sep}aiko-claude-code`), false);
+    assert.match(dir, /aiko-claude-code-/);
+    const info = await stat(dir);
+    assert.equal(info.mode & 0o077, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 test("使えない能力は指示文に理由つきで載る", async () => {

@@ -2,8 +2,13 @@
 // aiko-before-tool-guard.mjs — BeforeTool hook for Gemini CLI / Antigravity
 // Blocks direct edits to Agent-Aiko protected files.
 // stdout: JSON only. logs: stderr only.
+//
+// シェルの拒否リストは、コマンド文字列に保護パスがそのまま書いてあるときだけ効く。
+// python や node が開くファイル、変数に入れたパス、エンコードしたコマンドは見えない。
+// そこは止められない。JSON が読めないときと、正規化できた保護パスへの write/replace は拒否する。
 
-import { join } from 'path';
+import { realpathSync } from 'fs';
+import { basename, dirname, isAbsolute, join, normalize, resolve } from 'path';
 import { homedir } from 'os';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
@@ -20,10 +25,6 @@ const PROTECTED_PATHS = [
   '.claude/aiko/persona/INVARIANTS.md',
 ];
 
-const PROTECTED_PREFIXES = [
-  join(AIKO_HOME, 'persona', 'origin') + '/',
-];
-
 const PATH_KEYS = ['path', 'file_path', 'filepath', 'absolute_path', 'target_file'];
 
 const SHELL_INVARIANTS_DENY = [
@@ -33,18 +34,57 @@ const SHELL_INVARIANTS_DENY = [
 const SHELL_DESTRUCTIVE_OPS = /[>|;`]|sed\s+-i|perl\s+-pi|\brm\b|\bmv\b|\bcp\b|\btee\b/;
 const SHELL_PROTECTED_TERMS = [/INVARIANTS\.md/, /aiko-origin\.md/];
 
+function expandUser(p) {
+  return p.replace(/^~\//, `${HOME}/`).replace(/^\$HOME\//, `${HOME}/`);
+}
+
+/** 字句上の絶対パスと、存在する親を realpath したパス。`./` と `..` とリンクを同じ形にする。 */
+function canonicalForms(p) {
+  const expanded = expandUser(p);
+  const lexical = normalize(isAbsolute(expanded) ? expanded : resolve(expanded));
+  const forms = new Set([lexical]);
+  const missing = [];
+  let current = lexical;
+  for (;;) {
+    try {
+      let rebuilt = realpathSync(current);
+      for (let i = missing.length - 1; i >= 0; i -= 1) rebuilt = normalize(resolve(rebuilt, missing[i]));
+      forms.add(rebuilt);
+      break;
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) break;
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
+  return forms;
+}
+
+const PROTECTED_FILES = [
+  ...PROTECTED_PATHS,
+  join(process.cwd(), '.claude', 'aiko', 'persona', 'origin', 'persona.md'),
+  join(process.cwd(), '.claude', 'aiko', 'persona', 'aiko-origin.md'),
+  join(process.cwd(), '.claude', 'aiko', 'persona', 'INVARIANTS.md'),
+];
+
 function isProtectedPath(p) {
-  if (!p) return false;
-  const normalized = p.replace(/^~\//, `${HOME}/`).replace(/^\$HOME\//, `${HOME}/`);
-  if (PROTECTED_PATHS.some(pp => normalized === pp)) return true;
-  if (PROTECTED_PREFIXES.some(prefix => normalized.startsWith(prefix))) return true;
-  // relative project-local legacy paths (suffix-match only for specific non-common names)
-  const legacyRelPaths = [
-    '.claude/aiko/persona/origin/persona.md',
-    '.claude/aiko/persona/aiko-origin.md',
-    '.claude/aiko/persona/INVARIANTS.md',
-  ];
-  if (legacyRelPaths.some(lp => normalized === lp || normalized.endsWith('/' + lp))) return true;
+  if (!p || typeof p !== 'string') return false;
+  const forms = canonicalForms(p);
+  for (const target of PROTECTED_FILES) {
+    if (typeof target !== 'string') continue;
+    const targetForms = canonicalForms(target);
+    for (const form of forms) {
+      if (targetForms.has(form)) return true;
+    }
+  }
+  // origin ディレクトリ配下はファイル名が変わっても守る。overrides は含めない。
+  const originForms = canonicalForms(join(AIKO_HOME, 'persona', 'origin'));
+  for (const form of forms) {
+    for (const root of originForms) {
+      if (form === root || form.startsWith(`${root}/`)) return true;
+    }
+  }
   return false;
 }
 
@@ -97,8 +137,14 @@ async function main() {
     for await (const chunk of process.stdin) raw += chunk;
   } catch { /* empty stdin */ }
 
-  let input = {};
-  try { input = JSON.parse(raw); } catch { return allow(); }
+  // 読めない入力を通すと、保護パスへの書き込みを検査できない。
+  if (raw.trim().length === 0) {
+    return deny('Agent-Aiko guard could not read the tool request.');
+  }
+  let input;
+  try { input = JSON.parse(raw); } catch {
+    return deny('Agent-Aiko guard could not read the tool request.');
+  }
 
   const toolName = input.tool_name ?? '';
   const toolInput = input.tool_input ?? {};

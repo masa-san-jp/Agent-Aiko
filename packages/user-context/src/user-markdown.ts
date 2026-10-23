@@ -122,3 +122,33 @@ export async function writeUserMarkdown(path: string, user: UserMarkdown): Promi
     throw err;
   }
 }
+
+/** MCP が覚えた呼び方。user.md には入らないので、system 級の指示には出ない。 */
+export function userProposalPath(aikoHome: string): string {
+  return join(aikoHome, "user-proposal.md");
+}
+
+export async function proposeUserMarkdown(aikoHome: string, patch: UserMarkdown): Promise<string> {
+  const path = userProposalPath(aikoHome);
+  const current = (await readUserMarkdown([path]))?.user ?? {};
+  const next: UserMarkdown = {
+    ...current,
+    ...(patch.name !== undefined ? { name: patch.name } : {}),
+    ...(patch.address !== undefined ? { address: patch.address } : {}),
+    ...(patch.memory !== undefined ? { memory: patch.memory } : {}),
+  };
+  await writeUserMarkdown(path, next);
+  return path;
+}
+
+/** 提案を user.md へ重ねる。呼ぶのは CLI の明示操作だけ。 */
+export async function acceptUserProposal(aikoHome: string): Promise<boolean> {
+  const proposal = userProposalPath(aikoHome);
+  const found = await readUserMarkdown([proposal]);
+  if (found === undefined) return false;
+  const live = join(aikoHome, "user.md");
+  const current = (await readUserMarkdown([live]))?.user ?? {};
+  await writeUserMarkdown(live, { ...current, ...found.user });
+  await rm(proposal, { force: true });
+  return true;
+}

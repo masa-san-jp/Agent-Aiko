@@ -44,10 +44,13 @@ export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
 
 // 人格の一覧・切り替え・保存。利用側が core を直接見ないための口（§1）。
 export {
+  acceptPersonaProposals,
   deletePersona,
   listPersonas,
   listSpeechStyles,
   PersonaStoreError,
+  proposePersona,
+  proposePersonaSwitch,
   readActivePersona,
   readMode,
   readSpeechStyle,
@@ -70,8 +73,11 @@ export {
 
 // user.md（呼び名・記憶の場所）。利用側が user-context を直接見ないための口（§1）。
 export {
+  acceptUserProposal,
+  proposeUserMarkdown,
   readUserMarkdown,
   userMarkdownCandidates,
+  userProposalPath,
   writeUserMarkdown,
 } from "@agent-aiko/user-context";
 export type { UserMarkdown } from "@agent-aiko/user-context";

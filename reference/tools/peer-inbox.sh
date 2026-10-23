@@ -89,10 +89,19 @@ detect_peer_name() {
     return 1
 }
 
+# AppleScript やパスに埋め込む名前。英数とハイフン以外は受け取らない。
+valid_peer_name() {
+    printf '%s' "$1" | grep -Eq '^[a-z0-9-]+$'
+}
+
 require_peer_name() {
     local resolved
     if resolved=$(detect_peer_name); then
         PEER_NAME="$resolved"
+        if ! valid_peer_name "$PEER_NAME"; then
+            echo "Error: PEER_NAME must match ^[a-z0-9-]+$" >&2
+            exit 1
+        fi
         return 0
     fi
     echo "Error: PEER_NAME could not be resolved." >&2
@@ -109,6 +118,10 @@ cmd_send() {
     if [ -z "$to" ] || [ -z "$msg" ]; then
         echo "Error: <to> and <message> required" >&2
         usage
+    fi
+    if ! valid_peer_name "$to"; then
+        echo "Error: peer name must match ^[a-z0-9-]+$" >&2
+        exit 1
     fi
 
     local to_inbox_dir="$INBOX_ROOT/$to"
@@ -131,7 +144,14 @@ PY
 
     # macOS のみ通知（他 OS では黙ってスキップ）
     if command -v osascript >/dev/null 2>&1; then
-        osascript -e "display notification \"new message from $PEER_NAME\" with title \"@$to peer-inbox\" sound name \"Glass\"" 2>/dev/null || true
+        # 名前は argv で渡す。文字列へ埋め込むと、受信側の osascript がコードとして実行する。
+        osascript \
+            -e 'on run argv' \
+            -e 'display notification (item 1 of argv) with title (item 2 of argv) sound name "Glass"' \
+            -e 'end run' \
+            "new message from ${PEER_NAME}" \
+            "@${to} peer-inbox" \
+            2>/dev/null || true
     fi
 
     echo "Sent: $PEER_NAME -> $to: $msg"

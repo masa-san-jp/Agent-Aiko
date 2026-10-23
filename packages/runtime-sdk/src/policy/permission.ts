@@ -5,6 +5,8 @@
 // §2.4 が deny の対象に挙げる「権限外操作」を出せるのはこの層と Host / Organization だけで、
 // 既定規則（defaults.ts）は deny を出さない。
 
+import { realpathSync } from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { CandidateAction } from "./action.js";
 
 /** Manifest 側の語彙（schemas/permission-manifest.schema.json の require_for）。 */
@@ -66,9 +68,32 @@ export interface PermissionFinding {
   remediation: string;
 }
 
+/** 存在する最も近い親を realpath し、まだ無い部分は字句的に足す。
+ *  パス自体が無い書き込み先でも、親が外へのリンクなら先を見る。 */
+function canonical(input: string): string {
+  const absolute = resolve(input);
+  const missing: string[] = [];
+  let current = absolute;
+  for (;;) {
+    try {
+      const real = realpathSync(current);
+      return missing.reduceRight((acc, part) => resolve(acc, part), real);
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return absolute;
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
+}
+
+/** 絶対パスだけを範囲内とみなす。`/ws/../etc` は文字列の前方一致では `/ws` の中に見える。 */
 function isUnder(path: string, root: string): boolean {
-  const normalizedRoot = root.endsWith("/") ? root.slice(0, -1) : root;
-  return path === normalizedRoot || path.startsWith(`${normalizedRoot}/`);
+  if (!isAbsolute(path) || !isAbsolute(root)) return false;
+  const rel = relative(canonical(root), canonical(path));
+  if (rel === "") return true;
+  if (isAbsolute(rel)) return false;
+  return rel !== ".." && !rel.startsWith(`..${sep}`);
 }
 
 /** 高リスク＝権限が分からないままでは進めない操作（受入基準 9）。 */
@@ -120,6 +145,13 @@ export function checkPermissionManifest(
         code: "PERMISSION_UNRESOLVED",
         message: "書き込みを許す範囲が宣言されていません",
         remediation: "Permission Manifest の filesystem.writable_paths を宣言してください",
+      });
+    } else if (fileTargets.length === 0) {
+      findings.push({
+        kind: "indeterminate",
+        code: "FILE_TARGET_UNKNOWN",
+        message: "書き込み先が申告されていないため、許された範囲と照合できません",
+        remediation: "targets に type: file で書き込み先を申告してください",
       });
     } else {
       const outside = fileTargets.filter((t) => !writable.some((root) => isUnder(t.identifier, root)));

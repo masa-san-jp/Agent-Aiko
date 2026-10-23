@@ -165,7 +165,7 @@ describe("claude-code/scripts/install.sh", () => {
     );
   });
 
-  it("migrates mutable legacy .claude/aiko data into ~/.aiko", async () => {
+  it("does not import project .claude/aiko into the shared store", async () => {
     const projectDir = join(sandbox.root, "project");
     await mkdir(join(projectDir, ".claude", "aiko", "persona"), { recursive: true });
     await mkdir(join(projectDir, ".claude", "aiko", "capability", "rules"), { recursive: true });
@@ -179,16 +179,57 @@ describe("claude-code/scripts/install.sh", () => {
       "- legacy rule\n"
     );
 
+    const out = runInstaller({ cwd: projectDir, home: sandbox.root });
+
+    assert.match(out, /取り込みません/);
+    assert.equal((await readFile(join(sandbox.root, ".aiko", "mode"), "utf8")).trim(), "origin");
+    assert.equal(
+      (await readFile(join(sandbox.root, ".aiko", "persona", "aiko-override.md"), "utf8")).includes(
+        "legacy override",
+      ),
+      false,
+    );
+    const rules = await readFile(
+      join(sandbox.root, ".aiko", "capability", "rules", "rules-base.md"),
+      "utf8",
+    );
+    assert.equal(rules.includes("legacy rule"), false);
+
+    const entries = await readdir(join(projectDir, ".claude"));
+    const backup = entries.find((name) => /^aiko\.bak\./.test(name));
+    assert.equal(typeof backup, "string");
+    assert.match(
+      await readFile(join(projectDir, ".claude", String(backup), "persona", "aiko-override.md"), "utf8"),
+      /legacy override/,
+    );
+  });
+
+  it("moves a destination symlink aside instead of overwriting its target", async () => {
+    const projectDir = join(sandbox.root, "project");
+    const outside = join(sandbox.root, "outside.txt");
+    await mkdir(join(projectDir, ".claude", "scripts"), { recursive: true });
+    await writeFile(outside, "keep-me\n");
+    symlinkSync(outside, join(projectDir, ".claude", "scripts", "aiko-boot.sh"));
+
     runInstaller({ cwd: projectDir, home: sandbox.root });
 
-    assert.equal((await readFile(join(sandbox.root, ".aiko", "mode"), "utf8")).trim(), "override");
+    assert.equal(await readFile(outside, "utf8"), "keep-me\n");
+    const installed = lstatSync(join(projectDir, ".claude", "scripts", "aiko-boot.sh"));
+    assert.equal(installed.isSymbolicLink(), false);
     assert.match(
-      await readFile(join(sandbox.root, ".aiko", "persona", "aiko-override.md"), "utf8"),
-      /legacy override/
+      await readFile(join(projectDir, ".claude", "scripts", "aiko-boot.sh"), "utf8"),
+      /aiko-boot/,
     );
-    assert.match(
-      await readFile(join(sandbox.root, ".aiko", "capability", "rules", "rules-base.md"), "utf8"),
-      /legacy rule/
-    );
+  });
+
+  it("aborts when a parent of a destination is a symlink", async () => {
+    const projectDir = join(sandbox.root, "project");
+    const outside = join(sandbox.root, "outside-scripts");
+    await mkdir(join(projectDir, ".claude"), { recursive: true });
+    await mkdir(outside, { recursive: true });
+    symlinkSync(outside, join(projectDir, ".claude", "scripts"));
+
+    assert.throws(() => runInstaller({ cwd: projectDir, home: sandbox.root }), /シンボリックリンク/);
+    assert.equal(existsSync(join(outside, "aiko-boot.sh")), false);
   });
 });
