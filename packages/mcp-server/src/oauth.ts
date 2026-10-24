@@ -50,7 +50,9 @@ export class OAuthResource {
   static async discover(options: OAuthResourceOptions): Promise<OAuthResource> {
     const issuer = httpsUrl(options.issuer);
     const resource = httpsUrl(options.resource);
-    if (issuer.href !== options.issuer || resource.href !== options.resource) throw new Error("OAuth URLs must be canonical");
+    // OAuth issuer identifiers are compared verbatim. A root issuer without a
+    // trailing slash is valid; URL.href adding one must not reject it.
+    if (resource.href !== options.resource) throw new Error("OAuth resource URL must be canonical");
     if (resource.pathname !== "/mcp") throw new Error("OAuth resource must use the /mcp path");
     if (options.subjects.length !== 1 || !options.clientIds.length ||
         [...options.subjects, ...options.clientIds].some((v) => !v.trim()) ||
