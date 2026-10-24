@@ -259,3 +259,21 @@ HTTPS公開、プロキシ経由のHost/Origin制御、実際の認証基盤で�
 この段階でローカル共有データを多ユーザーに提供しないでください。
 
 参照：[MCP認可仕様](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[RFC 9068](https://www.rfc-editor.org/rfc/rfc9068)。
+
+### ログイン経路のローカル統合テスト
+
+Node.js 22 LTS以降とOpenSSLがある開発環境で実行します。
+
+```bash
+npm ci
+npm run build --workspace aiko-mcp
+npm run test:oauth-login --workspace aiko-mcp
+```
+
+テスト専用の `oidc-provider` を127.0.0.1上のHTTPSで起動し、開発用ログイン画面・同意画面・S256 PKCEによる認可コード交換・発行トークンによるMCPツール呼び出しを検証します。
+不正なPKCE verifierと認可コードの再利用が拒否されることも確認します。
+証明書と署名鍵は一時生成し、テストプロセス内でその証明書だけを信頼します。システム全体のTLS検証は無効化しません。
+終了時にサーバー・一時鍵・テストデータを削除します。
+
+この認証サーバーとアカウントはテスト専用です。開発用の簡易ログインを使うため、本物のユーザー認証や公開サービスの代わりにはなりません。
+認証サーバー実装はdevDependencyで、配布バイナリやnpmパッケージには含めません。通常のNode 20/22テストとは別に、Node 22のCIジョブでも実行します。

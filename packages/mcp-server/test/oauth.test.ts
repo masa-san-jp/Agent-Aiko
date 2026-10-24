@@ -41,6 +41,17 @@ test("OAuth: pinned discovery advertises resource, issuer and scope", async () =
   assert.equal(typeof await auth.verify(await token()), "string");
 });
 
+test("OAuth: a valid root issuer without a trailing slash is preserved verbatim", async () => {
+  const rootIssuer = "https://auth.example.test";
+  const auth = await OAuthResource.discover({ ...config, issuer: rootIssuer, fetch: async (input) => {
+    assert.equal(String(input), `${rootIssuer}/.well-known/oauth-authorization-server`);
+    return Response.json({ ...metadata, issuer: rootIssuer });
+  } });
+  assert.deepEqual(auth.metadata["authorization_servers"], [rootIssuer]);
+  await assert.rejects(OAuthResource.discover({ ...config, issuer: rootIssuer, fetch: async () =>
+    Response.json({ ...metadata, issuer: `${rootIssuer}/` }) }));
+});
+
 test("OAuth: wrong signature, issuer, audience, expiry, type and malformed tokens fail closed", async () => {
   const auth = await OAuthResource.discover(config);
   const foreign = await generateKeyPair("ES256");
