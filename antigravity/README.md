@@ -1,6 +1,44 @@
 # Agent-Aiko — Antigravity / Gemini CLI 版
 
-Gemini CLI（および Antigravity CLI）に **Agent-Aiko 人格**を付与する extension です。  
+## Antigravity CLIで保存済みの接し方を読み込む
+
+Antigravity CLI向けには、以下のネイティブhookを使います。Gemini拡張のimportだけではhookの形式が一致しません。
+既存の `~/.aiko/` に保存した人格・呼び名・応答方針を、新しいセッションの開始時に読み込みます。
+通常の作業の承認はAntigravityに委ね、人格のプレフィックスだけを理由に応答を再試行しません。
+
+```bash
+# リポジトリのルートで実行。既存の人格・ユーザー情報は変更しません。
+node antigravity/scripts/install-native-hooks.mjs
+```
+
+`~/.gemini/config/hooks.json` に `agent-aiko-native` という定義を追加します。
+既存の他のhookを保持し、変更前のファイルを同じフォルダへ `.aiko-backup-*` として保存します。
+同名の定義が手で変更されている場合、不正なJSONの場合、設定ファイルがsymlinkの場合は上書きしません。
+コマンドにはNodeとスクリプトの絶対パスを登録するため、このチェックアウトを移動・削除すると読み込めなくなります。
+移動する場合は旧定義を確認して取り除き、新しい場所から再登録してください。
+
+プロジェクト内だけで使う場合は、`--hooks-file /absolute/project/.agents/hooks.json` を指定できます。
+解除するときは追加した `agent-aiko-native` 定義だけを取り除いてください。他のhookや人格データは削除しません。
+同じhookをglobalとworkspaceの両方へ登録しないでください。
+
+Antigravityを再起動し、`/hooks` で読み込みを確認してください。
+人格の保存先を変えている場合は起動時に `AIKO_HOME` を設定します。
+この処理は人格データを初期化しません。まだ保存データがない場合は、このhookだけで人格を利用できるとは扱いません。
+
+読み込む設定は、人格本文・不変条項・運用ルール・選択中の人格に対応する `user.md` です。
+独立した `speech-style` 設定も、保存済みの `friend` / `servant` を読み込みます。
+定義は `AIKO_HOME/speech-styles/<id>.md` を優先し、このチェックアウトの `packages/mcp-server/speech-styles/` を既定値にします。
+`original`・未設定・不正値は人格本文の話し方を使います。保存先の外へ出るsymlinkは読み込みません。
+会話履歴や作業状態の引き継ぎはこの経路では未対応です。
+保存前の会話上の変更も、新しいセッションへ自動保存しません。
+ツール保護は直接のファイル編集と一部の明示的なシェル操作を対象とし、任意のプログラムによる書き込みを隔離するsandboxではありません。
+
+検証範囲：Antigravity CLI 1.2.7の設定形式検証とローカルhook契約試験。
+実モデルによる応答確認は、隔離環境に認証がなく停止したため未検証です。仕様根拠は [Antigravity hooks](https://www.antigravity.google/docs/hooks/) を参照してください。
+
+以下は既存の **Gemini CLI用extension** の手順です。Antigravityネイティブhookの手順とは区別してください。
+
+Gemini CLI に **Agent-Aiko 人格**を付与する extension です。
 セッション開始時に自動でコンテキストが注入されるため、起動後すぐに Aiko として話しかけられます。
 
 > **ステータス**: MVP。基本的な人格管理・保護・prefix 強制を実装済みです。
@@ -28,27 +66,11 @@ Aiko-override: やっほー！何する？
 
 ---
 
-## Antigravity CLI について
+## Gemini拡張とAntigravityの違い
 
-本 extension は Gemini CLI の extension 仕様に基づいて実装されています。  
-同じ仕様を持つ CLI であれば動作する見込みです。
-
-> **注意**: hook の実行コマンドは `$HOME/.gemini/extensions/agent-aiko/...` にハードコードされています（`hooks/hooks.json`）。  
-> Gemini CLI 以外の CLI で extension の場所が異なる場合は、`hooks/hooks.json` 内のパスを手動で書き換えてください。
-
-### Gemini CLI 以外での使い方
-
-```bash
-# 1. インストール（Gemini CLI チェックをスキップ）
-bash antigravity/scripts/install.sh --skip-gemini-check
-
-# 2. CLI の extension ディレクトリに symlink を追加
-mkdir -p ~/.your-cli/extensions
-ln -s ~/.gemini/extensions/agent-aiko ~/.your-cli/extensions/agent-aiko
-
-# 3. hooks/hooks.json のパスを実際のパスに合わせて書き換える
-#    "command": "node $HOME/.gemini/extensions/..." → 実際のパスに変更
-```
+以下のextension・`aiko-gemini`・TOMLコマンドはGemini CLI向けです。
+Antigravityでのネイティブhook導入は冒頭の手順を使ってください。
+Gemini拡張のimportでコマンドが変換されても、旧hookの正常動作まで確認されたことにはなりません。
 
 ---
 
@@ -57,7 +79,7 @@ ln -s ~/.gemini/extensions/agent-aiko ~/.your-cli/extensions/agent-aiko
 | 要件 | バージョン |
 |---|---|
 | Node.js | 20+ |
-| Gemini CLI または Antigravity CLI | 最新版 |
+| Gemini CLI | 利用バージョンでextension・hooksの互換性を確認すること |
 | OS | macOS / Linux / WSL（Windows PowerShell は未サポート） |
 
 Gemini CLI は事前に認証済みであること（`gemini auth login` 等）。
