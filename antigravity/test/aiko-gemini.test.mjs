@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 // aiko-gemini.test.mjs — unit tests for aiko-gemini.mjs subcommands
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, existsSync, readFileSync, mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, mkdtempSync, rmSync, symlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
@@ -42,6 +42,55 @@ test.beforeEach(() => {
 });
 test.afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
+});
+
+test('persona commands refuse names that escape the shared store', () => {
+  const home = setupAikoHome(tmpBase);
+  const outside = join(tmpBase, 'outside');
+  mkdirSync(outside);
+  writeFileSync(join(outside, 'persona.md'), 'OUTSIDE_FIXTURE');
+  for (const args of [['select', '../../../outside'], ['diff', '../../../outside'],
+    ['export', '../../../outside'], ['reset', 'confirm', '../../../outside']]) {
+    const result = run(home, args);
+    assert.notEqual(result.status, 0, args[0]);
+    assert.doesNotMatch(result.stdout, /OUTSIDE_FIXTURE/);
+    assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+  }
+  writeFileSync(join(home, 'mode'), 'override');
+  writeFileSync(join(home, 'active-persona'), '../../../outside');
+  const result = run(home, ['delete', 'confirm']);
+  assert.notEqual(result.status, 0);
+  assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+});
+
+test('persona commands do not follow store symlinks outside the shared store', () => {
+  const home = setupAikoHome(tmpBase);
+  const outside = join(tmpBase, 'outside');
+  mkdirSync(outside);
+  writeFileSync(join(outside, 'persona.md'), 'OUTSIDE_FIXTURE');
+  symlinkSync(outside, join(home, 'persona', 'overrides', 'linked'));
+  for (const args of [['select', 'linked'], ['diff', 'linked'], ['export', 'linked'], ['reset', 'confirm', 'linked']]) {
+    const result = run(home, args);
+    assert.notEqual(result.status, 0, args[0]);
+    assert.doesNotMatch(result.stdout, /OUTSIDE_FIXTURE/);
+    assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+  }
+});
+
+test('commands reject external user data and dangling output symlinks', () => {
+  const home = setupAikoHome(tmpBase);
+  const secret = join(tmpBase, 'outside-user.md');
+  writeFileSync(secret, 'OUTSIDE_FIXTURE');
+  rmSync(join(home, 'user.md'));
+  symlinkSync(secret, join(home, 'user.md'));
+  const context = run(home, ['context']);
+  assert.notEqual(context.status, 0);
+  assert.doesNotMatch(context.stdout, /OUTSIDE_FIXTURE/);
+  const destination = join(home, 'persona', 'overrides', 'linked');
+  symlinkSync(join(tmpBase, 'does-not-exist'), destination);
+  const reset = run(home, ['reset', 'confirm', 'linked']);
+  assert.notEqual(reset.status, 0);
+  assert.equal(existsSync(join(tmpBase, 'does-not-exist', 'persona.md')), false);
 });
 
 // AG-CLI-001: 未初期化で context

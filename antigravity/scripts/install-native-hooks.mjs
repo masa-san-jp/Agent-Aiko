@@ -9,10 +9,14 @@ import { randomUUID } from 'node:crypto';
 const args = process.argv.slice(2);
 const quote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
 try {
-  if (args.length !== 0 && (args.length !== 2 || args[0] !== '--hooks-file')) {
-    throw new Error('Usage: node install-native-hooks.mjs [--hooks-file <path>]');
+  let uninstall = false;
+  let hooksFile;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--uninstall' && !uninstall) uninstall = true;
+    else if (args[i] === '--hooks-file' && hooksFile === undefined && args[i + 1] && !args[i + 1].startsWith('--')) hooksFile = args[++i];
+    else throw new Error('Usage: node install-native-hooks.mjs [--uninstall] [--hooks-file <path>]');
   }
-  const target = resolve(args[1] ?? join(homedir(), '.gemini/config/hooks.json'));
+  const target = resolve(hooksFile ?? join(homedir(), '.gemini/config/hooks.json'));
   let previous;
   let config = {};
   try {
@@ -32,9 +36,11 @@ try {
   if (key in config && JSON.stringify(config[key]) !== JSON.stringify(definition)) {
     throw new Error('agent-aiko-native already exists with different settings; merge manually');
   }
-  if (key in config) { process.stdout.write('Agent-Aiko hooks already configured.\n'); }
+  if (uninstall && !(key in config)) { process.stdout.write('Agent-Aiko hooks are not configured.\n'); }
+  else if (!uninstall && key in config) { process.stdout.write('Agent-Aiko hooks already configured.\n'); }
   else {
-    config[key] = definition;
+    if (uninstall) delete config[key];
+    else config[key] = definition;
     await mkdir(dirname(target), { recursive: true });
     if (previous !== undefined) await writeFile(target + '.aiko-backup-' + randomUUID(), previous, { mode: 0o600, flag: 'wx' });
     const temporary = target + '.tmp-' + randomUUID();
@@ -46,6 +52,6 @@ try {
       if (current !== previous) throw new Error('Hooks changed during installation; retry');
       await rename(temporary, target);
     } finally { await rm(temporary, { force: true }); }
-    process.stdout.write(`Agent-Aiko hooks configured: ${target}\n`);
+    process.stdout.write(`Agent-Aiko hooks ${uninstall ? 'removed' : 'configured'}: ${target}\n`);
   }
 } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }
