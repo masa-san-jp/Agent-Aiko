@@ -82,6 +82,59 @@ test('persona selection is applied to the next native session and preserves save
   assert.equal(readFileSync(join(f.home, 'user.md'), 'utf8'), original);
 });
 
+test('origin uses its saved user settings ahead of the shared fallback', (t) => {
+  const f = fixture(t);
+  writeFileSync(join(f.home, 'persona/origin/user.md'), 'name: Fixture\naddress: OriginSpecific\n');
+  assert.equal(f.install().status, 0);
+  const command = JSON.parse(readFileSync(f.target, 'utf8'))['agent-aiko-native'].SessionStart[0].command;
+  const context = f.invoke(command, { conversationId: 'fixture' }).injectSteps[0].systemMessage.systemMessage;
+  assert.match(context, /OriginSpecific/);
+  assert.doesNotMatch(context, /テストさん/);
+  const cli = spawnSync(process.execPath, [join(f.scripts, 'aiko-gemini.mjs'), 'context'], {
+    env: { ...process.env, HOME: f.root, AIKO_HOME: f.home }, encoding: 'utf8',
+  });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.match(cli.stdout, /OriginSpecific/);
+  assert.doesNotMatch(cli.stdout, /テストさん/);
+});
+
+test('empty named-user settings fall back to the shared user, not another persona', (t) => {
+  const f = fixture(t);
+  const named = join(f.home, 'persona/overrides/review');
+  mkdirSync(named, { recursive: true });
+  mkdirSync(join(f.home, 'persona/override'), { recursive: true });
+  writeFileSync(join(named, 'persona.md'), 'REVIEW_FIXTURE');
+  writeFileSync(join(named, 'user.md'), '# User\nname:\naddress:\n');
+  writeFileSync(join(f.home, 'persona/override/user.md'), 'address: WrongPersona\n');
+  writeFileSync(join(f.home, 'mode'), 'override');
+  writeFileSync(join(f.home, 'active-persona'), 'review');
+  assert.equal(f.install().status, 0);
+  const command = JSON.parse(readFileSync(f.target, 'utf8'))['agent-aiko-native'].SessionStart[0].command;
+  const context = f.invoke(command, { conversationId: 'fixture' }).injectSteps[0].systemMessage.systemMessage;
+  assert.match(context, /テストさん/);
+  assert.doesNotMatch(context, /WrongPersona/);
+  const cli = spawnSync(process.execPath, [join(f.scripts, 'aiko-gemini.mjs'), 'context'], {
+    env: { ...process.env, HOME: f.root, AIKO_HOME: f.home }, encoding: 'utf8',
+  });
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.match(cli.stdout, /テストさん/);
+  assert.doesNotMatch(cli.stdout, /WrongPersona/);
+});
+
+test('new persona inherits the user settings of the currently selected persona', (t) => {
+  const f = fixture(t);
+  writeFileSync(join(f.home, 'persona/origin/user.md'), 'name: Fixture\naddress: OriginSpecific\n');
+  mkdirSync(join(f.home, 'persona/override'), { recursive: true });
+  writeFileSync(join(f.home, 'persona/override/user.md'), 'address: WrongPersona\n');
+  const cli = spawnSync(process.execPath, [join(f.scripts, 'aiko-gemini.mjs'), 'new', 'review'], {
+    env: { ...process.env, HOME: f.root, AIKO_HOME: f.home }, encoding: 'utf8',
+  });
+  assert.equal(cli.status, 0, cli.stderr);
+  const copied = readFileSync(join(f.home, 'persona/overrides/review/user.md'), 'utf8');
+  assert.match(copied, /OriginSpecific/);
+  assert.doesNotMatch(copied, /WrongPersona/);
+});
+
 test('native PreToolUse denies protected edits and delegates normal work to host', (t) => {
   const f = fixture(t);
   assert.equal(f.install().status, 0);

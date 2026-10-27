@@ -7,6 +7,8 @@ import { strict as assert } from "node:assert";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
 import { loadPersona } from "../src/aiko-persona-loader.js";
@@ -83,6 +85,43 @@ describe("loadPersona", () => {
     const snap = await loadPersona({ aikoHome: fixture.root });
     assert.equal(snap.user.name, "（ユーザー名）");
     assert.equal(snap.user.address, undefined);
+  });
+
+  it("does not treat the next line as the value of an empty name", async () => {
+    await writeFile(join(fixture.root, "user.md"), "name:\naddress: SharedFixture\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.equal(snap.user.name, undefined);
+    assert.equal(snap.user.address, "SharedFixture");
+  });
+
+  it("falls back to shared user settings when the selected persona has only empty fields", async () => {
+    await mkdir(join(fixture.root, "persona", "origin"), { recursive: true });
+    await writeFile(join(fixture.root, "persona", "origin", "user.md"), "name:\naddress:\n");
+    await writeFile(join(fixture.root, "user.md"), "name: SharedFixture\naddress: SharedAddress\n");
+    const snap = await loadPersona({ aikoHome: fixture.root });
+    assert.deepEqual(snap.user, { name: "SharedFixture", address: "SharedAddress" });
+  });
+
+  it("agrees with the Antigravity session hook on persona-specific and fallback addresses", async () => {
+    const originDir = join(fixture.root, "persona", "origin");
+    await mkdir(originDir, { recursive: true });
+    await writeFile(join(fixture.root, "user.md"), "name: SharedFixture\naddress: SharedAddress\n");
+    const hook = fileURLToPath(new URL("../../antigravity/scripts/aiko-native-hook.mjs", import.meta.url));
+    const scenarios: Array<[string, string]> = [
+      ["name: Fixture\naddress: PersonaAddress\n", "PersonaAddress"],
+      ["name:\naddress:\n", "SharedAddress"],
+    ];
+    for (const [specific, expected] of scenarios) {
+      await writeFile(join(originDir, "user.md"), specific);
+      const snap = await loadPersona({ aikoHome: fixture.root });
+      const result = spawnSync(process.execPath, [hook, "session"], {
+        env: { ...process.env, AIKO_HOME: fixture.root }, input: "{}", encoding: "utf8",
+      });
+      assert.equal(result.status, 0, result.stderr);
+      const context = JSON.parse(result.stdout).injectSteps[0].systemMessage.systemMessage as string;
+      assert.equal(snap.user.address, expected);
+      assert.ok(context.includes(expected));
+    }
   });
 
   it("returns empty user when user.md is absent", async () => {

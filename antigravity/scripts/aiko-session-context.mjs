@@ -6,6 +6,7 @@
 import { readFileSync, existsSync, realpathSync } from 'fs';
 import { join, relative, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
+import { readSelectedUser } from './aiko-user-context.mjs';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
 
@@ -91,18 +92,7 @@ function buildAdditionalContext() {
     personaRules = readSafe(rp);
   }
 
-  const userPath = (() => {
-    if (mode === 'override' && activePersona) {
-      const p = join(AIKO_HOME, 'persona', 'overrides', activePersona, 'user.md');
-      if (existsSync(p)) return p;
-    }
-    if (mode === 'override') {
-      const p = join(AIKO_HOME, 'persona', 'override', 'user.md');
-      if (existsSync(p)) return p;
-    }
-    return join(AIKO_HOME, 'user.md');
-  })();
-  const user = readSafe(userPath);
+  const user = readSelectedUser(AIKO_HOME, mode, activePersona, readSafe);
 
   const lines = [
     '# Agent-Aiko Runtime Context',

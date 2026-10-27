@@ -154,11 +154,11 @@ async function readUser(...paths: Array<string | undefined>): Promise<{ name?: s
       throw err;
     }
     const result: { name?: string; address?: string } = {};
-    const nameMatch = content.match(/^name:\s*(.+)$/m);
+    const nameMatch = content.match(/^name:[ \t]*([^\r\n]+)$/m);
     if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
       result.name = nameMatch[1].trim();
     }
-    const addressMatch = content.match(/^address:\s*(.+)$/m);
+    const addressMatch = content.match(/^address:[ \t]*([^\r\n]+)$/m);
     if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
       result.address = addressMatch[1].trim();
     }
