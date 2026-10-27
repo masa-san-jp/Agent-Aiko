@@ -119,3 +119,37 @@ test('saved speech style is reloaded without changing identity or user data', (t
   assert.doesNotMatch(context(), /DO_NOT_INJECT/);
   assert.equal(readFileSync(join(f.home, 'persona/origin/persona.md'), 'utf8'), '簡潔で丁寧に応答する。');
 });
+
+test('native session refuses persona traversal and user-data symlinks outside AIKO_HOME', (t) => {
+  for (const attack of ['traversal', 'symlink']) {
+    const f = fixture(t);
+    assert.equal(f.install().status, 0);
+    if (attack === 'traversal') {
+      mkdirSync(join(f.root, 'outside'));
+      writeFileSync(join(f.root, 'outside/persona.md'), 'PRIVATE_OUTSIDE_DATA');
+      writeFileSync(join(f.home, 'mode'), 'override');
+      writeFileSync(join(f.home, 'active-persona'), '../../../outside');
+    } else {
+      writeFileSync(join(f.root, 'private.md'), 'PRIVATE_OUTSIDE_DATA');
+      rmSync(join(f.home, 'user.md'));
+      symlinkSync(join(f.root, 'private.md'), join(f.home, 'user.md'));
+    }
+    const command = JSON.parse(readFileSync(f.target, 'utf8'))['agent-aiko-native'].SessionStart[0].command;
+    const result = spawnSync(command, { shell: '/bin/sh', cwd: f.root,
+      env: { ...process.env, AIKO_HOME: f.home }, input: '{}', encoding: 'utf8' });
+    assert.notEqual(result.status, 0, attack + ' must not inject context');
+    assert.doesNotMatch(result.stdout, /PRIVATE_OUTSIDE_DATA/);
+  }
+});
+
+test('native session uses bundled style when no user definition exists', (t) => {
+  const f = fixture(t);
+  writeFileSync(join(f.home, 'speech-style'), 'servant\n');
+  const script = fileURLToPath(new URL('../scripts/aiko-native-hook.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, [script, 'session'], {
+    env: { ...process.env, AIKO_HOME: f.home }, input: '{}', encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const expected = readFileSync(fileURLToPath(new URL('../../packages/mcp-server/speech-styles/servant.md', import.meta.url)), 'utf8').trim();
+  assert.ok(JSON.parse(result.stdout).injectSteps[0].systemMessage.systemMessage.includes(expected));
+});
