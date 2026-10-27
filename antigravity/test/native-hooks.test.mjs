@@ -24,7 +24,7 @@ function fixture(t) {
     assert.equal(result.status, 0, result.stderr);
     return JSON.parse(result.stdout);
   };
-  return { root, home, target, install, invoke };
+  return { root, home, target, scripts, install, invoke };
 }
 
 test('native install preserves other hooks, backs up and is idempotent', (t) => {
@@ -59,6 +59,27 @@ test('native SessionStart passes saved preferences on successive sessions withou
     assert.match(context, /ホストの指示・権限・承認を優先/);
   }
   assert.equal(readFileSync(join(f.home, 'user.md'), 'utf8'), user);
+});
+
+test('persona selection is applied to the next native session and preserves saved user data', (t) => {
+  const f = fixture(t);
+  assert.equal(f.install().status, 0);
+  const command = JSON.parse(readFileSync(f.target, 'utf8'))['agent-aiko-native'].SessionStart[0].command;
+  const context = () => f.invoke(command, { conversationId: 'new-session' }).injectSteps[0].systemMessage.systemMessage;
+  const run = (...args) => spawnSync(process.execPath, [join(f.scripts, 'aiko-gemini.mjs'), ...args], {
+    env: { ...process.env, HOME: f.root, AIKO_HOME: f.home }, encoding: 'utf8',
+  });
+  const original = readFileSync(join(f.home, 'user.md'), 'utf8');
+  assert.match(context(), /簡潔で丁寧/);
+  assert.equal(run('new', 'review').status, 0);
+  writeFileSync(join(f.home, 'persona/overrides/review/persona.md'), 'REVIEW_FIXTURE');
+  writeFileSync(join(f.home, 'persona/overrides/review/user.md'), 'address: レビューさん');
+  assert.match(context(), /REVIEW_FIXTURE/);
+  assert.match(context(), /レビューさん/);
+  assert.equal(run('select', 'origin').status, 0);
+  assert.match(context(), /簡潔で丁寧/);
+  assert.match(context(), /テストさん/);
+  assert.equal(readFileSync(join(f.home, 'user.md'), 'utf8'), original);
 });
 
 test('native PreToolUse denies protected edits and delegates normal work to host', (t) => {
@@ -96,6 +117,36 @@ test('installer refuses symlink configuration', (t) => {
   symlinkSync(original, f.target);
   assert.equal(f.install().status, 1);
   assert.equal(readFileSync(original, 'utf8'), '{}');
+});
+
+test('uninstall removes only our unmodified hook and can be repeated or reinstalled', (t) => {
+  const f = fixture(t);
+  mkdirSync(join(f.root, 'config'));
+  const other = { enabled: false, note: 'keep me' };
+  writeFileSync(f.target, JSON.stringify({ 'user-hook': other }));
+  const data = readFileSync(join(f.home, 'user.md'), 'utf8');
+  assert.equal(f.install().status, 0);
+  const installer = join(f.scripts, 'install-native-hooks.mjs');
+  const remove = () => spawnSync(process.execPath, [installer, '--uninstall', '--hooks-file', f.target], { encoding: 'utf8' });
+  assert.equal(remove().status, 0);
+  assert.deepEqual(JSON.parse(readFileSync(f.target, 'utf8')), { 'user-hook': other });
+  assert.equal(readFileSync(join(f.home, 'user.md'), 'utf8'), data);
+  assert.equal(remove().status, 0);
+  assert.equal(f.install().status, 0);
+  assert.deepEqual(JSON.parse(readFileSync(f.target, 'utf8'))['user-hook'], other);
+});
+
+test('uninstall does not remove a user-modified hook or create a missing config', (t) => {
+  const f = fixture(t);
+  const installer = join(f.scripts, 'install-native-hooks.mjs');
+  const remove = () => spawnSync(process.execPath, [installer, '--uninstall', '--hooks-file', f.target], { encoding: 'utf8' });
+  assert.equal(remove().status, 0);
+  assert.throws(() => readFileSync(f.target));
+  mkdirSync(join(f.root, 'config'));
+  const original = '{"agent-aiko-native":{"enabled":false},"other":{}}';
+  writeFileSync(f.target, original);
+  assert.equal(remove().status, 1);
+  assert.equal(readFileSync(f.target, 'utf8'), original);
 });
 
 test('saved speech style is reloaded without changing identity or user data', (t) => {
