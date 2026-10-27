@@ -241,7 +241,7 @@ test("HTTP: session limit, explicit deletion and idle expiry free capacity", asy
 
 test("HTTP: bundled CLI serves the bundled persona and shuts down on SIGTERM", { timeout: 10_000 }, async () => {
   const home = await mkdtemp(join(tmpdir(), "aiko-http-cli-"));
-  await writeFile(join(home, "user.md"), "# User\nname: preserved\n");
+  await writeFile(join(home, "user.md"), "# User\nname: FIXTURE_OWNER_NAME\n");
   const customDir = join(home, "persona", "overrides", "custom");
   await mkdir(customDir, { recursive: true });
   await writeFile(join(customDir, "persona.md"), "preserved persona");
@@ -266,13 +266,18 @@ test("HTTP: bundled CLI serves the bundled persona and shuts down on SIGTERM", {
     try {
       assert.equal(body(await client.callTool({ name: "aiko.health", arguments: {} }))["status"], "ok");
       assert.ok((await client.readResource({ uri: "persona://aiko/core" })).contents.length);
+      const prompt = await client.getPrompt({ name: "aiko.activate" });
+      assert.match(String((prompt.messages[0]?.content as { text?: string })?.text), /FIXTURE_OWNER_NAME/);
+      const denied = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(initialize) });
+      assert.equal(denied.status, 401);
+      assert.doesNotMatch(await denied.text(), /FIXTURE_OWNER_NAME/);
       const listed = (await client.listTools()).tools.map((tool) => tool.name);
       for (const name of ["aiko.remember_user", "aiko.switch_persona", "aiko.switch_speech_style", "aiko.save_persona", "aiko.delete_persona"]) {
         assert.ok(!listed.includes(name), name);
         const result = await client.callTool({ name, arguments: { name: "custom", content: "injected", address: "injected" } });
         assert.equal(result.isError, true, name);
       }
-      assert.equal(await readFile(join(home, "user.md"), "utf8"), "# User\nname: preserved\n");
+      assert.equal(await readFile(join(home, "user.md"), "utf8"), "# User\nname: FIXTURE_OWNER_NAME\n");
       assert.equal(await readFile(join(customDir, "persona.md"), "utf8"), "preserved persona");
       assert.deepEqual((await readdir(home)).sort(), ["persona", "user.md"]);
       assert.deepEqual(await readdir(join(home, "persona")), ["overrides"]);
