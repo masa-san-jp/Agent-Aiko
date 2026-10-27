@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync, realpathSync, lstatSync } from 'fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
+import { readSelectedUser } from './aiko-user-context.mjs';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
 
@@ -110,18 +111,6 @@ function resolveRulesPath(mode, activePersona) {
   return join(AIKO_HOME, 'persona', 'override', 'rules.md');
 }
 
-function resolveUserPath(mode, activePersona) {
-  if (mode === 'override' && activePersona) {
-    const p = join(AIKO_HOME, 'persona', 'overrides', activePersona, 'user.md');
-    if (existsSync(p)) return p;
-  }
-  if (mode === 'override') {
-    const p = join(AIKO_HOME, 'persona', 'override', 'user.md');
-    if (existsSync(p)) return p;
-  }
-  return join(AIKO_HOME, 'user.md');
-}
-
 function getInvariantsContent() {
   const p1 = join(AIKO_HOME, 'persona', 'INVARIANTS.md');
   const p2 = join(AIKO_HOME, 'INVARIANTS.md');
@@ -135,13 +124,12 @@ function buildContext() {
   const activePersona = getActivePersona();
   const prefix = getPrefix(mode, activePersona);
   const personaPath = resolvePersonaPath(mode, activePersona);
-  const userPath = resolveUserPath(mode, activePersona);
 
   const persona = readFileSafe(personaPath, '（人格ファイルが見つかりません）');
   const invariants = getInvariantsContent();
   const rules = readFileSafe(join(AIKO_HOME, 'capability', 'rules', 'rules-base.md'));
   const personaRules = mode === 'override' ? readFileSafe(resolveRulesPath(mode, activePersona)) : '';
-  const user = readFileSafe(userPath);
+  const user = readSelectedUser(AIKO_HOME, mode, activePersona, readFileSafe);
 
   const lines = [
     '# Agent-Aiko Runtime Context',
@@ -297,6 +285,7 @@ function cmdNew(args) {
     process.exit(1);
   }
 
+  const user = readSelectedUser(AIKO_HOME, getMode(), getActivePersona(), readFileSafe);
   const dir = join(AIKO_HOME, 'persona', 'overrides', name);
   assertInsideHome(dir);
   mkdirSync(dir, { recursive: true });
@@ -304,10 +293,7 @@ function cmdNew(args) {
   const originPersona = readFileSafe(resolvePersonaPath('origin', ''), '');
   writeFileSafe(join(dir, 'persona.md'), originPersona);
 
-  const userSrc = existsSync(join(AIKO_HOME, 'persona', 'override', 'user.md'))
-    ? join(AIKO_HOME, 'persona', 'override', 'user.md')
-    : join(AIKO_HOME, 'user.md');
-  writeFileSafe(join(dir, 'user.md'), readFileSafe(userSrc));
+  writeFileSafe(join(dir, 'user.md'), user);
   writeFileSafe(join(dir, 'rules.md'), '');
   writeFileSafe(join(dir, 'README.md'), `# ${name} persona\n\nAgent-Aiko named persona.\n`);
 

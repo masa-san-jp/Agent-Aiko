@@ -5,6 +5,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { parseUserFields } from "./aiko-user-fields.js";
 
 /** ~/.aiko/ から読み込んだ人格スナップショット。 */
 export interface AikoPersonaSnapshot {
@@ -153,15 +154,7 @@ async function readUser(...paths: Array<string | undefined>): Promise<{ name?: s
       if (isNotFound(err)) continue;
       throw err;
     }
-    const result: { name?: string; address?: string } = {};
-    const nameMatch = content.match(/^name:\s*(.+)$/m);
-    if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
-      result.name = nameMatch[1].trim();
-    }
-    const addressMatch = content.match(/^address:\s*(.+)$/m);
-    if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
-      result.address = addressMatch[1].trim();
-    }
+    const result = parseUserFields(content);
     if (result.name !== undefined || result.address !== undefined) return result;
   }
   return {};

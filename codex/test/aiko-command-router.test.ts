@@ -14,6 +14,7 @@ import {
   AikoCommandRouter,
   mergeOverrideInstruction,
   parseSlashCommand,
+  parseUserFields,
   summarizeInstruction,
   unifiedDiff,
 } from "../src/aiko-command-router.js";
@@ -827,7 +828,7 @@ describe("AikoCommandRouter — /aiko-export and /aiko-diff", () => {
       "# Override\ncustomized\n"
     );
     const result = await router.execute("aiko-export", "");
-    assert.match(result.output, /aiko-override.md（共有用・ユーザー情報除去済み）/);
+    assert.match(result.output, /aiko-override.md（共有用・内容を確認）/);
     assert.match(result.output, /customized/);
     assert.match(result.output, /origin との diff/);
     assert.match(result.output, /user\.md（受け取り側で作成）/);
@@ -849,9 +850,32 @@ describe("AikoCommandRouter — /aiko-export and /aiko-diff", () => {
     assert.match(result.output, /name: （ユーザー名）/);
     assert.match(result.output, /address: （呼び方）/);
   });
+
+  it("/aiko-export uses shared user settings when the persona user file is an empty template", async () => {
+    await mkdir(join(fixture.aikoHome, "persona", "override"), { recursive: true });
+    await writeFile(join(fixture.aikoHome, "persona", "override", "user.md"), "name:\naddress:\n");
+    await writeFile(join(fixture.aikoHome, "user.md"), "name: CurrentUser\naddress: CurrentUserさん\n");
+    await writeFile(join(fixture.aikoHome, "persona", "aiko-override.md"), "# Override\nCurrentUserさん向け。\n");
+    const result = await router.execute("aiko-export", "");
+    assert.doesNotMatch(result.output, /CurrentUser/);
+    assert.match(result.output, /（呼び方）向け。/);
+  });
+
+  it("/aiko-export warns when personal information may remain in the content", async () => {
+    await writeFile(join(fixture.aikoHome, "persona", "aiko-override.md"), "PRIVATE_CONTENT_FIXTURE\n");
+    const result = await router.execute("aiko-export", "");
+    assert.match(result.output, /PRIVATE_CONTENT_FIXTURE/);
+    assert.match(result.output, /個人情報/);
+    assert.match(result.output, /共有前に確認/);
+    assert.doesNotMatch(result.output, /ユーザー情報除去済み/);
+  });
 });
 
 describe("pure helpers", () => {
+  it("does not treat a later line as the value of an empty user field", () => {
+    assert.deepEqual(parseUserFields("name:\naddress:\n"), {});
+    assert.deepEqual(parseUserFields("name:\naddress: FixtureAddress\n"), { address: "FixtureAddress" });
+  });
   it("mergeOverrideInstruction appends a timestamped section", () => {
     const merged = mergeOverrideInstruction("# A\nbody", "be polite");
     assert.match(merged, /# A\nbody\n\n## ユーザー指示/);
