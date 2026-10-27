@@ -2,8 +2,8 @@
 // aiko-gemini.mjs — Agent-Aiko CLI for Gemini CLI / Antigravity
 // Node.js 20+ / ESM / no external dependencies
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync, realpathSync, lstatSync } from 'fs';
+import { join, dirname, resolve, relative, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
@@ -19,16 +19,44 @@ const DENY_PATTERNS = [
   /(ファイル保護|保護).*(解除|無効|無視)/i,
 ];
 
-function readFileSafe(path, fallback = '') {
-  try {
-    return readFileSync(path, 'utf8').trim();
-  } catch {
-    return fallback;
+function assertInsideHome(filePath) {
+  const root = realpathSync(AIKO_HOME);
+  const lexical = resolve(filePath);
+  const rel = relative(resolve(AIKO_HOME), lexical);
+  if (isAbsolute(rel) || rel === '..' || rel.startsWith('..' + sep)) throw new Error('Path is outside AIKO_HOME');
+  let ancestor = lexical;
+  for (;;) {
+    try {
+      const actual = realpathSync(ancestor);
+      const actualRel = relative(root, actual);
+      if (isAbsolute(actualRel) || actualRel === '..' || actualRel.startsWith('..' + sep)) throw new Error('Path is outside AIKO_HOME');
+      return;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      // A dangling symlink must not be treated as a missing regular file.
+      try { if (lstatSync(ancestor).isSymbolicLink()) throw new Error('Dangling symlink is not allowed'); }
+      catch (statError) { if (statError.code !== 'ENOENT') throw statError; }
+      const parent = dirname(ancestor);
+      if (parent === ancestor) throw error;
+      ancestor = parent;
+    }
   }
 }
 
+function requireName(name) {
+  if (!SLUG_RE.test(name)) throw new Error('Invalid persona name');
+}
+
+function readFileSafe(path, fallback = '') {
+  assertInsideHome(path);
+  try { return readFileSync(path, 'utf8').trim(); }
+  catch (error) { if (error.code === 'ENOENT') return fallback; throw error; }
+}
+
 function writeFileSafe(filePath, content) {
+  assertInsideHome(filePath);
   mkdirSync(dirname(filePath), { recursive: true });
+  assertInsideHome(filePath);
   writeFileSync(filePath, content, 'utf8');
 }
 
@@ -43,7 +71,9 @@ function getMode() {
 }
 
 function getActivePersona() {
-  return readFileSafe(join(AIKO_HOME, 'active-persona'), '');
+  const name = readFileSafe(join(AIKO_HOME, 'active-persona'), '');
+  if (name) requireName(name);
+  return name;
 }
 
 function getPrefix(mode, activePersona) {
@@ -161,6 +191,7 @@ function appendOverrideHistory(action, detail) {
   const histPath = join(AIKO_HOME, 'override-history.jsonl');
   const entry = JSON.stringify({ timestamp: new Date().toISOString(), action, detail }) + '\n';
   try {
+    assertInsideHome(histPath);
     mkdirSync(AIKO_HOME, { recursive: true });
     appendFileSync(histPath, entry, 'utf8');
   } catch {
@@ -236,12 +267,13 @@ function cmdOverride(args) {
       process.exit(3);
     }
   }
-  writeFileSafe(join(AIKO_HOME, 'mode'), 'override');
-  const mode = getMode();
   const activePersona = getActivePersona();
   const targetPath = resolvePersonaPath('override', activePersona);
+  assertInsideHome(targetPath);
+  writeFileSafe(join(AIKO_HOME, 'mode'), 'override');
   const entry = `\n\n---\n\n## ユーザー指示（Antigravity / Gemini CLI override）\n\n- ${new Date().toISOString()}: ${instruction}\n`;
   try {
+    assertInsideHome(targetPath);
     appendFileSync(targetPath, entry, 'utf8');
   } catch {
     writeFileSafe(targetPath, readFileSafe(targetPath) + entry);
@@ -266,6 +298,7 @@ function cmdNew(args) {
   }
 
   const dir = join(AIKO_HOME, 'persona', 'overrides', name);
+  assertInsideHome(dir);
   mkdirSync(dir, { recursive: true });
 
   const originPersona = readFileSafe(resolvePersonaPath('origin', ''), '');
@@ -303,8 +336,11 @@ function cmdSelect(args) {
     console.log('mode を override（名前なし）に変更しました。');
     return;
   }
+  requireName(name);
   const personaDir = join(AIKO_HOME, 'persona', 'overrides', name);
   const personaFile = join(AIKO_HOME, 'persona', 'overrides', `${name}.md`);
+  assertInsideHome(personaDir);
+  assertInsideHome(personaFile);
   if (!existsSync(personaDir) && !existsSync(personaFile)) {
     console.error(`人格 "${name}" が見つかりません。`);
     process.exit(1);
@@ -325,6 +361,7 @@ function cmdPersonas() {
 
   const overridesDir = join(AIKO_HOME, 'persona', 'overrides');
   if (existsSync(overridesDir)) {
+    assertInsideHome(overridesDir);
     try {
       const entries = readdirSync(overridesDir, { withFileTypes: true });
       for (const e of entries) {
@@ -353,6 +390,7 @@ function cmdDiff(args) {
     console.log('（origin との差分は自分自身なので空です）');
     return;
   } else {
+    requireName(name);
     targetPath = join(AIKO_HOME, 'persona', 'overrides', name, 'persona.md');
     targetLabel = name;
   }
@@ -383,6 +421,7 @@ function cmdExport(args) {
     personaPath = resolvePersonaPath('override', '');
     rulesPath = resolveRulesPath('override', '');
   } else {
+    requireName(name);
     personaPath = join(AIKO_HOME, 'persona', 'overrides', name, 'persona.md');
     rulesPath = join(AIKO_HOME, 'persona', 'overrides', name, 'rules.md');
   }
@@ -414,6 +453,7 @@ function cmdReset(args) {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
   const confirmed = args.includes('--yes') || args.includes('confirm');
   const targetName = args.filter(a => a !== '--yes' && a !== 'confirm')[0] ?? '';
+  if (targetName && targetName !== 'override') requireName(targetName);
 
   if (!confirmed) {
     const mode = getMode();
@@ -473,6 +513,7 @@ function cmdDelete(args) {
     console.error(`人格 "${activePersona}" のディレクトリが見つかりません。`);
     process.exit(2);
   }
+  assertInsideHome(dir);
   rmSync(dir, { recursive: true, force: true });
   writeFileSafe(join(AIKO_HOME, 'active-persona'), '');
   writeFileSafe(join(AIKO_HOME, 'mode'), 'origin');
