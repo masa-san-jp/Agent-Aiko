@@ -3,14 +3,24 @@
 // Reads ~/.aiko/ and injects Agent-Aiko runtime context as additionalContext.
 // stdout: JSON only. logs: stderr only.
 
-import { readFileSync, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync, realpathSync } from 'fs';
+import { join, relative, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
 
 function readSafe(path, fallback = '') {
-  try { return readFileSync(path, 'utf8').trim(); } catch { return fallback; }
+  try {
+    const actual = realpathSync(path);
+    const within = relative(realpathSync(AIKO_HOME), actual);
+    if (isAbsolute(within) || within === '..' || within.startsWith('..' + sep)) {
+      throw new Error('Agent-Aiko context must stay inside AIKO_HOME');
+    }
+    return readFileSync(actual, 'utf8').trim();
+  } catch (error) {
+    if (error.code === 'ENOENT') return fallback;
+    throw error;
+  }
 }
 
 function isInitialized() {
@@ -24,7 +34,11 @@ function getMode() {
 }
 
 function getActivePersona() {
-  return readSafe(join(AIKO_HOME, 'active-persona'), '');
+  const name = readSafe(join(AIKO_HOME, 'active-persona'), '');
+  if (name && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/.test(name)) {
+    throw new Error('Invalid active persona name');
+  }
+  return name;
 }
 
 function getPrefix(mode, activePersona) {

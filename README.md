@@ -25,7 +25,7 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 |----|------------|------|--------------|---------|
 | **[Claude Code 版](claude-code/)** | Anthropic Claude Code を使っている方 | Anthropic API（Claude Code 標準） | `~/.aiko/` ＋ プロジェクトの `.claude/skills/` | `claude` コマンドの中で `/aiko` |
 | **[Codex 版](codex/)** | ChatGPT サブスク（Plus / Pro / Business 等）を使う方 | `codex login`（ChatGPT OAuth） | `~/.aiko/` ＋ `~/.local/bin/aiko` | `aiko` コマンドで対話シェル |
-| **[Antigravity / Gemini CLI 版](antigravity/)** | Gemini CLI または Antigravity CLI を使っている方 | Google AI（Gemini CLI 標準） | `~/.aiko/` ＋ Gemini CLI extension | `gemini` コマンドの中で会話（起動時に自動注入） |
+| **[Antigravity / Gemini CLI 版](antigravity/)** | Antigravity CLI / Gemini CLI を使っている方 | 各CLI標準の認証 | `~/.aiko/` ＋ Antigravity用hook / Gemini用extension | `agy` / `gemini`（[導入方法・検証範囲](antigravity/)を参照） |
 
 3 版とも：
 - 同じ人格定義（`persona/origin/persona.md` / `INVARIANTS.md`）と同じ操作感（`/aiko-or` `/aiko-mode` `/aiko-diff` 等の slash command）
