@@ -1,8 +1,9 @@
 description = "Export current or specified Agent-Aiko persona for sharing."
 
 prompt = """
-Agent-Aiko の対象人格を共有用に export します。
-ユーザー情報が含まれていないことを確認し、下記をそのまま提示してください。
+Agent-Aiko の対象人格を export します。
+user.md は含まれませんが、人格本文やルールに個人情報が含まれる可能性があります。
+自動的に除去済みとは断言せず、共有前に利用者が内容を確認できるよう提示してください。
 
 !{aiko-gemini export {{args}}}
 """
