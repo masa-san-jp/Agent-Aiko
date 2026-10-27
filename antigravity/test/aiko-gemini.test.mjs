@@ -128,6 +128,21 @@ test('reset confirmation resets the selected persona without overwriting default
   assert.equal(readFileSync(defaultOverride, 'utf8'), originalDefault);
 });
 
+test('reset validates all destinations before changing either override file', () => {
+  const home = setupAikoHome(tmpBase);
+  writeFileSync(join(home, 'mode'), 'override');
+  const current = join(home, 'persona', 'override', 'persona.md');
+  writeFileSync(current, 'KEEP_OVERRIDE_FIXTURE');
+  const external = join(tmpBase, 'external-persona.md');
+  writeFileSync(external, 'KEEP_EXTERNAL_FIXTURE');
+  const legacy = join(home, 'persona', 'aiko-override.md');
+  rmSync(legacy);
+  symlinkSync(external, legacy);
+  assert.notEqual(run(home, ['reset', 'confirm']).status, 0);
+  assert.equal(readFileSync(current, 'utf8'), 'KEEP_OVERRIDE_FIXTURE');
+  assert.equal(readFileSync(external, 'utf8'), 'KEEP_EXTERNAL_FIXTURE');
+});
+
 // AG-CLI-001: 未初期化で context
 test('AG-CLI-001: uninitialized returns exit 4 or uninitialized message', () => {
   const uninitHome = join(tmpBase, 'empty-aiko');

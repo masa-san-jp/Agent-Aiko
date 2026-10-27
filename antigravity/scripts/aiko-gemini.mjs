@@ -485,6 +485,9 @@ function cmdReset(args) {
   } else {
     const overridePath = join(AIKO_HOME, 'persona', 'override', 'persona.md');
     const legacyPath = join(AIKO_HOME, 'persona', 'aiko-override.md');
+    // Validate both destinations before changing either file.
+    assertInsideHome(overridePath);
+    if (existsSync(legacyPath)) assertInsideHome(legacyPath);
     writeFileSafe(overridePath, originContent);
     if (existsSync(legacyPath)) writeFileSafe(legacyPath, originContent);
     console.log('override persona を origin にリセットしました。');
