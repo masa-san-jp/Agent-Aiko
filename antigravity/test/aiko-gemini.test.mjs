@@ -228,6 +228,22 @@ test('AG-CLI-010: export does not include user.md content', () => {
   assert.ok(!r.stdout.includes('秘密のユーザー'), 'user.md content should not appear in export');
 });
 
+test('export warns that persona and rules may contain private information', () => {
+  const home = setupAikoHome(tmpBase);
+  const persona = join(home, 'persona', 'overrides', 'review');
+  mkdirSync(persona, { recursive: true });
+  writeFileSync(join(persona, 'persona.md'), 'PERSONA_PRIVATE_FIXTURE');
+  writeFileSync(join(persona, 'rules.md'), 'RULE_PRIVATE_FIXTURE');
+  writeFileSync(join(persona, 'user.md'), 'USER_PRIVATE_FIXTURE');
+  const result = run(home, ['export', 'review']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /PERSONA_PRIVATE_FIXTURE/);
+  assert.match(result.stdout, /RULE_PRIVATE_FIXTURE/);
+  assert.doesNotMatch(result.stdout, /USER_PRIVATE_FIXTURE/);
+  assert.match(result.stdout, /共有前/);
+  assert.match(result.stdout, /個人情報/);
+});
+
 test('AG-CLI-014: reset with confirm keyword executes reset', () => {
   const home = setupAikoHome(tmpBase);
   writeFileSync(join(home, 'persona', 'override', 'persona.md'), 'changed override');

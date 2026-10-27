@@ -440,6 +440,7 @@ function cmdExport(args) {
     `- exportedAt: ${new Date().toISOString()}`,
     '- source: antigravity-gemini',
     `- name: ${targetName}`,
+    '- 注意: user.md は含みませんが、人格本文やルールには個人情報が残る場合があります。共有前に内容を確認してください。',
     '',
     '## persona.md',
     '',
