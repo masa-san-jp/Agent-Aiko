@@ -213,7 +213,7 @@ Codex App のペット表示に Aiko を選べるため、Aiko 人格で作業�
 /aiko-or <自然文>                アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
 /aiko-origin                     アイコ（オリジナル）に切替（/aiko-org でも可）
 /aiko-reset [name]               アイコ（カスタマイズ）または指定人格をリセット（確認あり・履歴は残る）
-/aiko-export [name]              現在または指定の人格を共有用に出力（ユーザー情報は含めない）
+/aiko-export [name]              人格を出力（user.mdは含まない。共有前に本文・ルールを確認）
 /aiko-diff [name]                オリジナルと現在または指定の人格との差分を表示
 /aiko-personas                   利用できる名前付き人格と現在の選択状態を表示
 /aiko-new <name>                 新しい名前付き人格を作成して選択

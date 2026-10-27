@@ -8,7 +8,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import { appendOverrideHistory } from "./aiko-history.js";
+import { parseUserFields } from "./aiko-user-fields.js";
 import type { AikoRuntime } from "./aiko-runtime.js";
+export { parseUserFields } from "./aiko-user-fields.js";
 
 /** スラッシュコマンドのパース結果。 */
 export interface ParsedSlashCommand {
@@ -299,7 +301,8 @@ export class AikoCommandRouter {
       output: [
         "===== 共有用人格エクスポート =====",
         "この出力には現在の user.md を含めません。受け取った側が自分の名前・呼び方を設定してください。",
-        `===== ${label}（共有用・ユーザー情報除去済み） =====`,
+        "名前・呼び名を置換しても、本文やルールに個人情報が残る場合があります。共有前に確認してください。",
+        `===== ${label}（共有用・内容を確認） =====`,
         sanitizedOverride,
         ...rulesSection,
         "===== origin との diff =====",
@@ -712,19 +715,6 @@ export function mergeOverrideInstruction(existing: string, instruction: string):
 export function summarizeInstruction(instruction: string): string {
   const head = instruction.split(/\r?\n/)[0]?.trim() ?? "";
   return head.length > 60 ? `${head.slice(0, 60)}…` : head;
-}
-
-export function parseUserFields(content: string): { name?: string; address?: string } {
-  const result: { name?: string; address?: string } = {};
-  const nameMatch = content.match(/^name:\s*(.+)$/m);
-  if (nameMatch && typeof nameMatch[1] === "string" && nameMatch[1].trim().length > 0) {
-    result.name = nameMatch[1].trim();
-  }
-  const addressMatch = content.match(/^address:\s*(.+)$/m);
-  if (addressMatch && typeof addressMatch[1] === "string" && addressMatch[1].trim().length > 0) {
-    result.address = addressMatch[1].trim();
-  }
-  return result;
 }
 
 export function sanitizeExportContent(
