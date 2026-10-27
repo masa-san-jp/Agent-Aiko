@@ -377,13 +377,16 @@ function cmdPersonas() {
 
 function cmdDiff(args) {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
-  const name = args[0] ?? '';
+  const requestedName = args[0] ?? '';
+  const mode = getMode();
+  const activePersona = getActivePersona();
+  const name = requestedName || (mode === 'override' && activePersona ? activePersona : mode);
   const originPath = resolvePersonaPath('origin', '');
   const originLines = readFileSafe(originPath).split('\n');
 
   let targetPath;
   let targetLabel;
-  if (!name || name === 'override') {
+  if (name === 'override') {
     targetPath = resolvePersonaPath('override', '');
     targetLabel = 'override';
   } else if (name === 'origin') {
@@ -410,20 +413,19 @@ function cmdExport(args) {
   const mode = getMode();
   const activePersona = getActivePersona();
 
-  let targetName = name || (activePersona || (mode === 'override' ? 'override' : 'origin'));
+  const targetName = name || (mode === 'override' && activePersona ? activePersona : mode);
   let personaPath, rulesPath;
 
-  if (!name || name === 'origin') {
+  if (targetName === 'origin') {
     personaPath = resolvePersonaPath('origin', '');
     rulesPath = resolveRulesPath('origin', '');
-    targetName = 'origin';
-  } else if (name === 'override') {
+  } else if (targetName === 'override') {
     personaPath = resolvePersonaPath('override', '');
     rulesPath = resolveRulesPath('override', '');
   } else {
-    requireName(name);
-    personaPath = join(AIKO_HOME, 'persona', 'overrides', name, 'persona.md');
-    rulesPath = join(AIKO_HOME, 'persona', 'overrides', name, 'rules.md');
+    requireName(targetName);
+    personaPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'persona.md');
+    rulesPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'rules.md');
   }
 
   let personaContent = readFileSafe(personaPath);
@@ -452,13 +454,15 @@ function cmdExport(args) {
 function cmdReset(args) {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
   const confirmed = args.includes('--yes') || args.includes('confirm');
-  const targetName = args.filter(a => a !== '--yes' && a !== 'confirm')[0] ?? '';
+  const requestedName = args.filter(a => a !== '--yes' && a !== 'confirm')[0] ?? '';
+  const targetName = requestedName || (getMode() === 'override' ? getActivePersona() : '') || 'override';
+  if (targetName === 'origin') throw new Error('The origin persona cannot be reset');
   if (targetName && targetName !== 'override') requireName(targetName);
 
   if (!confirmed) {
     const mode = getMode();
     const activePersona = getActivePersona();
-    const target = targetName || (activePersona || 'override');
+    const target = targetName;
     console.log(`Reset は破壊的操作です。
 
 現在の状態:
@@ -474,7 +478,7 @@ function cmdReset(args) {
   const originPath = resolvePersonaPath('origin', '');
   const originContent = readFileSafe(originPath);
 
-  if (targetName && targetName !== 'override') {
+  if (targetName !== 'override') {
     const targetPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'persona.md');
     writeFileSafe(targetPath, originContent);
     console.log(`人格 "${targetName}" を origin にリセットしました。`);

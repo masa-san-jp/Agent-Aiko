@@ -93,6 +93,41 @@ test('commands reject external user data and dangling output symlinks', () => {
   assert.equal(existsSync(join(tmpBase, 'does-not-exist', 'persona.md')), false);
 });
 
+test('export without a name uses the selected persona', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  writeFileSync(join(home, 'persona', 'overrides', 'review', 'persona.md'), 'REVIEW_EXPORT_FIXTURE');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  const result = run(home, ['export']);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /REVIEW_EXPORT_FIXTURE/);
+  assert.match(result.stdout, /name: review/);
+});
+
+test('diff without a name uses the selected persona', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  writeFileSync(join(home, 'persona', 'overrides', 'review', 'persona.md'), 'REVIEW_DIFF_FIXTURE');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  const result = run(home, ['diff']);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /REVIEW_DIFF_FIXTURE/);
+});
+
+test('reset confirmation resets the selected persona without overwriting default override', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  const selected = join(home, 'persona', 'overrides', 'review', 'persona.md');
+  const defaultOverride = join(home, 'persona', 'override', 'persona.md');
+  writeFileSync(selected, 'REVIEW_RESET_FIXTURE');
+  const originalDefault = readFileSync(defaultOverride, 'utf8');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  assert.match(run(home, ['reset']).stdout, /review/);
+  assert.equal(run(home, ['reset', 'confirm']).status, 0);
+  assert.equal(readFileSync(selected, 'utf8'), 'アイコ origin persona');
+  assert.equal(readFileSync(defaultOverride, 'utf8'), originalDefault);
+});
+
 // AG-CLI-001: 未初期化で context
 test('AG-CLI-001: uninitialized returns exit 4 or uninitialized message', () => {
   const uninitHome = join(tmpBase, 'empty-aiko');
