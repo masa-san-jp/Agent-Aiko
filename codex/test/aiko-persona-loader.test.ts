@@ -122,6 +122,24 @@ describe("loadPersona", () => {
       assert.equal(snap.user.address, expected);
       assert.ok(context.includes(expected));
     }
+    const namedDir = join(fixture.root, "persona", "overrides", "review");
+    const defaultDir = join(fixture.root, "persona", "override");
+    await mkdir(namedDir, { recursive: true });
+    await mkdir(defaultDir, { recursive: true });
+    await writeFile(join(namedDir, "persona.md"), "Named fixture");
+    await writeFile(join(namedDir, "user.md"), "name:\naddress:\n");
+    await writeFile(join(defaultDir, "user.md"), "address: WrongPersona\n");
+    await writeFile(join(fixture.root, "mode"), "override\n");
+    await writeFile(join(fixture.root, "active-persona"), "review\n");
+    const named = await loadPersona({ aikoHome: fixture.root });
+    const result = spawnSync(process.execPath, [hook, "session"], {
+      env: { ...process.env, AIKO_HOME: fixture.root }, input: "{}", encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const context = JSON.parse(result.stdout).injectSteps[0].systemMessage.systemMessage as string;
+    assert.equal(named.user.address, "SharedAddress");
+    assert.ok(context.includes("SharedAddress"));
+    assert.ok(!context.includes("WrongPersona"));
   });
 
   it("returns empty user when user.md is absent", async () => {
