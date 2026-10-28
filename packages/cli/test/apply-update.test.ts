@@ -52,6 +52,27 @@ async function sandbox() {
 
 const now = new Date("2026-08-01T00:00:00.000Z");
 
+test("更新は人格別ユーザー設定とプロフィールを上書きしない", async () => {
+  const s = await sandbox();
+  try {
+    const paths = ["persona/origin/user.md", "persona/override/user.md", "persona/override/persona.md", "user-profile.json", "user-proposal.md", "speech-style", "speech-style-proposal", "speech-styles/friend.md"];
+    for (const rel of paths) {
+      await write(join(s.aikoHome, rel), "FIXTURE_USER_DATA\n");
+      await write(join(s.template, rel), "FIXTURE_TEMPLATE\n");
+    }
+    const result = await applyUpdate({ aikoHome: s.aikoHome, templateAikoDir: s.template, version: "v1.0.0", backupRoot: s.backups, now });
+    for (const rel of paths) {
+      assert.equal(await readFile(join(s.aikoHome, rel), "utf8"), "FIXTURE_USER_DATA\n", rel);
+      // An older backup may contain user data. Rollback must not restore it.
+      await write(join(result.backupDir, rel), "FIXTURE_OLD_BACKUP\n");
+    }
+    await rollback({ aikoHome: s.aikoHome, backupRoot: s.backups });
+    for (const rel of paths) {
+      assert.equal(await readFile(join(s.aikoHome, rel), "utf8"), "FIXTURE_USER_DATA\n", rel);
+    }
+  } finally { await s.cleanup(); }
+});
+
 test("更新で配布物側のファイルが新しくなる", async () => {
   const s = await sandbox();
   try {
