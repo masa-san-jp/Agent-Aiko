@@ -21,7 +21,7 @@ async function makeSandbox() {
 function runInstaller({ cwd, home, input = "" }) {
   return execFileSync("bash", [INSTALLER, "--yes"], {
     cwd,
-    env: { ...process.env, HOME: home },
+    env: { ...process.env, HOME: home, AIKO_HOME: join(home, ".aiko") },
     input,
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"],
@@ -53,6 +53,16 @@ describe("claude-code/scripts/install.sh", () => {
     if (existsSync(userMd)) {
       assert.equal(statSync(userMd).mode & 0o777, 0o600, "user.md must not be readable by others");
     }
+  });
+
+  it("preserves the origin user settings across reinstall", async () => {
+    const project = join(sandbox.root, "project");
+    await mkdir(project, { recursive: true });
+    runInstaller({ cwd: project, home: sandbox.root });
+    const path = join(sandbox.root, ".aiko", "persona", "origin", "user.md");
+    await writeFile(path, "address: FIXTURE_LOCAL_NAME\n");
+    runInstaller({ cwd: project, home: sandbox.root });
+    assert.equal(await readFile(path, "utf8"), "address: FIXTURE_LOCAL_NAME\n");
   });
 
   it("refuses to install into $HOME/.claude", async () => {
