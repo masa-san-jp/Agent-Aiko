@@ -2,7 +2,7 @@
 
 **A persona you can carry between MCP clients.** Aiko is the same agent in Claude Code, Codex CLI, Cursor and VS Code — one definition, loaded over MCP, instead of the same paragraphs pasted into four different config files.
 
-The MCP server runs on your machine, and its settings are stored locally. It can provide persona and user information to the MCP client; that client may send the information to a model provider or another service. Running MCP locally does not block that communication. Check the client's data handling before sharing personal information.
+Everything runs on your machine. The persona, the profile, whatever you tell it to remember — none of it leaves the device, and there is no server to run.
 
 ## Install
 
@@ -148,7 +148,7 @@ The design documents live in [docs/](https://github.com/masa-san-jp/Agent-Aiko/t
 
 アイコの人格を、どの MCP クライアントからでも同じ形で取り出せるサーバー。Claude Code でも Codex でも Cursor でも VS Code でも、同じ1つの定義を読む。設定ファイル4つに同じ文章を貼って回らなくてよくなる。
 
-MCPサーバーは手元で動き、設定ファイルも手元に保存されます。人格やユーザー情報は、要求に応じて接続したMCPクライアントへ渡され、クライアントがモデル提供元などの外部サービスへ送信する場合があります。MCPをローカルで動かすだけでは、その通信は遮断されません。個人情報を含める前に、利用するクライアントの情報の取り扱いを確認してください。
+すべて手元で動く。人格も、覚えたことも、端末の外へ出ない。立てるサーバーも無い。
 
 ### 入れる
 
@@ -212,17 +212,16 @@ node dist/server.js http --port 3000
 トークンはランダムな32バイト以上の値をbase64url形式（43〜128文字）にし、URLやコマンド引数に含めないでください。
 サーバーはトークンをログへ出力しません。変更する場合は新しい値でサーバーを再起動してください。
 待受は `127.0.0.1` 固定で、トークン認証に加えてHostとOriginを検証します。
-外部公開・リバースプロキシ経由の利用や、Claude.ai / ChatGPTのコネクタ登録には対応していません。
+外部公開・リバースプロキシ経由の利用や、Claude.ai / ChatGPTのコネクタ登録は、後続のOAuth・HTTPS対応後に行います。
 
 `/mcp` はPOSTによるJSON応答とDELETEによるセッション終了を提供します。GETの常設SSEストリームは提供しません。
 クライアントごとにMCPセッションとRuntime Profileを分離し、最大32セッション、無操作15分で破棄します。
 セッションIDだけではアクセスできません。ただし、同じトークンを持つ全接続はこのプロセスを起動した同じローカルユーザーのデータを使います。
-トークンを渡すことは、接続先に人格やユーザー情報を読む権限を渡すことです。信頼できるクライアントにのみ設定してください。
 この共有トークンはOAuthやtenant分離の代替ではなく、同じOSユーザー権限を持つ不正なプロセスから秘密を隔離するものでもありません。
 処理中のHTTPリクエストは認証処理を含め最大32件、TCP接続は最大128件です。上限超過は503で拒否します。
 POST本文は1 MiBまでです。終了はCtrl+CまたはSIGTERMで行えます。
 
-このHTTP接続はローカル検証用であり、複数ユーザー向けのサービスではありません。
+実装は [Issue #103](https://github.com/masa-san-jp/Agent-Aiko/issues/103) のPhase 1を対象としています。
 
 ## 外部OAuth認証基盤との連携（Phase 2・リソースサーバー）
 
