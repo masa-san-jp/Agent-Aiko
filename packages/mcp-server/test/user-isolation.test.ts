@@ -11,11 +11,14 @@ import { acceptPersonaProposals, acceptUserProposal } from "@agent-aiko/runtime-
 
 const packageDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const entry = join(packageDir, "dist", "server.js");
-const bundled = ["origin/persona.md", "INVARIANTS.md", "speech-styles/friend.md", "speech-styles/servant.md"];
+const commonFiles = [
+  "dist/server.js", "dist/index.js", "package.json", "persona/origin/persona.md",
+  "persona/INVARIANTS.md", "persona/speech-styles/friend.md", "persona/speech-styles/servant.md",
+];
 
 async function packageHashes(): Promise<string[]> {
-  return Promise.all(bundled.map(async (path) =>
-    createHash("sha256").update(await readFile(join(packageDir, "persona", path))).digest("hex"),
+  return Promise.all(commonFiles.map(async (path) =>
+    createHash("sha256").update(await readFile(join(packageDir, path))).digest("hex"),
   ));
 }
 
