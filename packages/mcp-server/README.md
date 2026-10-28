@@ -2,7 +2,7 @@
 
 **A persona you can carry between MCP clients.** Aiko is the same agent in Claude Code, Codex CLI, Cursor and VS Code — one definition, loaded over MCP, instead of the same paragraphs pasted into four different config files.
 
-The MCP server runs on your machine, and its settings are stored locally. It can provide persona and user information to the MCP client; that client may send the information to a model provider or another service. Check the client's data handling before sharing personal information.
+The MCP server runs on your machine, and its settings are stored locally. It can provide persona and user information to the MCP client; that client may send the information to a model provider or another service. Running MCP locally does not block that communication. Check the client's data handling before sharing personal information.
 
 ## Install
 
@@ -148,7 +148,7 @@ The design documents live in [docs/](https://github.com/masa-san-jp/Agent-Aiko/t
 
 アイコの人格を、どの MCP クライアントからでも同じ形で取り出せるサーバー。Claude Code でも Codex でも Cursor でも VS Code でも、同じ1つの定義を読む。設定ファイル4つに同じ文章を貼って回らなくてよくなる。
 
-MCPサーバーは手元で動き、設定ファイルも手元に保存されます。人格やユーザー情報は接続したMCPクライアントへ渡され、クライアントがモデル提供元などの外部サービスへ送信する場合があります。個人情報を含める前に、利用するクライアントの情報の取り扱いを確認してください。
+MCPサーバーは手元で動き、設定ファイルも手元に保存されます。人格やユーザー情報は、要求に応じて接続したMCPクライアントへ渡され、クライアントがモデル提供元などの外部サービスへ送信する場合があります。MCPをローカルで動かすだけでは、その通信は遮断されません。個人情報を含める前に、利用するクライアントの情報の取り扱いを確認してください。
 
 ### 入れる
 
