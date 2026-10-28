@@ -431,7 +431,7 @@ copy_aiko_template_tree() {
         # 利用者のものは上書きせず、uninstall の記録にも残さない。
         # 初期値が必要なファイルは、共有ストアに無いときだけ置く。
         # プロジェクト側の rules-base はコピーしない。
-        if { [ "$rel" = "capability/rules/rules-base.md" ] || [ "$rel" = "persona/origin/user.md" ]; } && [ ! -e "$AIKO_HOME/$rel" ]; then
+        if { [ "$rel" = "capability/rules/rules-base.md" ] || [ "$rel" = "persona/origin/user.md" ]; } && [ ! -e "$AIKO_HOME/$rel" ] && [ ! -L "$AIKO_HOME/$rel" ]; then
           mkdir -p "$(dirname "$AIKO_HOME/$rel")"
           cp -P "$TEMPLATE_DIR/aiko/$rel" "$AIKO_HOME/$rel"
         fi

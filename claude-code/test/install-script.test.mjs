@@ -65,6 +65,19 @@ describe("claude-code/scripts/install.sh", () => {
     assert.equal(await readFile(path, "utf8"), "address: FIXTURE_LOCAL_NAME\n");
   });
 
+  it("does not create origin user settings through a dangling symlink", async () => {
+    const project = join(sandbox.root, "project");
+    await mkdir(project, { recursive: true });
+    runInstaller({ cwd: project, home: sandbox.root });
+    const path = join(sandbox.root, ".aiko", "persona", "origin", "user.md");
+    const outside = join(sandbox.root, "outside-user.md");
+    await rm(path);
+    symlinkSync(outside, path);
+    runInstaller({ cwd: project, home: sandbox.root });
+    assert.equal(lstatSync(path).isSymbolicLink(), true);
+    assert.equal(existsSync(outside), false);
+  });
+
   it("refuses to install into $HOME/.claude", async () => {
     assert.throws(
       () => runInstaller({ cwd: sandbox.root, home: sandbox.root }),
