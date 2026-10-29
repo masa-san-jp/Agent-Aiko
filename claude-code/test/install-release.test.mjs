@@ -208,8 +208,13 @@ describe("installer: 配布物の取得と照合", () => {
 
   it("curl ラッパーは main を既定にしない", async () => {
     const wrapper = await readFile(join(REPO_ROOT, "scripts", "install.sh"), "utf8");
+    const ref = wrapper.match(/PINNED_REF="(v[0-9][A-Za-z0-9._-]*)"/)?.[1];
+    const rootReadme = await readFile(join(REPO_ROOT, "README.md"), "utf8");
+    const claudeReadme = await readFile(join(REPO_ROOT, "claude-code", "README.md"), "utf8");
     assert.equal(wrapper.includes("AGENT_AIKO_REF:-main"), false);
-    assert.match(wrapper, /PINNED_REF="v0\.3\.2"/);
+    assert.ok(ref, "インストーラはリリースタグを固定する");
+    assert.ok(rootReadme.includes(`/Agent-Aiko/${ref}/scripts/install.sh`));
+    assert.ok(claudeReadme.includes(`/Agent-Aiko/${ref}/scripts/install.sh`));
   });
 });
 

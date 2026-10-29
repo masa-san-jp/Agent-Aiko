@@ -1,7 +1,7 @@
 #!/bin/bash
 # Agent-Aiko Claude Code 版 installer
 # 経路：
-#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
+#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.3/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
 #   ラッパーの PINNED_REF は、そのリリースのタグに合わせる。
 #   bash scripts/install.sh                                                                              # 互換ラッパー経由
 #   bash claude-code/scripts/install.sh                                                                  # 直接実行
@@ -467,6 +467,15 @@ copy_state_if_missing "capability/skills"
 copy_state_if_missing "capability/rules/rules-base.md"
 MANIFEST_TMP="$(mktemp)"
 copy_aiko_template_tree
+# Release archives omit this seed so older updaters cannot overwrite it. A new
+# installation still needs the same initial file; never replace an existing
+# file or follow a dangling symlink.
+ORIGIN_USER="$AIKO_HOME/persona/origin/user.md"
+if ! path_exists "$ORIGIN_USER"; then
+  assert_parents_are_not_symlinks "$ORIGIN_USER" "$AIKO_HOME"
+  mkdir -p "$(dirname "$ORIGIN_USER")"
+  ( umask 077; set -o noclobber; printf 'name:\naddress:\n' > "$ORIGIN_USER" )
+fi
 # 一覧は原子的に置き換える。途中で失敗した一覧を残すと、消してよいものを
 # 消し損ねるより悪い（消してはいけないものが一覧に無い状態になる）。
 sort -u "$MANIFEST_TMP" > "$AIKO_HOME/.install-manifest"
