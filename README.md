@@ -25,7 +25,7 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 |----|------------|------|--------------|---------|
 | **[Claude Code 版](claude-code/)** | Anthropic Claude Code を使っている方 | Anthropic API（Claude Code 標準） | `~/.aiko/` ＋ プロジェクトの `.claude/skills/` | `claude` コマンドの中で `/aiko` |
 | **[Codex 版](codex/)** | ChatGPT サブスク（Plus / Pro / Business 等）を使う方 | `codex login`（ChatGPT OAuth） | `~/.aiko/` ＋ `~/.local/bin/aiko` | `aiko` コマンドで対話シェル |
-| **[Antigravity / Gemini CLI 版](antigravity/)** | Gemini CLI または Antigravity CLI を使っている方 | Google AI（Gemini CLI 標準） | `~/.aiko/` ＋ Gemini CLI extension | `gemini` コマンドの中で会話（起動時に自動注入） |
+| **[Antigravity / Gemini CLI 版](antigravity/)** | Antigravity CLI / Gemini CLI を使っている方 | 各CLI標準の認証 | `~/.aiko/` ＋ Antigravity用hook / Gemini用extension | `agy` / `gemini`（[導入方法・検証範囲](antigravity/)を参照） |
 
 3 版とも：
 - 同じ人格定義（`persona/origin/persona.md` / `INVARIANTS.md`）と同じ操作感（`/aiko-or` `/aiko-mode` `/aiko-diff` 等の slash command）
@@ -59,6 +59,8 @@ npx aiko-mcp install
 | `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
 | `--force` | 同じ名前で違う設定が入っていても置き換える |
 
+会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、次に人格を読み込んだときに反映されます。
+
 ### 1 つずつ入れる
 
 `npx -y aiko-mcp` をクライアントの起動コマンドに書くと、開いているプロジェクトの `node_modules/.bin/aiko-mcp` が先に動きます。偽の実行ファイルを置いたリポジトリを開くだけで、そのコードが起動します。起動コマンドは、インストール済みの `server.js` を node の絶対パスで指してください。`npx aiko-mcp install` はそう書きます。
@@ -74,13 +76,6 @@ codex mcp add aiko -- "$NODE" "$SERVER"
 ```
 
 入ったかどうかは `claude mcp list`（Codex は `codex mcp list`）で確認できます。`aiko ... ✔ Connected` と出れば完了です。
-
-### ボタンで入れる
-
-クリックするとクライアントが開いて、確認だけで入ります。このボタンは `npx -y aiko-mcp` を書くので、信頼できないリポジトリでは使わないでください。普段は `npx aiko-mcp install` を使います。
-
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Aiko-0098FF?logo=visualstudiocode&logoColor=white)](vscode:mcp/install?%7B%22name%22%3A%22aiko%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22aiko-mcp%22%5D%7D)
-[![Install in Cursor](https://img.shields.io/badge/Cursor-Install_Aiko-000000?logo=cursor&logoColor=white)](cursor://anysphere.cursor-deeplink/mcp/install?name=aiko&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImFpa28tbWNwIl19)
 
 ### 設定ファイルを直接書く場合
 
@@ -110,7 +105,7 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 「記憶は ~/notes にある」      → 場所を控える（中身は読みません）
 「自分用の人格を保存して」      → 独自人格として保存する
 「オリジナルに戻して」         → 元の人格へ戻る
-「friend モードで話して」      → 話し方を友だち口調にする（original / friend / servant）
+「friend モードで話して」      → 話し方の切り替えを提案する（original / friend / servant）
 ```
 
 
@@ -218,7 +213,7 @@ Codex App のペット表示に Aiko を選べるため、Aiko 人格で作業�
 /aiko-or <自然文>                アイコ（カスタマイズ）をカスタマイズ → 以降デフォルトで起動
 /aiko-origin                     アイコ（オリジナル）に切替（/aiko-org でも可）
 /aiko-reset [name]               アイコ（カスタマイズ）または指定人格をリセット（確認あり・履歴は残る）
-/aiko-export [name]              現在または指定の人格を共有用に出力（ユーザー情報は含めない）
+/aiko-export [name]              人格を出力（user.mdは含まない。共有前に本文・ルールを確認）
 /aiko-diff [name]                オリジナルと現在または指定の人格との差分を表示
 /aiko-personas                   利用できる名前付き人格と現在の選択状態を表示
 /aiko-new <name>                 新しい名前付き人格を作成して選択

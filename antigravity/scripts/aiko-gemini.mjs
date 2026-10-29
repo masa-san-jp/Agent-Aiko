@@ -2,9 +2,10 @@
 // aiko-gemini.mjs — Agent-Aiko CLI for Gemini CLI / Antigravity
 // Node.js 20+ / ESM / no external dependencies
 
-import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, appendFileSync, mkdirSync, existsSync, readdirSync, rmSync, realpathSync, lstatSync } from 'fs';
+import { join, dirname, resolve, relative, isAbsolute, sep } from 'path';
 import { homedir } from 'os';
+import { readSelectedUser } from './aiko-user-context.mjs';
 
 const AIKO_HOME = process.env.AIKO_HOME ?? join(homedir(), '.aiko');
 
@@ -19,16 +20,44 @@ const DENY_PATTERNS = [
   /(ファイル保護|保護).*(解除|無効|無視)/i,
 ];
 
-function readFileSafe(path, fallback = '') {
-  try {
-    return readFileSync(path, 'utf8').trim();
-  } catch {
-    return fallback;
+function assertInsideHome(filePath) {
+  const root = realpathSync(AIKO_HOME);
+  const lexical = resolve(filePath);
+  const rel = relative(resolve(AIKO_HOME), lexical);
+  if (isAbsolute(rel) || rel === '..' || rel.startsWith('..' + sep)) throw new Error('Path is outside AIKO_HOME');
+  let ancestor = lexical;
+  for (;;) {
+    try {
+      const actual = realpathSync(ancestor);
+      const actualRel = relative(root, actual);
+      if (isAbsolute(actualRel) || actualRel === '..' || actualRel.startsWith('..' + sep)) throw new Error('Path is outside AIKO_HOME');
+      return;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      // A dangling symlink must not be treated as a missing regular file.
+      try { if (lstatSync(ancestor).isSymbolicLink()) throw new Error('Dangling symlink is not allowed'); }
+      catch (statError) { if (statError.code !== 'ENOENT') throw statError; }
+      const parent = dirname(ancestor);
+      if (parent === ancestor) throw error;
+      ancestor = parent;
+    }
   }
 }
 
+function requireName(name) {
+  if (!SLUG_RE.test(name)) throw new Error('Invalid persona name');
+}
+
+function readFileSafe(path, fallback = '') {
+  assertInsideHome(path);
+  try { return readFileSync(path, 'utf8').trim(); }
+  catch (error) { if (error.code === 'ENOENT') return fallback; throw error; }
+}
+
 function writeFileSafe(filePath, content) {
+  assertInsideHome(filePath);
   mkdirSync(dirname(filePath), { recursive: true });
+  assertInsideHome(filePath);
   writeFileSync(filePath, content, 'utf8');
 }
 
@@ -43,7 +72,9 @@ function getMode() {
 }
 
 function getActivePersona() {
-  return readFileSafe(join(AIKO_HOME, 'active-persona'), '');
+  const name = readFileSafe(join(AIKO_HOME, 'active-persona'), '');
+  if (name) requireName(name);
+  return name;
 }
 
 function getPrefix(mode, activePersona) {
@@ -80,18 +111,6 @@ function resolveRulesPath(mode, activePersona) {
   return join(AIKO_HOME, 'persona', 'override', 'rules.md');
 }
 
-function resolveUserPath(mode, activePersona) {
-  if (mode === 'override' && activePersona) {
-    const p = join(AIKO_HOME, 'persona', 'overrides', activePersona, 'user.md');
-    if (existsSync(p)) return p;
-  }
-  if (mode === 'override') {
-    const p = join(AIKO_HOME, 'persona', 'override', 'user.md');
-    if (existsSync(p)) return p;
-  }
-  return join(AIKO_HOME, 'user.md');
-}
-
 function getInvariantsContent() {
   const p1 = join(AIKO_HOME, 'persona', 'INVARIANTS.md');
   const p2 = join(AIKO_HOME, 'INVARIANTS.md');
@@ -105,13 +124,12 @@ function buildContext() {
   const activePersona = getActivePersona();
   const prefix = getPrefix(mode, activePersona);
   const personaPath = resolvePersonaPath(mode, activePersona);
-  const userPath = resolveUserPath(mode, activePersona);
 
   const persona = readFileSafe(personaPath, '（人格ファイルが見つかりません）');
   const invariants = getInvariantsContent();
   const rules = readFileSafe(join(AIKO_HOME, 'capability', 'rules', 'rules-base.md'));
   const personaRules = mode === 'override' ? readFileSafe(resolveRulesPath(mode, activePersona)) : '';
-  const user = readFileSafe(userPath);
+  const user = readSelectedUser(AIKO_HOME, mode, activePersona, readFileSafe);
 
   const lines = [
     '# Agent-Aiko Runtime Context',
@@ -161,6 +179,7 @@ function appendOverrideHistory(action, detail) {
   const histPath = join(AIKO_HOME, 'override-history.jsonl');
   const entry = JSON.stringify({ timestamp: new Date().toISOString(), action, detail }) + '\n';
   try {
+    assertInsideHome(histPath);
     mkdirSync(AIKO_HOME, { recursive: true });
     appendFileSync(histPath, entry, 'utf8');
   } catch {
@@ -236,12 +255,13 @@ function cmdOverride(args) {
       process.exit(3);
     }
   }
-  writeFileSafe(join(AIKO_HOME, 'mode'), 'override');
-  const mode = getMode();
   const activePersona = getActivePersona();
   const targetPath = resolvePersonaPath('override', activePersona);
+  assertInsideHome(targetPath);
+  writeFileSafe(join(AIKO_HOME, 'mode'), 'override');
   const entry = `\n\n---\n\n## ユーザー指示（Antigravity / Gemini CLI override）\n\n- ${new Date().toISOString()}: ${instruction}\n`;
   try {
+    assertInsideHome(targetPath);
     appendFileSync(targetPath, entry, 'utf8');
   } catch {
     writeFileSafe(targetPath, readFileSafe(targetPath) + entry);
@@ -265,16 +285,15 @@ function cmdNew(args) {
     process.exit(1);
   }
 
+  const user = readSelectedUser(AIKO_HOME, getMode(), getActivePersona(), readFileSafe);
   const dir = join(AIKO_HOME, 'persona', 'overrides', name);
+  assertInsideHome(dir);
   mkdirSync(dir, { recursive: true });
 
   const originPersona = readFileSafe(resolvePersonaPath('origin', ''), '');
   writeFileSafe(join(dir, 'persona.md'), originPersona);
 
-  const userSrc = existsSync(join(AIKO_HOME, 'persona', 'override', 'user.md'))
-    ? join(AIKO_HOME, 'persona', 'override', 'user.md')
-    : join(AIKO_HOME, 'user.md');
-  writeFileSafe(join(dir, 'user.md'), readFileSafe(userSrc));
+  writeFileSafe(join(dir, 'user.md'), user);
   writeFileSafe(join(dir, 'rules.md'), '');
   writeFileSafe(join(dir, 'README.md'), `# ${name} persona\n\nAgent-Aiko named persona.\n`);
 
@@ -303,8 +322,11 @@ function cmdSelect(args) {
     console.log('mode を override（名前なし）に変更しました。');
     return;
   }
+  requireName(name);
   const personaDir = join(AIKO_HOME, 'persona', 'overrides', name);
   const personaFile = join(AIKO_HOME, 'persona', 'overrides', `${name}.md`);
+  assertInsideHome(personaDir);
+  assertInsideHome(personaFile);
   if (!existsSync(personaDir) && !existsSync(personaFile)) {
     console.error(`人格 "${name}" が見つかりません。`);
     process.exit(1);
@@ -325,6 +347,7 @@ function cmdPersonas() {
 
   const overridesDir = join(AIKO_HOME, 'persona', 'overrides');
   if (existsSync(overridesDir)) {
+    assertInsideHome(overridesDir);
     try {
       const entries = readdirSync(overridesDir, { withFileTypes: true });
       for (const e of entries) {
@@ -340,19 +363,23 @@ function cmdPersonas() {
 
 function cmdDiff(args) {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
-  const name = args[0] ?? '';
+  const requestedName = args[0] ?? '';
+  const mode = getMode();
+  const activePersona = getActivePersona();
+  const name = requestedName || (mode === 'override' && activePersona ? activePersona : mode);
   const originPath = resolvePersonaPath('origin', '');
   const originLines = readFileSafe(originPath).split('\n');
 
   let targetPath;
   let targetLabel;
-  if (!name || name === 'override') {
+  if (name === 'override') {
     targetPath = resolvePersonaPath('override', '');
     targetLabel = 'override';
   } else if (name === 'origin') {
     console.log('（origin との差分は自分自身なので空です）');
     return;
   } else {
+    requireName(name);
     targetPath = join(AIKO_HOME, 'persona', 'overrides', name, 'persona.md');
     targetLabel = name;
   }
@@ -372,19 +399,19 @@ function cmdExport(args) {
   const mode = getMode();
   const activePersona = getActivePersona();
 
-  let targetName = name || (activePersona || (mode === 'override' ? 'override' : 'origin'));
+  const targetName = name || (mode === 'override' && activePersona ? activePersona : mode);
   let personaPath, rulesPath;
 
-  if (!name || name === 'origin') {
+  if (targetName === 'origin') {
     personaPath = resolvePersonaPath('origin', '');
     rulesPath = resolveRulesPath('origin', '');
-    targetName = 'origin';
-  } else if (name === 'override') {
+  } else if (targetName === 'override') {
     personaPath = resolvePersonaPath('override', '');
     rulesPath = resolveRulesPath('override', '');
   } else {
-    personaPath = join(AIKO_HOME, 'persona', 'overrides', name, 'persona.md');
-    rulesPath = join(AIKO_HOME, 'persona', 'overrides', name, 'rules.md');
+    requireName(targetName);
+    personaPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'persona.md');
+    rulesPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'rules.md');
   }
 
   let personaContent = readFileSafe(personaPath);
@@ -399,6 +426,7 @@ function cmdExport(args) {
     `- exportedAt: ${new Date().toISOString()}`,
     '- source: antigravity-gemini',
     `- name: ${targetName}`,
+    '- 注意: user.md は含みませんが、人格本文やルールには個人情報が残る場合があります。共有前に内容を確認してください。',
     '',
     '## persona.md',
     '',
@@ -413,12 +441,15 @@ function cmdExport(args) {
 function cmdReset(args) {
   if (!isInitialized()) { console.log('Agent-Aiko is not initialized.'); process.exit(4); }
   const confirmed = args.includes('--yes') || args.includes('confirm');
-  const targetName = args.filter(a => a !== '--yes' && a !== 'confirm')[0] ?? '';
+  const requestedName = args.filter(a => a !== '--yes' && a !== 'confirm')[0] ?? '';
+  const targetName = requestedName || (getMode() === 'override' ? getActivePersona() : '') || 'override';
+  if (targetName === 'origin') throw new Error('The origin persona cannot be reset');
+  if (targetName && targetName !== 'override') requireName(targetName);
 
   if (!confirmed) {
     const mode = getMode();
     const activePersona = getActivePersona();
-    const target = targetName || (activePersona || 'override');
+    const target = targetName;
     console.log(`Reset は破壊的操作です。
 
 現在の状態:
@@ -434,13 +465,16 @@ function cmdReset(args) {
   const originPath = resolvePersonaPath('origin', '');
   const originContent = readFileSafe(originPath);
 
-  if (targetName && targetName !== 'override') {
+  if (targetName !== 'override') {
     const targetPath = join(AIKO_HOME, 'persona', 'overrides', targetName, 'persona.md');
     writeFileSafe(targetPath, originContent);
     console.log(`人格 "${targetName}" を origin にリセットしました。`);
   } else {
     const overridePath = join(AIKO_HOME, 'persona', 'override', 'persona.md');
     const legacyPath = join(AIKO_HOME, 'persona', 'aiko-override.md');
+    // Validate both destinations before changing either file.
+    assertInsideHome(overridePath);
+    if (existsSync(legacyPath)) assertInsideHome(legacyPath);
     writeFileSafe(overridePath, originContent);
     if (existsSync(legacyPath)) writeFileSafe(legacyPath, originContent);
     console.log('override persona を origin にリセットしました。');
@@ -473,6 +507,7 @@ function cmdDelete(args) {
     console.error(`人格 "${activePersona}" のディレクトリが見つかりません。`);
     process.exit(2);
   }
+  assertInsideHome(dir);
   rmSync(dir, { recursive: true, force: true });
   writeFileSafe(join(AIKO_HOME, 'active-persona'), '');
   writeFileSafe(join(AIKO_HOME, 'mode'), 'origin');

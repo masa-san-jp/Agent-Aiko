@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { strict as assert } from "node:assert";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -7,7 +8,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, it } from "node:test";
 
 const execFileAsync = promisify(execFile);
-const REPO_ROOT = resolve(dirname(new URL(import.meta.url).pathname), "..", "..");
+const REPO_ROOT = resolve(dirname(fileURLToPath(new URL(import.meta.url))), "..", "..");
 const INSTALLER = join(REPO_ROOT, "antigravity", "scripts", "install.sh");
 
 describe("antigravity/scripts/install.sh", () => {

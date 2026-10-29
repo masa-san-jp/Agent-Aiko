@@ -1,12 +1,13 @@
+import { fileURLToPath } from 'node:url';
 // aiko-gemini.test.mjs — unit tests for aiko-gemini.mjs subcommands
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, existsSync, readFileSync, mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, mkdtempSync, rmSync, symlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 
-const SCRIPT = new URL('../scripts/aiko-gemini.mjs', import.meta.url).pathname;
+const SCRIPT = fileURLToPath(new URL('../scripts/aiko-gemini.mjs', import.meta.url));
 
 function setupAikoHome(base) {
   const home = join(base, '.aiko');
@@ -41,6 +42,105 @@ test.beforeEach(() => {
 });
 test.afterEach(() => {
   rmSync(tmpBase, { recursive: true, force: true });
+});
+
+test('persona commands refuse names that escape the shared store', () => {
+  const home = setupAikoHome(tmpBase);
+  const outside = join(tmpBase, 'outside');
+  mkdirSync(outside);
+  writeFileSync(join(outside, 'persona.md'), 'OUTSIDE_FIXTURE');
+  for (const args of [['select', '../../../outside'], ['diff', '../../../outside'],
+    ['export', '../../../outside'], ['reset', 'confirm', '../../../outside']]) {
+    const result = run(home, args);
+    assert.notEqual(result.status, 0, args[0]);
+    assert.doesNotMatch(result.stdout, /OUTSIDE_FIXTURE/);
+    assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+  }
+  writeFileSync(join(home, 'mode'), 'override');
+  writeFileSync(join(home, 'active-persona'), '../../../outside');
+  const result = run(home, ['delete', 'confirm']);
+  assert.notEqual(result.status, 0);
+  assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+});
+
+test('persona commands do not follow store symlinks outside the shared store', () => {
+  const home = setupAikoHome(tmpBase);
+  const outside = join(tmpBase, 'outside');
+  mkdirSync(outside);
+  writeFileSync(join(outside, 'persona.md'), 'OUTSIDE_FIXTURE');
+  symlinkSync(outside, join(home, 'persona', 'overrides', 'linked'));
+  for (const args of [['select', 'linked'], ['diff', 'linked'], ['export', 'linked'], ['reset', 'confirm', 'linked']]) {
+    const result = run(home, args);
+    assert.notEqual(result.status, 0, args[0]);
+    assert.doesNotMatch(result.stdout, /OUTSIDE_FIXTURE/);
+    assert.equal(readFileSync(join(outside, 'persona.md'), 'utf8'), 'OUTSIDE_FIXTURE');
+  }
+});
+
+test('commands reject external user data and dangling output symlinks', () => {
+  const home = setupAikoHome(tmpBase);
+  const secret = join(tmpBase, 'outside-user.md');
+  writeFileSync(secret, 'OUTSIDE_FIXTURE');
+  rmSync(join(home, 'user.md'));
+  symlinkSync(secret, join(home, 'user.md'));
+  const context = run(home, ['context']);
+  assert.notEqual(context.status, 0);
+  assert.doesNotMatch(context.stdout, /OUTSIDE_FIXTURE/);
+  const destination = join(home, 'persona', 'overrides', 'linked');
+  symlinkSync(join(tmpBase, 'does-not-exist'), destination);
+  const reset = run(home, ['reset', 'confirm', 'linked']);
+  assert.notEqual(reset.status, 0);
+  assert.equal(existsSync(join(tmpBase, 'does-not-exist', 'persona.md')), false);
+});
+
+test('export without a name uses the selected persona', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  writeFileSync(join(home, 'persona', 'overrides', 'review', 'persona.md'), 'REVIEW_EXPORT_FIXTURE');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  const result = run(home, ['export']);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /REVIEW_EXPORT_FIXTURE/);
+  assert.match(result.stdout, /name: review/);
+});
+
+test('diff without a name uses the selected persona', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  writeFileSync(join(home, 'persona', 'overrides', 'review', 'persona.md'), 'REVIEW_DIFF_FIXTURE');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  const result = run(home, ['diff']);
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /REVIEW_DIFF_FIXTURE/);
+});
+
+test('reset confirmation resets the selected persona without overwriting default override', () => {
+  const home = setupAikoHome(tmpBase);
+  mkdirSync(join(home, 'persona', 'overrides', 'review'));
+  const selected = join(home, 'persona', 'overrides', 'review', 'persona.md');
+  const defaultOverride = join(home, 'persona', 'override', 'persona.md');
+  writeFileSync(selected, 'REVIEW_RESET_FIXTURE');
+  const originalDefault = readFileSync(defaultOverride, 'utf8');
+  assert.equal(run(home, ['select', 'review']).status, 0);
+  assert.match(run(home, ['reset']).stdout, /review/);
+  assert.equal(run(home, ['reset', 'confirm']).status, 0);
+  assert.equal(readFileSync(selected, 'utf8'), 'アイコ origin persona');
+  assert.equal(readFileSync(defaultOverride, 'utf8'), originalDefault);
+});
+
+test('reset validates all destinations before changing either override file', () => {
+  const home = setupAikoHome(tmpBase);
+  writeFileSync(join(home, 'mode'), 'override');
+  const current = join(home, 'persona', 'override', 'persona.md');
+  writeFileSync(current, 'KEEP_OVERRIDE_FIXTURE');
+  const external = join(tmpBase, 'external-persona.md');
+  writeFileSync(external, 'KEEP_EXTERNAL_FIXTURE');
+  const legacy = join(home, 'persona', 'aiko-override.md');
+  rmSync(legacy);
+  symlinkSync(external, legacy);
+  assert.notEqual(run(home, ['reset', 'confirm']).status, 0);
+  assert.equal(readFileSync(current, 'utf8'), 'KEEP_OVERRIDE_FIXTURE');
+  assert.equal(readFileSync(external, 'utf8'), 'KEEP_EXTERNAL_FIXTURE');
 });
 
 // AG-CLI-001: 未初期化で context
@@ -126,6 +226,22 @@ test('AG-CLI-010: export does not include user.md content', () => {
   const r = run(home, ['export', 'review']);
   assert.equal(r.status, 0, `stderr: ${r.stderr}`);
   assert.ok(!r.stdout.includes('秘密のユーザー'), 'user.md content should not appear in export');
+});
+
+test('export warns that persona and rules may contain private information', () => {
+  const home = setupAikoHome(tmpBase);
+  const persona = join(home, 'persona', 'overrides', 'review');
+  mkdirSync(persona, { recursive: true });
+  writeFileSync(join(persona, 'persona.md'), 'PERSONA_PRIVATE_FIXTURE');
+  writeFileSync(join(persona, 'rules.md'), 'RULE_PRIVATE_FIXTURE');
+  writeFileSync(join(persona, 'user.md'), 'USER_PRIVATE_FIXTURE');
+  const result = run(home, ['export', 'review']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /PERSONA_PRIVATE_FIXTURE/);
+  assert.match(result.stdout, /RULE_PRIVATE_FIXTURE/);
+  assert.doesNotMatch(result.stdout, /USER_PRIVATE_FIXTURE/);
+  assert.match(result.stdout, /共有前/);
+  assert.match(result.stdout, /個人情報/);
 });
 
 test('AG-CLI-014: reset with confirm keyword executes reset', () => {

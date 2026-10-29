@@ -9,7 +9,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { SERVER_VERSION } from "../src/aiko-server.js";
 
@@ -25,7 +25,7 @@ const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"))
 };
 
 test("公開する名前と版が意図どおり", () => {
-  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.3.2"]);
+  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.3.3"]);
 });
 
 test("レジストリに出す名前と版が、package.json と食い違わない", () => {
@@ -122,6 +122,20 @@ test("配るのは bundle した2本だけ", () => {
 test("人格を同梱している", () => {
   assert.equal(existsSync(join(pkgRoot, "persona", "origin", "persona.md")), true);
   assert.equal(existsSync(join(pkgRoot, "persona", "INVARIANTS.md")), true);
+});
+
+test("同梱人格には共通の定義だけを含める", () => {
+  const personaRoot = join(pkgRoot, "persona");
+  const files = shippedFiles()
+    .filter((path) => path.startsWith(`${personaRoot}${sep}`))
+    .map((path) => relative(personaRoot, path).split(sep).join("/"))
+    .sort();
+  assert.deepEqual(files, [
+    "INVARIANTS.md",
+    "origin/persona.md",
+    "speech-styles/friend.md",
+    "speech-styles/servant.md",
+  ]);
 });
 
 test("話し方の定義を同梱している", () => {

@@ -427,11 +427,11 @@ copy_aiko_template_tree() {
   ( cd "$TEMPLATE_DIR/aiko" && find . -mindepth 1 -print ) | while IFS= read -r item; do
     rel="${item#./}"
     case "$rel" in
-      mode|user.md|override-history.jsonl|active-persona|persona/aiko-override.md|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
+      mode|user.md|user-profile.json|user-proposal.md|override-history.jsonl|active-persona|speech-style|speech-style-proposal|speech-styles|speech-styles/*|persona/origin/user.md|persona/aiko-override.md|persona/override|persona/override/*|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
         # 利用者のものは上書きせず、uninstall の記録にも残さない。
-        # rules-base だけは、共有ストアに無いときテンプレートから置く。
+        # 初期値が必要なファイルは、共有ストアに無いときだけ置く。
         # プロジェクト側の rules-base はコピーしない。
-        if [ "$rel" = "capability/rules/rules-base.md" ] && [ ! -e "$AIKO_HOME/$rel" ]; then
+        if { [ "$rel" = "capability/rules/rules-base.md" ] || [ "$rel" = "persona/origin/user.md" ]; } && [ ! -e "$AIKO_HOME/$rel" ] && [ ! -L "$AIKO_HOME/$rel" ]; then
           mkdir -p "$(dirname "$AIKO_HOME/$rel")"
           cp -P "$TEMPLATE_DIR/aiko/$rel" "$AIKO_HOME/$rel"
         fi
