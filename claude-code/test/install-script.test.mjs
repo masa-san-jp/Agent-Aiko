@@ -75,7 +75,7 @@ describe("claude-code/scripts/install.sh", () => {
     await mkdir(scripts, { recursive: true });
     await cp(INSTALLER, join(scripts, "install.sh"));
     await cp(join(REPO_ROOT, "claude-code", "template"), template, { recursive: true });
-    await rm(join(template, ".claude", "aiko", "persona", "origin", "user.md"));
+    await rm(join(template, ".claude", "aiko", "persona", "origin", "user.md"), { force: true });
 
     const project = join(sandbox.root, "project");
     await mkdir(project, { recursive: true });
