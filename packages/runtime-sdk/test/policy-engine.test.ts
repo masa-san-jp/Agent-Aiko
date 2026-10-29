@@ -29,7 +29,7 @@ const clock = () => new Date("2026-08-01T00:00:00.000Z");
 const manifest: PermissionManifest = {
   schema_version: 1,
   runtime_id: "claude-code",
-  filesystem: { writable_paths: ["/home/example/dev/project"] },
+  filesystem: { writable_paths: ["/tmp/aiko-fixture-user/dev/project"] },
   network: { outbound: "allowlist", allowed_hosts: ["api.github.com"] },
   approval: { policy: "on-request", require_for: ["git-push"] },
   sandbox: { mode: "workspace-write" },
@@ -98,7 +98,7 @@ test("取り返しがつかない操作は require_approval", () => {
   const decision = evaluate(
     action({
       type: "file.delete",
-      targets: [{ type: "file", identifier: "/home/example/dev/project/tmp.txt" }],
+      targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/tmp.txt" }],
       effects: { ...noEffects, irreversible: true },
     }),
   );
@@ -119,7 +119,7 @@ test(".. で writable の外へ出るパスは前方一致では通さない", (
   const decision = evaluate(
     action({
       type: "file.write",
-      targets: [{ type: "file", identifier: "/home/example/dev/project/../etc/passwd" }],
+      targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/../etc/passwd" }],
     }),
   );
   assert.equal(decision.decision, "deny");
@@ -299,7 +299,7 @@ test("期限切れの承認は無効になる", () => {
 test("有効な承認があれば同じ操作は止まらない", () => {
   const target = action({
     type: "file.delete",
-    targets: [{ type: "file", identifier: "/home/example/dev/project/tmp.txt" }],
+    targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/tmp.txt" }],
     effects: { ...noEffects, irreversible: true },
   });
   const engine = new DeterministicPolicyEngine({ permissionManifest: manifest, clock });
@@ -319,7 +319,7 @@ test("有効な承認があれば同じ操作は止まらない", () => {
 test("規則集合が変われば過去の承認は効かない", () => {
   const target = action({
     type: "file.delete",
-    targets: [{ type: "file", identifier: "/home/example/dev/project/tmp.txt" }],
+    targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/tmp.txt" }],
     effects: { ...noEffects, irreversible: true },
   });
   const grant: ApprovalGrant = {
@@ -340,7 +340,7 @@ test("取り返しがつかない操作の判定はキャッシュしない", ()
   const decision = evaluate(
     action({
       type: "file.delete",
-      targets: [{ type: "file", identifier: "/home/example/dev/project/tmp.txt" }],
+      targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/tmp.txt" }],
       effects: { ...noEffects, irreversible: true },
     }),
   );
