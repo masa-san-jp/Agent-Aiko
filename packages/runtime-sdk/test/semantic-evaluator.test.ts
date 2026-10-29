@@ -23,7 +23,7 @@ const clock = () => new Date("2026-08-01T00:00:00.000Z");
 const manifest: PermissionManifest = {
   schema_version: 1,
   runtime_id: "claude-code",
-  filesystem: { writable_paths: ["/home/example/dev/project"] },
+  filesystem: { writable_paths: ["/tmp/aiko-fixture-user/dev/project"] },
   network: { outbound: "allowed" },
   sandbox: { mode: "workspace-write" },
 };
