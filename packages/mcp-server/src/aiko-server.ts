@@ -23,7 +23,7 @@ import {
   proposeUserMarkdown,
   readSpeechStyle,
   SPEECH_STYLES,
-  switchSpeechStyle,
+  proposeSpeechStyle,
   RuntimeSdkError,
   SemanticBudget,
   ValidateResponseRequestSchema,
@@ -40,7 +40,7 @@ import { ProfileStore } from "./profile-store.js";
 import { registerPrompts } from "./prompts.js";
 
 export const SERVER_NAME = "aiko-mcp";
-export const SERVER_VERSION = "0.3.2";
+export const SERVER_VERSION = "0.3.3";
 
 /** Prompt（aiko.activate など）で人格を置くときの名乗り。人格や話し方を切り替えても
  *  変えない——「Aiko-<人格名>」のように中身の都合が名前に出ると、同じ Aiko に見えなくなる。
@@ -473,16 +473,20 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
     server.registerTool(
       "aiko.switch_speech_style",
       {
-        title: "話し方を切り替える",
+        title: "話し方の切り替えを提案する",
         description:
-          "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。人格は変えず口調だけを変える。反映は次に人格を読み込んだとき（aiko.activate など）",
+          "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。提案として残り、利用者が aiko accept した後、次に人格を読み込んだときに反映される",
         inputSchema: { name: z.enum(SPEECH_STYLES) },
       },
       async ({ name }) => {
         try {
-          await switchSpeechStyle(aikoHome, name);
+          const path = await proposeSpeechStyle(aikoHome, name);
           return json({
-            switched: true,
+            proposed: true,
+            applied: false,
+            switched: false,
+            path,
+            next: "aiko accept",
             name,
             speechStyles: await listSpeechStyles(aikoHome),
           });

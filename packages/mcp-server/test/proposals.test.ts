@@ -10,7 +10,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { PersonaRepository } from "@agent-aiko/core";
-import { acceptPersonaProposals, acceptUserProposal, readUserMarkdown } from "@agent-aiko/runtime-sdk";
+import { acceptPersonaProposals, acceptSpeechStyleProposal, acceptUserProposal, readSpeechStyle, readUserMarkdown } from "@agent-aiko/runtime-sdk";
 import { createAikoServer } from "../src/aiko-server.js";
 
 const persona = {
@@ -78,6 +78,21 @@ test("save / switch / remember は本番の人格と user.md を書かない", a
       await readFile(join(home, "persona", "proposals", "trial", "persona.md"), "utf8"),
       /会話から入れた人格/,
     );
+
+    const style = parse(await client.callTool({
+      name: "aiko.switch_speech_style", arguments: { name: "friend" },
+    }));
+    assert.equal(style["proposed"], true);
+    assert.equal(style["applied"], false);
+    assert.equal(style["switched"], false);
+    assert.equal(style["next"], "aiko accept");
+    assert.equal(await readSpeechStyle(home), "original");
+    assert.equal(await acceptSpeechStyleProposal(home), "friend");
+    assert.equal(await readSpeechStyle(home), "friend");
+    assert.equal(await acceptSpeechStyleProposal(home), undefined);
+    await writeFile(join(home, "speech-style-proposal"), "../injected\n");
+    await assert.rejects(acceptSpeechStyleProposal(home), /不正/);
+    assert.equal(await readSpeechStyle(home), "friend");
 
     const accepted = await acceptPersonaProposals(home);
     assert.deepEqual(accepted.saved, ["trial"]);

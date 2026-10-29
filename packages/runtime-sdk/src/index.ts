@@ -45,12 +45,14 @@ export type { PersonaRepository, PersonaSnapshot } from "@agent-aiko/core";
 // 人格の一覧・切り替え・保存。利用側が core を直接見ないための口（§1）。
 export {
   acceptPersonaProposals,
+  acceptSpeechStyleProposal,
   deletePersona,
   listPersonas,
   listSpeechStyles,
   PersonaStoreError,
   proposePersona,
   proposePersonaSwitch,
+  proposeSpeechStyle,
   readActivePersona,
   readMode,
   readSpeechStyle,

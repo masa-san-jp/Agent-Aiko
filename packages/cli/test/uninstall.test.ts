@@ -215,3 +215,14 @@ test("計画の時点で利用者のものを対象に入れない", async () =>
     await s.cleanup();
   }
 });
+
+test("manifest に載っていても人格別ユーザー設定とプロフィールを消さない", async () => {
+  const s = await installed();
+  try {
+    const paths = ["persona/origin/user.md", "persona/override/user.md", "persona/override/persona.md", "user-profile.json", "user-proposal.md", "speech-style", "speech-style-proposal", "speech-styles/friend.md"];
+    for (const path of paths) await write(join(s.aikoHome, path), "FIXTURE_USER_DATA\n");
+    await writeFile(join(s.aikoHome, MANIFEST_NAME), paths.join("\n"));
+    await uninstall(s.aikoHome);
+    for (const path of paths) assert.equal(await readFile(join(s.aikoHome, path), "utf8"), "FIXTURE_USER_DATA\n", path);
+  } finally { await s.cleanup(); }
+});

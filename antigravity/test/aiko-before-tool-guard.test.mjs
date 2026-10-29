@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 // aiko-before-tool-guard.test.mjs — tests for BeforeTool hook
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import { join } from 'path';
 import { tmpdir, homedir } from 'os';
 import { spawnSync } from 'child_process';
 
-const SCRIPT = new URL('../scripts/aiko-before-tool-guard.mjs', import.meta.url).pathname;
+const SCRIPT = fileURLToPath(new URL('../scripts/aiko-before-tool-guard.mjs', import.meta.url));
 
 function run(aikoHome, toolInput) {
   const input = JSON.stringify(toolInput);
