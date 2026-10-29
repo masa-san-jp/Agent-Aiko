@@ -208,8 +208,9 @@ describe("installer: 配布物の取得と照合", () => {
 
   it("curl ラッパーは main を既定にしない", async () => {
     const wrapper = await readFile(join(REPO_ROOT, "scripts", "install.sh"), "utf8");
+    const { version } = JSON.parse(await readFile(join(REPO_ROOT, "packages", "mcp-server", "package.json"), "utf8"));
     assert.equal(wrapper.includes("AGENT_AIKO_REF:-main"), false);
-    assert.match(wrapper, /PINNED_REF="v0\.3\.2"/);
+    assert.equal(wrapper.includes(`PINNED_REF="v${version}"`), true);
   });
 });
 

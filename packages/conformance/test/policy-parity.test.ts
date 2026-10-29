@@ -47,7 +47,7 @@ const user = {
 const permissionManifest: PermissionManifest = {
   schema_version: 1,
   runtime_id: "claude-code",
-  filesystem: { writable_paths: ["/home/example/dev/project"] },
+  filesystem: { writable_paths: ["/tmp/aiko-fixture-user/dev/project"] },
   network: { outbound: "denied" },
   sandbox: { mode: "workspace-write" },
 };
@@ -61,7 +61,7 @@ const evaluateRequest: EvaluateActionRequest = {
     actionId: "a-1",
     type: "file.delete",
     summary: "一時ファイルを消す",
-    targets: [{ type: "file", identifier: "/home/example/dev/project/tmp.txt" }],
+    targets: [{ type: "file", identifier: "/tmp/aiko-fixture-user/dev/project/tmp.txt" }],
     effects: {
       external: false,
       irreversible: true,

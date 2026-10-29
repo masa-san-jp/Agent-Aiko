@@ -128,7 +128,7 @@ Invariants を空にした Persona Package を置ければ、設計書 §6.5 の
 
 ```
 $ ls -ld ~/.aiko
-drwxrwxr-x 33 masa masa 4096  7月 30 19:54 /home/example/.aiko
+drwxrwxr-x … ~/.aiko （所有者名とパスを省略）
 ```
 
 `0775` であり `0700` ではない。`claude-code/scripts/install.sh` は状態ファイルを `cp -R` で置くだけで、`chmod 600` / `chmod 700` を一度も発行していない（明示的な `chmod` は `644` と `u+w` のみ）。つまり権限は umask 任せで、同一端末の他ユーザーから読める状態になりうる。

@@ -146,6 +146,19 @@ jobs:
           # git archive はタグの中身をそのまま固める。ビルド成果物を含まないので、
           # 同じタグから作り直せば同じ checksum が出る。
           git archive --format=tar.gz --prefix="${name}/" -o "dist-release/${name}.tar.gz" "$tag"
+          # Old updaters do not recognize these user-owned paths. Refuse to
+          # publish a template containing any of them.
+          tar -tzf "dist-release/${name}.tar.gz" > dist-release/archive-files.txt
+          prefix="${name}/claude-code/template/.claude/aiko"
+          while IFS= read -r entry; do
+            case "$entry" in
+              "$prefix/user-profile.json"|"$prefix/user-proposal.md"|"$prefix/speech-style"|"$prefix/speech-style-proposal"|"$prefix/speech-styles"|"$prefix/speech-styles/"*|"$prefix/persona/origin/user.md"|"$prefix/persona/override"|"$prefix/persona/override/"*)
+                echo "refusing archive containing an unsafe legacy update target" >&2
+                exit 1
+                ;;
+            esac
+          done < dist-release/archive-files.txt
+          rm dist-release/archive-files.txt
           cd dist-release
           sha256sum "${name}.tar.gz" > SHA256SUMS
           echo "name=$name" >> "$GITHUB_OUTPUT"
