@@ -18,12 +18,16 @@ Claude Code 環境で動く Aiko の配布物です。既存プロジェクト�
 
 ## インストール
 
+**v0.3.2 以前を利用中の場合:** 古い `aiko update`、`aiko rollback`、`aiko uninstall` は、人格別のユーザー設定を上書き・削除する場合があります。操作前に利用者の保存先（通常は `~/.aiko`）を端末内に退避してください。下の新しいインストーラによる再導入は既存設定を保持し、古い導入記録も修正します。ただし、インストーラは既存の `aiko` コマンド自体を更新しないため、古いコマンドの rollback・uninstall は使わず、更新済みの CLI を用意してから実行してください。
+
+更新済み CLI を使うには、v0.3.3 の配布物を検証して展開したディレクトリで `npm ci --ignore-scripts` と `npm run build` を実行し、`node packages/cli/dist/cli.js rollback` のように実行します。
+
 ### A. curl でインストール（推奨）
 
 インストールしたいプロジェクトのディレクトリで次のコマンドを実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.3/scripts/install.sh | bash
 ```
 
 `scripts/install.sh` は互換ラッパーで、内部的に `claude-code/scripts/install.sh` を実行します。確認プロンプトで `Y` を入力すると、Aiko 共有ストア `~/.aiko/` が初期化され、対象プロジェクトには `.claude/skills/aiko*/` と `.claude/scripts/aiko-*.sh` が配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。

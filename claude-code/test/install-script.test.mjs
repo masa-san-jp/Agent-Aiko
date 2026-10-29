@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, statSync, symlinkSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,8 +18,8 @@ async function makeSandbox() {
   };
 }
 
-function runInstaller({ cwd, home, input = "" }) {
-  return execFileSync("bash", [INSTALLER, "--yes"], {
+function runInstaller({ cwd, home, input = "", installer = INSTALLER }) {
+  return execFileSync("bash", [installer, "--yes"], {
     cwd,
     env: { ...process.env, HOME: home, AIKO_HOME: join(home, ".aiko") },
     input,
@@ -61,7 +61,32 @@ describe("claude-code/scripts/install.sh", () => {
     runInstaller({ cwd: project, home: sandbox.root });
     const path = join(sandbox.root, ".aiko", "persona", "origin", "user.md");
     await writeFile(path, "address: FIXTURE_LOCAL_NAME\n");
+    const manifest = join(sandbox.root, ".aiko", ".install-manifest");
+    await writeFile(manifest, `${await readFile(manifest, "utf8")}persona/origin/user.md\n`);
     runInstaller({ cwd: project, home: sandbox.root });
+    assert.equal(await readFile(path, "utf8"), "address: FIXTURE_LOCAL_NAME\n");
+    assert.equal((await readFile(manifest, "utf8")).split("\n").includes("persona/origin/user.md"), false);
+  });
+
+  it("initializes and preserves origin settings when a release omits the seed", async () => {
+    const release = join(sandbox.root, "release", "claude-code");
+    const scripts = join(release, "scripts");
+    const template = join(release, "template");
+    await mkdir(scripts, { recursive: true });
+    await cp(INSTALLER, join(scripts, "install.sh"));
+    await cp(join(REPO_ROOT, "claude-code", "template"), template, { recursive: true });
+    await rm(join(template, ".claude", "aiko", "persona", "origin", "user.md"));
+
+    const project = join(sandbox.root, "project");
+    await mkdir(project, { recursive: true });
+    const installer = join(scripts, "install.sh");
+    const path = join(sandbox.root, ".aiko", "persona", "origin", "user.md");
+    runInstaller({ cwd: project, home: sandbox.root, installer });
+    assert.equal(await readFile(path, "utf8"), "name:\naddress:\n");
+    assert.equal(statSync(path).mode & 0o777, 0o600);
+
+    await writeFile(path, "address: FIXTURE_LOCAL_NAME\n");
+    runInstaller({ cwd: project, home: sandbox.root, installer });
     assert.equal(await readFile(path, "utf8"), "address: FIXTURE_LOCAL_NAME\n");
   });
 

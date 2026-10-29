@@ -1,0 +1,4 @@
+# Older updaters copy every template file they do not recognize as user-owned.
+# Never ship this seed in a Git release archive: those updaters would overwrite
+# an existing persona-specific user file with the blank template.
+/claude-code/template/.claude/aiko/persona/origin/user.md export-ignore
