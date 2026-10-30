@@ -132,7 +132,7 @@ test("初回の呼び名は提案を承認し、MCP を再起動すると反映�
   const restarted = new Client({ name: "first-user-restarted", version: "0.0.0" });
   const connect = (target: Client) => target.connect(new StdioClientTransport({
     command: process.execPath, args: [serverEntry],
-    env: { ...process.env, AIKO_HOME: home } as Record<string, string>,
+    env: { ...process.env, HOME: home, AIKO_HOME: home, AIKO_USER_PROFILE: "" } as Record<string, string>,
   }));
   try {
     await connect(client);
