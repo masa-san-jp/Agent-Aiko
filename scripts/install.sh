@@ -18,7 +18,7 @@ set -euo pipefail
 
 # 既定は公開済みのリリースタグ。ブランチ名や main は取らない。
 # インストーラを変えたリリースでは、タグを打つ前に PINNED_REF をそのタグへ合わせる。
-PINNED_REF="v0.3.2"
+PINNED_REF="v0.3.5"
 REF="${AGENT_AIKO_REF:-$PINNED_REF}"
 case "$REF" in
   v*) ;;
