@@ -6,12 +6,12 @@
     "url": "https://github.com/masa-san-jp/Agent-Aiko",
     "source": "github"
   },
-  "version": "0.3.4",
+  "version": "0.3.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "aiko-mcp",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "transport": {
         "type": "stdio"
       },

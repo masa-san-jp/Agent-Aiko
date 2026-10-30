@@ -1,7 +1,7 @@
 #!/bin/bash
 # Agent-Aiko Claude Code 版 installer
 # 経路：
-#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.4/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
+#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.5/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
 #   ラッパーの PINNED_REF は、そのリリースのタグに合わせる。
 #   bash scripts/install.sh                                                                              # 互換ラッパー経由
 #   bash claude-code/scripts/install.sh                                                                  # 直接実行

@@ -140,17 +140,17 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 
 **v0.3.2 以前を利用中の場合:** 古い `aiko update`、`aiko rollback`、`aiko uninstall` は、人格別のユーザー設定を上書き・削除する場合があります。操作前に利用者の保存先（通常は `~/.aiko`）を端末内に退避してください。下の新しいインストーラによる再導入は既存設定を保持し、古い導入記録も修正します。ただし、インストーラは既存の `aiko` コマンド自体を更新しないため、古いコマンドの rollback・uninstall は使わず、更新済みの CLI を用意してから実行してください。
 
-更新済み CLI を使うには、v0.3.4 の配布物を検証して展開したディレクトリで `npm ci --ignore-scripts` と `npm run build` を実行し、`node packages/cli/dist/cli.js rollback` のように実行します。
+更新済み CLI を使うには、v0.3.5 の配布物を検証して展開したディレクトリで `npm ci --ignore-scripts` と `npm run build` を実行し、`node packages/cli/dist/cli.js rollback` のように実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.4/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.5/scripts/install.sh | bash
 ```
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
 installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。https の Release は `gh attestation verify` も要ります（`file://` の試験用は対象外）。**照合に失敗した場合は中止し、リポジトリの clone には回りません。** 照合済みで入ったかどうかは出力に出ます。
 
-上の URL はリリース `v0.3.4` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
+上の URL はリリース `v0.3.5` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
 
 | 環境変数 | 既定 | 用途 |
 |---|---|---|
@@ -160,14 +160,31 @@ installer は GitHub Releases の配布物を取得し、SHA256 を照合して�
 
 配布物が無い channel では中止します。`main` は取りません。
 
-インストーラ自体を実行前に確認したい場合は、次の手順で取得・照合してから実行してください。
+上の `curl | bash` は、Release の配布物を照合する前に、raw URL から取得したインストーラを実行します。インストーラ自体も実行前に確認したい場合は、GitHub CLI（`gh` 2.49 以上）が必要です。インストール先のプロジェクトで、以下のブロックをまとめて実行してください。SHA256 または attestation の検証に失敗すると実行を中止します。
 
 ```bash
-tag=$(curl -fsSL https://api.github.com/repos/masa-san-jp/Agent-Aiko/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
-curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/agent-aiko-${tag}.tar.gz"
-curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/SHA256SUMS"
-sha256sum -c SHA256SUMS && tar -xzf "agent-aiko-${tag}.tar.gz"
-bash "agent-aiko-${tag}/claude-code/scripts/install.sh"
+(
+  set -eu
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT
+  tag=$(gh release view --repo masa-san-jp/Agent-Aiko --json tagName --jq .tagName)
+  case "$tag" in v[0-9]*) ;; *) exit 1 ;; esac
+  case "$tag" in *[!A-Za-z0-9._-]*) exit 1 ;; esac
+  archive="agent-aiko-${tag}.tar.gz"
+  gh release download "$tag" --repo masa-san-jp/Agent-Aiko \
+    --pattern "$archive" --pattern SHA256SUMS --dir "$work"
+  (
+    cd "$work"
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha256sum -c SHA256SUMS
+    else
+      shasum -a 256 -c SHA256SUMS
+    fi
+  )
+  gh attestation verify "$work/$archive" --repo masa-san-jp/Agent-Aiko
+  tar -xzf "$work/$archive" -C "$work"
+  bash "$work/agent-aiko-${tag}/claude-code/scripts/install.sh"
+)
 ```
 
 ### Codex 版
