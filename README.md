@@ -138,6 +138,8 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 
 ### Claude Code 版
 
+**v0.3.2 以前を利用中の場合:** 公開済みの旧インストーラによる再導入や、古い `aiko update`、`aiko rollback`、`aiko uninstall` は、人格別のユーザー設定を上書き・削除する場合があります。操作前に利用者の保存先（通常は `~/.aiko`）を端末内に退避してください。修正版の配布を準備中です。
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.2/scripts/install.sh | bash
 ```

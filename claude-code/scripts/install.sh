@@ -467,6 +467,15 @@ copy_state_if_missing "capability/skills"
 copy_state_if_missing "capability/rules/rules-base.md"
 MANIFEST_TMP="$(mktemp)"
 copy_aiko_template_tree
+# Release archives omit this seed so older updaters cannot overwrite it. A new
+# installation still needs the same initial file; never replace an existing
+# file or follow a dangling symlink.
+ORIGIN_USER="$AIKO_HOME/persona/origin/user.md"
+if ! path_exists "$ORIGIN_USER"; then
+  assert_parents_are_not_symlinks "$ORIGIN_USER" "$AIKO_HOME"
+  mkdir -p "$(dirname "$ORIGIN_USER")"
+  ( umask 077; set -o noclobber; printf 'name:\naddress:\n' > "$ORIGIN_USER" )
+fi
 # 一覧は原子的に置き換える。途中で失敗した一覧を残すと、消してよいものを
 # 消し損ねるより悪い（消してはいけないものが一覧に無い状態になる）。
 sort -u "$MANIFEST_TMP" > "$AIKO_HOME/.install-manifest"

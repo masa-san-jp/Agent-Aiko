@@ -57,7 +57,7 @@ test("URL の query は秘匿される", () => {
 // --- path redaction（§13.3） ---
 
 test("ホームディレクトリは ~ に置き換わる", () => {
-  const out = redactText("/home/example/.aiko/user.md を読めません", { home: "/home/example" });
+  const out = redactText("/tmp/aiko-fixture-user/.aiko/user.md を読めません", { home: "/tmp/aiko-fixture-user" });
   assert.equal(out, "~/.aiko/user.md を読めません");
 });
 
