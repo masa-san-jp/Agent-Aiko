@@ -158,14 +158,31 @@ installer は GitHub Releases の配布物を取得し、SHA256 を照合して�
 
 配布物が無い channel では中止します。`main` は取りません。
 
-インストーラ自体を実行前に確認したい場合は、次の手順で取得・照合してから実行してください。
+上の `curl | bash` は、Release の配布物を照合する前に、raw URL から取得したインストーラを実行します。インストーラ自体も実行前に確認したい場合は、GitHub CLI（`gh` 2.49 以上）が必要です。インストール先のプロジェクトで、以下のブロックをまとめて実行してください。SHA256 または attestation の検証に失敗すると実行を中止します。
 
 ```bash
-tag=$(curl -fsSL https://api.github.com/repos/masa-san-jp/Agent-Aiko/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
-curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/agent-aiko-${tag}.tar.gz"
-curl -fsSLO "https://github.com/masa-san-jp/Agent-Aiko/releases/download/${tag}/SHA256SUMS"
-sha256sum -c SHA256SUMS && tar -xzf "agent-aiko-${tag}.tar.gz"
-bash "agent-aiko-${tag}/claude-code/scripts/install.sh"
+(
+  set -eu
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT
+  tag=$(gh release view --repo masa-san-jp/Agent-Aiko --json tagName --jq .tagName)
+  case "$tag" in v[0-9]*) ;; *) exit 1 ;; esac
+  case "$tag" in *[!A-Za-z0-9._-]*) exit 1 ;; esac
+  archive="agent-aiko-${tag}.tar.gz"
+  gh release download "$tag" --repo masa-san-jp/Agent-Aiko \
+    --pattern "$archive" --pattern SHA256SUMS --dir "$work"
+  (
+    cd "$work"
+    if command -v sha256sum >/dev/null 2>&1; then
+      sha256sum -c SHA256SUMS
+    else
+      shasum -a 256 -c SHA256SUMS
+    fi
+  )
+  gh attestation verify "$work/$archive" --repo masa-san-jp/Agent-Aiko
+  tar -xzf "$work/$archive" -C "$work"
+  bash "$work/agent-aiko-${tag}/claude-code/scripts/install.sh"
+)
 ```
 
 ### Codex 版
