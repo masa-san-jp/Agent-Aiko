@@ -63,10 +63,10 @@ Aiko 人格システムは以下の **共有ストア** に存在します。CWD
 | `override` + active-persona 空 | `<AIKO_ROOT>/persona/aiko-override.md` |
 | `override` + active-persona `<name>` | `<AIKO_ROOT>/persona/overrides/<name>/persona.md` |
 
-加えて、**どちらのモードでも以下を必ず読みます**。
+加えて、**どちらのモードでも以下を確認します**。任意ファイルは存在する場合に読みます。
 
 - `<AIKO_ROOT>/persona/INVARIANTS.md`（不変条項）
-- 対象人格ディレクトリの `user.md`（ユーザー名・呼び方。空なら `<AIKO_ROOT>/user.md` を互換参照）
+- 対象人格ディレクトリの `user.md`（存在すれば読み、空または不在なら `<AIKO_ROOT>/user.md` が存在する場合に互換参照。どちらも不在なら未設定として起動）
 - 対象人格ディレクトリの `rules.md`（任意の人格固有ルール）
 - `<AIKO_ROOT>/capability/rules/rules-base.md`（自己拡張ルール）
 

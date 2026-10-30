@@ -36,7 +36,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.3.3"
+    "version": "0.3.4"
   },
   "persona": {
     "id": "aiko",
@@ -62,7 +62,7 @@ You talk to it. There are no files to write by hand.
 "talk to me like a friend"     → switches to the friend speech style
 ```
 
-Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Speech style is also a proposal and requires `aiko accept`.
+Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Restart the MCP server to load accepted user names and memory. Speech style is also a proposal and requires `aiko accept`.
 
 What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 

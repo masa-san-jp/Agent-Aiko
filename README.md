@@ -59,7 +59,7 @@ npx aiko-mcp install
 | `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
 | `--force` | 同じ名前で違う設定が入っていても置き換える |
 
-会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、次に人格を読み込んだときに反映されます。
+会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、人格・話し方は次に人格を読み込んだときに反映されます。呼び名は MCP サーバーを再起動すると反映されます。
 
 ### 1 つずつ入れる
 
@@ -140,17 +140,17 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 
 **v0.3.2 以前を利用中の場合:** 古い `aiko update`、`aiko rollback`、`aiko uninstall` は、人格別のユーザー設定を上書き・削除する場合があります。操作前に利用者の保存先（通常は `~/.aiko`）を端末内に退避してください。下の新しいインストーラによる再導入は既存設定を保持し、古い導入記録も修正します。ただし、インストーラは既存の `aiko` コマンド自体を更新しないため、古いコマンドの rollback・uninstall は使わず、更新済みの CLI を用意してから実行してください。
 
-更新済み CLI を使うには、v0.3.3 の配布物を検証して展開したディレクトリで `npm ci --ignore-scripts` と `npm run build` を実行し、`node packages/cli/dist/cli.js rollback` のように実行します。
+更新済み CLI を使うには、v0.3.4 の配布物を検証して展開したディレクトリで `npm ci --ignore-scripts` と `npm run build` を実行し、`node packages/cli/dist/cli.js rollback` のように実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.3/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.4/scripts/install.sh | bash
 ```
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
 installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。https の Release は `gh attestation verify` も要ります（`file://` の試験用は対象外）。**照合に失敗した場合は中止し、リポジトリの clone には回りません。** 照合済みで入ったかどうかは出力に出ます。
 
-上の URL はリリース `v0.3.3` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
+上の URL はリリース `v0.3.4` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
 
 | 環境変数 | 既定 | 用途 |
 |---|---|---|
