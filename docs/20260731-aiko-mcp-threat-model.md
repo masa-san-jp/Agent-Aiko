@@ -5,6 +5,15 @@
 
 作成 2026-07-31。設計書が上位の正本であり、本文書が設計書と矛盾する場合は設計書を優先する。
 
+> 以下の脅威の説明と対策には、作成時点の調査・要求が含まれます。「未実装」「現状」とある箇所を現在の実装状況として扱わないでください。以下は 2026-10-31 にコードから確認した範囲です。未記載の対策は完了と判断していません。
+>
+> - T1: Release アーカイブは checksum と GitHub attestation を照合します。ただし `curl | bash` 経路の最初のスクリプトと、そのスクリプトが raw URL から取得する本体は、この照合の前に実行されます。README の別手順ではインストーラを含むアーカイブを実行前に照合します。
+> - T3: CLI の更新適用は実装され、HTTPS の配布アーカイブの checksum と attestation を検証します。利用者設定の保護修正は main にありますが、2026-10-31 時点の公開済み v0.3.2 には含まれません。
+> - T4: rollback は端末内のバックアップから復元します。バックアップの署名・checksum や撤回済みバージョンの確認は実装されていません。利用者設定の保護修正は未公開です。
+> - T7: CI で `npm audit` を実行し、Release workflow は SBOM を生成します。これらは依存関係の安全性全体を保証しません。
+>
+> 確認箇所: `scripts/install.sh`、`claude-code/scripts/install.sh`、`packages/cli/src/download.ts`、`packages/cli/src/apply-update.ts`、`.github/workflows/ci.yml`、`.github/workflows/release.yml`。
+
 ---
 
 ## 1. なぜ配布経路から書くか
