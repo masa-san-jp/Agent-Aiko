@@ -148,7 +148,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Archive only the sources required for maintenance
-        run: git archive --format=tar -o maintenance-source.tar HEAD -- package.json package-lock.json tsconfig.json tsconfig.base.json README.md packages claude-code/template .github/scripts/test-maintenance-windows.mjs
+        run: git archive --format=tar -o maintenance-source.tar HEAD -- package.json package-lock.json tsconfig.json tsconfig.base.json README.md LICENSE packages claude-code/template .github/scripts/test-maintenance-windows.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: maintenance-windows-source
