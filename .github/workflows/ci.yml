@@ -167,6 +167,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # docs includes filenames that Windows cannot check out. Only the
+          # package sources and templates are needed by this job.
+          sparse-checkout: |
+            packages
+            claude-code/template
+            .github/scripts
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
