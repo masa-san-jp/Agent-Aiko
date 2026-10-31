@@ -8,7 +8,7 @@
 // 消したあと何が残っているかを必ず出す。消えたものより、残っているものを
 // 知りたいのが利用者側の関心。
 
-import { readdir, readFile, rm, rmdir, stat } from "node:fs/promises";
+import { readdir, readFile, rm, rmdir, lstat } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { isUserOwned } from "./apply-update.js";
 
@@ -28,12 +28,16 @@ async function listFiles(root: string, base = root): Promise<string[]> {
   let entries: string[];
   try {
     entries = await readdir(root);
-  } catch {
-    return out;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return out;
+    throw err;
   }
   for (const entry of entries) {
     const full = join(root, entry);
-    const info = await stat(full).catch(() => undefined);
+    const info = await lstat(full).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined;
+      throw err;
+    });
     if (info === undefined) continue;
     if (info.isDirectory()) out.push(...(await listFiles(full, base)));
     else out.push(relative(base, full).split(sep).join("/"));
@@ -42,12 +46,20 @@ async function listFiles(root: string, base = root): Promise<string[]> {
 }
 
 export async function planUninstall(aikoHome: string): Promise<UninstallPlan> {
-  const manifest = await readFile(join(aikoHome, MANIFEST_NAME), "utf8").catch(() => undefined);
+  const manifestPath = join(aikoHome, MANIFEST_NAME);
+  const manifestInfo = await lstat(manifestPath).catch((err: NodeJS.ErrnoException) => {
+    if (err.code === "ENOENT") return undefined;
+    throw err;
+  });
   const present = await listFiles(aikoHome);
 
-  if (manifest === undefined) {
+  if (manifestInfo === undefined) {
     return { removable: [], kept: present, manifestMissing: true };
   }
+  if (!manifestInfo.isFile() || manifestInfo.nlink > 1) {
+    throw new Error("導入記録が通常のファイルではないため、何も削除しません");
+  }
+  const manifest = await readFile(manifestPath, "utf8");
 
   const installed = new Set(
     manifest
@@ -56,7 +68,13 @@ export async function planUninstall(aikoHome: string): Promise<UninstallPlan> {
       .filter((line) => line.length > 0),
   );
 
-  const removable = present.filter((rel) => installed.has(rel) && !isUserOwned(rel));
+  // リンクは配布物の通常ファイルと断定できず、利用者が置いた可能性がある。
+  const removable: string[] = [];
+  for (const rel of present) {
+    if (!installed.has(rel) || isUserOwned(rel)) continue;
+    const info = await lstat(join(aikoHome, rel)).catch(() => undefined);
+    if (info?.isFile() && info.nlink === 1) removable.push(rel);
+  }
   const kept = present.filter((rel) => !removable.includes(rel) && rel !== MANIFEST_NAME);
   return { removable, kept, manifestMissing: false };
 }
@@ -101,7 +119,7 @@ export function renderUninstall(result: UninstallResult, aikoHome: string): stri
 export function renderManifestMissing(aikoHome: string): string {
   return [
     `${aikoHome} に導入時の記録（${MANIFEST_NAME}）がありません`,
-    "何が配布物のもので何がマサさんのものか区別できないため、何も削除しません。",
+    "何が配布物のもので何が利用者のものか区別できないため、何も削除しません。",
     "手で削除する場合は、user.md と persona/ の中身を先に退避してください。",
     "",
   ].join("\n");

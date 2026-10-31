@@ -20,6 +20,7 @@ const external = ["@modelcontextprotocol/sdk", "@modelcontextprotocol/sdk/*", "z
 for (const [entry, out] of [
   ["src/server.ts", "dist/server.js"],
   ["src/index.ts", "dist/index.js"],
+  ["../cli/src/cli.ts", "dist/maintenance.js"],
 ]) {
   await build({
     entryPoints: [join(pkg, entry)],
@@ -51,7 +52,7 @@ for (const [entry, out] of [
 const dist = join(pkg, "dist");
 for (const entry of await readdir(dist)) {
   if (entry.endsWith(".d.ts") || entry.endsWith(".d.ts.map")) continue;
-  if (entry === "server.js" || entry === "index.js") continue;
+  if (entry === "server.js" || entry === "index.js" || entry === "maintenance.js") continue;
   await rm(join(dist, entry), { recursive: true, force: true });
 }
 
@@ -60,4 +61,4 @@ for (const entry of await readdir(dist)) {
 // それを使う側の型検査だけが落ちる（実際にこの状態になった）。
 await rm(join(pkg, "tsconfig.tsbuildinfo"), { force: true });
 
-console.log("[bundle] dist/server.js, dist/index.js（他は削除）");
+console.log("[bundle] dist/server.js, dist/index.js, dist/maintenance.js（他は削除）");

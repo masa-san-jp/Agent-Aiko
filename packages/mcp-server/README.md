@@ -4,6 +4,8 @@
 
 Everything runs on your machine. The persona, the profile, whatever you tell it to remember — none of it leaves the device, and there is no server to run.
 
+The package also contains `aiko-maintenance` for explicit local update, rollback, and uninstall operations. It does not replace an existing `aiko` command. For a temporary installation and safe migration instructions, see the project README.
+
 ## Install
 
 ```bash
@@ -36,7 +38,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.3.5"
+    "version": "0.3.6"
   },
   "persona": {
     "id": "aiko",

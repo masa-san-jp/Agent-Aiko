@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -28,7 +28,7 @@ async function installed() {
   await write(join(aikoHome, "hooks", "stop.sh"), "#!/bin/sh\n");
 
   // 利用者のもの
-  await write(join(aikoHome, "user.md"), "呼び名はマサくん\n");
+  await write(join(aikoHome, "user.md"), "呼び名は利用者さん\n");
   await write(join(aikoHome, "persona", "aiko-override.md"), "自分で書いた人格\n");
   await write(join(aikoHome, "capability", "rules", "rules-base.md"), "自分で書いた規則\n");
   // manifest に無い、後から置いたもの
@@ -56,7 +56,7 @@ test("呼び名は消えない", async () => {
   const s = await installed();
   try {
     await uninstall(s.aikoHome);
-    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名はマサくん\n");
+    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名は利用者さん\n");
   } finally {
     await s.cleanup();
   }
@@ -224,5 +224,48 @@ test("manifest に載っていても人格別ユーザー設定とプロフィ�
     await writeFile(join(s.aikoHome, MANIFEST_NAME), paths.join("\n"));
     await uninstall(s.aikoHome);
     for (const path of paths) assert.equal(await readFile(join(s.aikoHome, path), "utf8"), "FIXTURE_USER_DATA\n", path);
+  } finally { await s.cleanup(); }
+});
+
+
+test("アンインストールはディレクトリやファイルのリンクをたどらない", async () => {
+  const s = await installed();
+  try {
+    const outside = join(s.root, "outside");
+    await write(join(outside, "private.md"), "USER DATA\n");
+    await symlink(outside, join(s.aikoHome, "linked"), "dir");
+    await symlink(join(outside, "private.md"), join(s.aikoHome, "linked-file.md"));
+    await write(join(s.aikoHome, MANIFEST_NAME), "linked/private.md\nlinked-file.md\n");
+    await uninstall(s.aikoHome);
+    assert.equal(await readFile(join(outside, "private.md"), "utf8"), "USER DATA\n");
+    assert.equal(existsSync(join(s.aikoHome, "linked-file.md")), true);
+  } finally { await s.cleanup(); }
+});
+
+
+test("導入記録がユーザーデータのリンクなら削除しない", async () => {
+  for (const kind of ["symbolic", "hard"]) {
+    const s = await installed();
+    try {
+      const manifest = join(s.aikoHome, MANIFEST_NAME);
+      await rm(manifest);
+      const user = join(s.aikoHome, "user.md");
+      if (kind === "symbolic") await symlink(user, manifest);
+      else await link(user, manifest);
+      await assert.rejects(uninstall(s.aikoHome), /導入記録/);
+      assert.equal(await readFile(user, "utf8"), "呼び名は利用者さん\n");
+      assert.equal(existsSync(join(s.aikoHome, "persona", "origin", "persona.md")), true);
+    } finally { await s.cleanup(); }
+  }
+});
+
+test("導入記録に載っていても利用者データへのハードリンクは残す", async () => {
+  const s = await installed();
+  try {
+    const target = join(s.aikoHome, "linked.md");
+    await link(join(s.aikoHome, "user.md"), target);
+    await write(join(s.aikoHome, MANIFEST_NAME), "linked.md\n");
+    await uninstall(s.aikoHome);
+    assert.equal(await readFile(target, "utf8"), "呼び名は利用者さん\n");
   } finally { await s.cleanup(); }
 });
