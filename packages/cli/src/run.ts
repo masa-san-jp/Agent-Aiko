@@ -5,7 +5,7 @@ import { runChecks, worstLevel, type CheckResult } from "./checks.js";
 import { resolveEnvironment } from "./environment.js";
 import { renderChecks, renderStatus } from "./render.js";
 import { collectStatus } from "./status.js";
-import { checkForUpdate, readInstalledVersion, renderCheck, type Channel, type FetchReleases } from "./update.js";
+import { checkForUpdate, parseVersion, readInstalledVersion, renderCheck, type Channel, type FetchReleases } from "./update.js";
 import { configure, renderConfigured, type Ask } from "./configure.js";
 import {
   acceptPersonaProposals,
@@ -56,6 +56,7 @@ const USAGE = `使い方: aiko <コマンド>
   update --check        新しい版が出ていないかを見る（何も書き換えない）
   update --check --channel beta   試用版も対象に含める
   update                新しい版を取得して照合してから入れる（利用者の設定は触らない）
+  update --yes          確認が必要な版の更新を承認する
   rollback              直前の版へ戻す（利用者の設定は触らない）
   uninstall             導入時に置いたものだけを消す（利用者の設定は残す）
   uninstall --yes       確認せずに消す
@@ -75,7 +76,7 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
   const [command = "help", ...rest] = argv;
   const commandName = io.commandName ?? "aiko";
   const usage = commandName === "aiko-maintenance"
-    ? `使い方: aiko-maintenance <コマンド>\n\n  update --check  更新を確認する\n  update          配布物を更新する\n  rollback        配布物を直前の状態に戻す\n  uninstall       導入時の配布物を削除する\n  help            この使い方を表示する\n`
+    ? `使い方: aiko-maintenance <コマンド>\n\n  update --check  更新を確認する\n  update          配布物を更新する\n  update --yes    確認が必要な版の更新を承認する\n  rollback        配布物を直前の状態に戻す\n  uninstall       導入時の配布物を削除する\n  help            この使い方を表示する\n`
     : USAGE;
 
   if (command === "help" || command === "--help" || command === "-h") {
@@ -236,6 +237,26 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
       if (!found.updateAvailable) {
         io.out(`すでに最新です（${installedVersion}）\n`);
         return 0;
+      }
+      const current = parseVersion(installedVersion);
+      const target = parseVersion(found.latest.tag);
+      if (!current || !target) {
+        io.err("版を比較できないため更新しません。\n");
+        return 1;
+      }
+      if (current.core[0] !== target.core[0] || current.core[1] !== target.core[1]) {
+        io.out(`更新先: ${installedVersion} → ${found.latest.tag}\n`);
+        if (!rest.includes("--yes")) {
+          if (!io.ask) {
+            io.err("この版への更新は確認が必要です。対話できない環境では内容を確認して --yes を付けてください。\n");
+            return 2;
+          }
+          const answer = await io.ask("この版に更新していいですか？ [y/N]");
+          if (!/^y(es)?$/i.test(answer.trim())) {
+            io.out("更新をやめました。\n");
+            return 0;
+          }
+        }
       }
       const work = await mkdtemp(joinPath(tmpdir(), "aiko-update-"));
       try {
