@@ -249,7 +249,7 @@ test("aiko update は照合に失敗したら何も入れない", async () => {
     // 壊れた checksum を返す取得口。
     const out: string[] = [];
     const err: string[] = [];
-    const code = await run(["update"], "1.0.0", {
+    const code = await run(["update", "--yes"], "1.0.0", {
       out: (t) => out.push(t),
       err: (t) => err.push(t),
       env: { AIKO_HOME: s.aikoHome },
@@ -280,7 +280,7 @@ test("aiko update は照合が通れば入れて、退避を残す", async () =>
     const digest = createHash("sha256").update(bytes).digest("hex");
 
     const out: string[] = [];
-    const code = await run(["update"], "1.0.0", {
+    const code = await run(["update", "--yes"], "1.0.0", {
       out: (t) => out.push(t),
       err: () => {},
       env: { AIKO_HOME: s.aikoHome },
