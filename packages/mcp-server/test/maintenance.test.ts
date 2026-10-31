@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const entry = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "maintenance.js");
 
@@ -69,7 +69,7 @@ test("配布保守コマンドは非対話の大きな版の更新を承認な�
     await write(join(home, "version"), "v0.1.0\n");
     await write(join(home, "user.md"), "CURRENT USER\n");
     await write(preload, `globalThis.fetch = async url => {\n  if (!String(url).includes('/releases?')) throw new Error('unexpected download');\n  return new Response(JSON.stringify([{tag_name: 'v0.2.0', prerelease: false, html_url: ''}]));\n};\n`);
-    const result = spawnSync(process.execPath, ["--import", preload, entry, "update"], {
+    const result = spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, entry, "update"], {
       encoding: "utf8", cwd: root,
       env: { ...process.env, HOME: root, USERPROFILE: root, AIKO_HOME: home, AIKO_USER_PROFILE: "" },
     });
