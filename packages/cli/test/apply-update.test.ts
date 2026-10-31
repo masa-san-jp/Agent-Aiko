@@ -5,7 +5,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cp as cpDir, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp as cpDir, link, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -42,10 +42,11 @@ async function sandbox() {
   // 手元（古い版＋利用者のもの）
   await write(join(aikoHome, "persona", "origin", "persona.md"), "古い人格\n");
   await write(join(aikoHome, "capability", "rules", "model-routing.md"), "古い規則\n");
-  await write(join(aikoHome, "user.md"), "呼び名はマサくん\n");
+  await write(join(aikoHome, "user.md"), "呼び名は利用者さん\n");
   await write(join(aikoHome, "mode"), "override\n");
   await write(join(aikoHome, "persona", "aiko-override.md"), "自分で書いた人格\n");
   await write(join(aikoHome, "capability", "rules", "rules-base.md"), "自分で書いた規則\n");
+  await write(join(aikoHome, "version"), "v0.0.1\n");
 
   return { root, aikoHome, template, backups, cleanup: () => rm(root, { recursive: true, force: true }) };
 }
@@ -99,7 +100,7 @@ test("更新で User Profile は変わらない", async () => {
       backupRoot: s.backups,
       now,
     });
-    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名はマサくん\n");
+    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名は利用者さん\n");
   } finally {
     await s.cleanup();
   }
@@ -248,7 +249,7 @@ test("aiko update は照合に失敗したら何も入れない", async () => {
     // 壊れた checksum を返す取得口。
     const out: string[] = [];
     const err: string[] = [];
-    const code = await run(["update"], "0.0.1", {
+    const code = await run(["update"], "1.0.0", {
       out: (t) => out.push(t),
       err: (t) => err.push(t),
       env: { AIKO_HOME: s.aikoHome },
@@ -279,7 +280,7 @@ test("aiko update は照合が通れば入れて、退避を残す", async () =>
     const digest = createHash("sha256").update(bytes).digest("hex");
 
     const out: string[] = [];
-    const code = await run(["update"], "0.0.1", {
+    const code = await run(["update"], "1.0.0", {
       out: (t) => out.push(t),
       err: () => {},
       env: { AIKO_HOME: s.aikoHome },
@@ -293,11 +294,24 @@ test("aiko update は照合が通れば入れて、退避を残す", async () =>
 
     assert.deepEqual(
       [code, await readFile(join(s.aikoHome, "persona", "origin", "persona.md"), "utf8"), await readFile(join(s.aikoHome, "user.md"), "utf8")],
-      [0, "新しい人格\n", "呼び名はマサくん\n"],
+      [0, "新しい人格\n", "呼び名は利用者さん\n"],
     );
+    await rollback({ aikoHome: s.aikoHome, backupRoot: join(s.aikoHome, "backups") });
+    assert.equal((await readFile(join(s.aikoHome, "version"), "utf8")).trim(), "v0.0.1");
   } finally {
     await s.cleanup();
   }
+});
+
+test("古いバックアップの版情報を復元元の版と誤認しない", async () => {
+  const s = await sandbox();
+  try {
+    const old = join(s.backups, "old");
+    await write(join(old, "backup.json"), JSON.stringify({ version: "v1.0.0", createdAt: "2026-01-01T00:00:00Z" }));
+    await write(join(old, "component.md"), "old\n");
+    await rollback({ aikoHome: s.aikoHome, backupRoot: s.backups });
+    assert.equal((await readFile(join(s.aikoHome, "version"), "utf8")).trim(), "unknown");
+  } finally { await s.cleanup(); }
 });
 
 test("file:// と注入した取得口は attestation を省略する", () => {
@@ -348,4 +362,52 @@ test("aiko rollback は退避が無ければ失敗する", async () => {
   } finally {
     await s.cleanup();
   }
+});
+
+
+test("巻き戻しはリンクを経由して利用者設定に到達する場合、何も変更しない", async () => {
+  const s = await sandbox();
+  try {
+    const old = join(s.backups, "old");
+    await write(join(old, "backup.json"), JSON.stringify({ version: "v0.3.2", createdAt: "2026-01-01T00:00:00Z" }));
+    await write(join(old, "component", "user.md"), "OLD TEMPLATE\n");
+    await write(join(old, "persona", "origin", "persona.md"), "OLD PERSONA\n");
+    await symlink(s.aikoHome, join(s.aikoHome, "component"), "dir");
+    await assert.rejects(rollback({ aikoHome: s.aikoHome, backupRoot: s.backups }), /シンボリックリンク/);
+    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名は利用者さん\n");
+    assert.equal(await readFile(join(s.aikoHome, "persona", "origin", "persona.md"), "utf8"), "古い人格\n");
+  } finally { await s.cleanup(); }
+});
+
+test("更新はリンク先やハードリンクを通じて利用者設定を変更しない", async () => {
+  for (const kind of ["parent-symlink", "file-hardlink", "version-symlink"]) {
+    const s = await sandbox();
+    try {
+      if (kind === "parent-symlink") {
+        await write(join(s.template, "component", "user.md"), "NEW TEMPLATE\n");
+        await symlink(s.aikoHome, join(s.aikoHome, "component"), "dir");
+      } else if (kind === "file-hardlink") {
+        await write(join(s.template, "component.md"), "NEW TEMPLATE\n");
+        await link(join(s.aikoHome, "user.md"), join(s.aikoHome, "component.md"));
+      } else {
+        await rm(join(s.aikoHome, "version"));
+        await symlink(join(s.aikoHome, "user.md"), join(s.aikoHome, "version"));
+      }
+      await assert.rejects(applyUpdate({ aikoHome: s.aikoHome, templateAikoDir: s.template, version: "v1.0.0", backupRoot: s.backups, now }), /リンク/);
+      assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名は利用者さん\n");
+      assert.equal(await readFile(join(s.aikoHome, "persona", "origin", "persona.md"), "utf8"), "古い人格\n");
+    } finally { await s.cleanup(); }
+  }
+});
+
+test("リンクを含む古いバックアップはたどらず中止する", async () => {
+  const s = await sandbox();
+  try {
+    const old = join(s.backups, "old");
+    await write(join(old, "backup.json"), JSON.stringify({ version: "v0.3.2", createdAt: "2026-01-01T00:00:00Z" }));
+    await mkdir(join(old, "component"), { recursive: true });
+    await symlink(join(s.aikoHome, "user.md"), join(old, "component", "file.md"));
+    await assert.rejects(rollback({ aikoHome: s.aikoHome, backupRoot: s.backups }), /シンボリックリンク/);
+    assert.equal(await readFile(join(s.aikoHome, "user.md"), "utf8"), "呼び名は利用者さん\n");
+  } finally { await s.cleanup(); }
 });

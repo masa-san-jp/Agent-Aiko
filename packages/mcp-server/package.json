@@ -1,6 +1,6 @@
 {
   "name": "aiko-mcp",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "mcpName": "io.github.masa-san-jp/aiko",
   "description": "A portable persona for MCP clients — the same agent in Claude Code, Codex, Cursor and VS Code. Runs locally; nothing leaves your machine.",
   "type": "module",
@@ -8,17 +8,19 @@
     "node": ">=20"
   },
   "bin": {
-    "aiko-mcp": "dist/server.js"
+    "aiko-mcp": "dist/server.js",
+    "aiko-maintenance": "dist/maintenance.js"
   },
   "files": [
     "dist/server.js",
     "dist/index.js",
+    "dist/maintenance.js",
     "persona",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -b && node scripts/bundle-persona.mjs && node scripts/bundle.mjs",
+    "build": "tsc -b ../cli && tsc -b && node scripts/bundle-persona.mjs && node scripts/bundle.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "pretest": "npm run build",
     "test": "node --import tsx --test test/*.test.ts",

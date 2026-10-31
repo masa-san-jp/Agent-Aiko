@@ -152,7 +152,7 @@ jobs:
           prefix="${name}/claude-code/template/.claude/aiko"
           while IFS= read -r entry; do
             case "$entry" in
-              "$prefix/user-profile.json"|"$prefix/user-proposal.md"|"$prefix/speech-style"|"$prefix/speech-style-proposal"|"$prefix/speech-styles"|"$prefix/speech-styles/"*|"$prefix/persona/origin/user.md"|"$prefix/persona/override"|"$prefix/persona/override/"*)
+              "$prefix/backups"|"$prefix/backups/"*|"$prefix/user-profile.json"|"$prefix/user-proposal.md"|"$prefix/speech-style"|"$prefix/speech-style-proposal"|"$prefix/speech-styles"|"$prefix/speech-styles/"*|"$prefix/persona/origin/user.md"|"$prefix/persona/override"|"$prefix/persona/override/"*)
                 echo "refusing archive containing an unsafe legacy update target" >&2
                 exit 1
                 ;;

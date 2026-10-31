@@ -25,7 +25,7 @@ const manifest = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "utf8"))
 };
 
 test("公開する名前と版が意図どおり", () => {
-  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.3.5"]);
+  assert.deepEqual([manifest.name, manifest.version], ["aiko-mcp", "0.3.6"]);
 });
 
 test("レジストリに出す名前と版が、package.json と食い違わない", () => {
@@ -113,10 +113,10 @@ test("配る中身に個人名が入っていない", () => {
   assert.deepEqual(offenders.map((f) => f.replace(pkgRoot, "")), []);
 });
 
-test("配るのは bundle した2本だけ", () => {
+test("配るのは bundle した3本だけ", () => {
   // 型定義は手元に残す（他 package の型検査が使う）。**配る範囲は files で絞る**。
   const shipped = (manifest.files ?? []).filter((f) => f.startsWith("dist/")).sort();
-  assert.deepEqual(shipped, ["dist/index.js", "dist/server.js"]);
+  assert.deepEqual(shipped, ["dist/index.js", "dist/maintenance.js", "dist/server.js"]);
 });
 
 test("人格を同梱している", () => {
@@ -155,13 +155,14 @@ test("同梱するものを files で絞っている", () => {
     "LICENSE",
     "README.md",
     "dist/index.js",
+    "dist/maintenance.js",
     "dist/server.js",
     "persona",
   ]);
 });
 
-test("実行の入口が1つある", () => {
-  assert.deepEqual(manifest.bin, { "aiko-mcp": "dist/server.js" });
+test("MCP と保守コマンドの入口がある", () => {
+  assert.deepEqual(manifest.bin, { "aiko-mcp": "dist/server.js", "aiko-maintenance": "dist/maintenance.js" });
 });
 
 test("ビルドせずに publish しても空にならない（prepack がある）", () => {
