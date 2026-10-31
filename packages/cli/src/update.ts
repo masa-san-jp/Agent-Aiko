@@ -1,8 +1,5 @@
-// `aiko update --check`。設計書 §10.4。
-//
-// **見るだけで、何も書き換えない。** 実際の更新は、インストーラを Release 取得＋
-// checksum 照合に切り替えたあとに足す（そちらは導入手順を1コマンドに保つかどうかの
-// 判断が要るため未着手）。「確認はできるが適用はまだ」を、黙らずに言う。
+import { lstat, readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export type Channel = "stable" | "beta";
 
@@ -58,6 +55,20 @@ export function parseVersion(tag: string): { core: number[]; pre: string | null 
   };
 }
 
+/** 配布コマンド自身ではなく、実際に導入されたデータの版を読む。 */
+export async function readInstalledVersion(home: string): Promise<string | undefined> {
+  const path = join(home, "version");
+  let stat;
+  try { stat = await lstat(path); } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw err;
+  }
+  if (!stat.isFile() || stat.nlink !== 1 || stat.size > 256) throw new Error("版ファイルが通常のファイルではありません");
+  const value = (await readFile(path, "utf8")).trim();
+  const tag = value.startsWith("v") ? value : `v${value}`;
+  return parseVersion(tag) ? tag : undefined;
+}
+
 /** a が b より新しければ 1、古ければ -1、同じなら 0。比較できなければ null。
  *  SemVer と同じく、prerelease は同じ数字の正式版より古い。 */
 export function compareVersions(a: string, b: string): number | null {
@@ -105,14 +116,14 @@ export async function checkForUpdate(
   }
 
   // package.json の version は `0.1.0` 形式、tag は `v0.1.0` 形式。
-  const cmp = compareVersions(`v${currentVersion}`, latest.tag);
+  const cmp = compareVersions(currentVersion.startsWith("v") ? currentVersion : `v${currentVersion}`, latest.tag);
   if (cmp === null) {
     return { current: currentVersion, latest, reason: "incomparable", error: "版を比較できませんでした" };
   }
   return { current: currentVersion, latest, updateAvailable: cmp < 0 };
 }
 
-export function renderCheck(result: UpdateCheckResult, channel: Channel): string {
+export function renderCheck(result: UpdateCheckResult, channel: Channel, commandName = "aiko"): string {
   const lines = [`いま使っているもの: ${result.current}`];
   if (result.error && !result.latest) {
     // 「見に行けなかった」のか「まだ何も出していない」のかは、利用者にとって別の話。
@@ -127,8 +138,7 @@ export function renderCheck(result: UpdateCheckResult, channel: Channel): string
       lines.push(`  ${result.error}`);
     } else if (result.updateAvailable) {
       lines.push("", "新しいものがあります。", `  ${result.latest.url}`);
-      // 適用まで自動でやれない以上、できないことを黙らない。
-      lines.push("", "いまは自動更新できません。上のページから入れ直してください。");
+      lines.push("", `更新するには ${commandName} update を実行してください。`);
     } else {
       lines.push("", "最新です。");
     }

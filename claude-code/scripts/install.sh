@@ -1,7 +1,7 @@
 #!/bin/bash
 # Agent-Aiko Claude Code 版 installer
 # 経路：
-#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.5/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
+#   curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.6/scripts/install.sh | bash   # 互換ラッパー経由（推奨）
 #   ラッパーの PINNED_REF は、そのリリースのタグに合わせる。
 #   bash scripts/install.sh                                                                              # 互換ラッパー経由
 #   bash claude-code/scripts/install.sh                                                                  # 直接実行
@@ -173,10 +173,10 @@ verify_release_attestation() {
   gh attestation verify "$1" --repo masa-san-jp/Agent-Aiko >/dev/null 2>&1 || return 6
 }
 
+RELEASE_TAG=""
 if [ ! -d "$TEMPLATE_DIR" ]; then
   TEMP_DIR=$(mktemp -d)
   CLEANUP_TEMP=true
-  RELEASE_TAG=""
   EXTRACTED=""
 
   if [ -n "${AGENT_AIKO_REF:-}" ]; then
@@ -285,13 +285,18 @@ echo ""
 # インストール実行
 # ─────────────────────────────────────
 HAD_PROJECT_CLAUDE_MD=0
-[ -e "$PROJECT_CLAUDE_DIR/CLAUDE.md" ] && HAD_PROJECT_CLAUDE_MD=1
+{ [ -e "$PROJECT_CLAUDE_DIR/CLAUDE.md" ] || [ -L "$PROJECT_CLAUDE_DIR/CLAUDE.md" ]; } && HAD_PROJECT_CLAUDE_MD=1
 HAD_PROJECT_SETTINGS=0
-[ -e "$PROJECT_CLAUDE_DIR/settings.json" ] && HAD_PROJECT_SETTINGS=1
+{ [ -e "$PROJECT_CLAUDE_DIR/settings.json" ] || [ -L "$PROJECT_CLAUDE_DIR/settings.json" ]; } && HAD_PROJECT_SETTINGS=1
 
 mkdir -p "$PROJECT_CLAUDE_DIR" "$AIKO_HOME"
 if [ -L "$PROJECT_CLAUDE_DIR" ]; then
   printf "  %sエラー: .claude がシンボリックリンクです。中止します。%s\n" "$BOLD" "$RESET" >&2
+  exit 1
+fi
+# 導入記録を通じて利用者ファイルを書き換えない。リンクやディレクトリは扱わない。
+if [ -L "$AIKO_HOME/.install-manifest" ] || [ -d "$AIKO_HOME/.install-manifest" ]; then
+  printf "  %sエラー: 導入記録がリンクまたはディレクトリです。中止します。%s\n" "$BOLD" "$RESET" >&2
   exit 1
 fi
 
@@ -327,6 +332,21 @@ assert_parents_are_not_symlinks() {
   done
 }
 
+# 既存の通常ファイルがハードリンクなら、cp や chmod で別のファイルも変わる。
+assert_not_hardlinked() {
+  local target="$1" count
+  count="$(stat -f '%l' "$target" 2>/dev/null || true)"
+  case "$count" in ''|*[!0-9]*) count="$(stat -c '%h' "$target" 2>/dev/null || true)" ;; esac
+  case "$count" in ''|*[!0-9]*)
+    printf "  %sエラー: ファイルのリンク数を確認できません。中止します。%s\n" "$BOLD" "$RESET" >&2
+    exit 1 ;;
+  esac
+  if [ "$count" -gt 1 ]; then
+    printf "  %sエラー: ハードリンクがあるため中止します: %s%s\n" "$BOLD" "$target" "$RESET" >&2
+    exit 1
+  fi
+}
+
 prepare_destination_for_template() {
   local src="$1"
   local dst="$2"
@@ -347,15 +367,22 @@ prepare_destination_for_template() {
     return 0
   fi
 
+  if [ ! -f "$dst" ] && [ ! -d "$dst" ]; then
+    printf "  %sエラー: 通常のファイルやディレクトリではないため中止します: %s%s\n" "$BOLD" "$dst" "$RESET" >&2
+    exit 1
+  fi
+
   if [ -d "$src" ]; then
     if [ ! -d "$dst" ]; then
       backup_existing_path "$dst"
     else
-      chmod -R u+w "$dst" 2>/dev/null || true
+      # 子には利用者ファイルが混在するため再帰的に chmod しない。
+      chmod u+w "$dst" 2>/dev/null || true
     fi
   elif [ -d "$dst" ]; then
     backup_existing_path "$dst"
   elif [ -f "$dst" ]; then
+    assert_not_hardlinked "$dst"
     chmod 644 "$dst" 2>/dev/null || true
   fi
 }
@@ -366,6 +393,7 @@ copy_template_item_to_project() {
   local dst="$PROJECT_CLAUDE_DIR/$rel"
 
   [ -e "$src" ] || return 0
+  assert_parents_are_not_symlinks "$dst" "$PROJECT_CLAUDE_DIR"
   mkdir -p "$(dirname "$dst")"
   prepare_destination_for_template "$src" "$dst"
   if [ -d "$src" ]; then
@@ -383,10 +411,20 @@ copy_project_children() {
   local child
 
   [ -d "$src_dir" ] || return 0
+  assert_parents_are_not_symlinks "$dst_dir/.aiko-check" "$PROJECT_CLAUDE_DIR"
   mkdir -p "$dst_dir"
   for child in "$src_dir"/*; do
     [ -e "$child" ] || continue
     local dst_child="$dst_dir/$(basename "$child")"
+    # cp -R が既存ディレクトリ内のリンクを辿らないことを推測しない。
+    if [ -d "$dst_child" ] && [ ! -L "$dst_child" ]; then
+      local unsafe
+      unsafe="$(find "$dst_child" \( -type l -o \( -type f -links +1 \) \) -print -quit)" || exit 1
+      if [ -n "$unsafe" ]; then
+        printf "  %sエラー: 配置先にリンクがあるため中止します: %s%s\n" "$BOLD" "$unsafe" "$RESET" >&2
+        exit 1
+      fi
+    fi
     prepare_destination_for_template "$child" "$dst_child"
     if [ -d "$child" ]; then
       mkdir -p "$dst_child"
@@ -416,9 +454,9 @@ copy_state_if_missing() {
 }
 
 USER_HAD_OVERRIDE=0
-[ -e "$STATE_SOURCE/persona/aiko-override.md" ] && USER_HAD_OVERRIDE=1
+path_exists "$STATE_SOURCE/persona/aiko-override.md" && USER_HAD_OVERRIDE=1
 USER_HAD_MODE=0
-[ -e "$STATE_SOURCE/mode" ] && USER_HAD_MODE=1
+path_exists "$STATE_SOURCE/mode" && USER_HAD_MODE=1
 
 copy_aiko_template_tree() {
   local item rel src dst
@@ -427,11 +465,12 @@ copy_aiko_template_tree() {
   ( cd "$TEMPLATE_DIR/aiko" && find . -mindepth 1 -print ) | while IFS= read -r item; do
     rel="${item#./}"
     case "$rel" in
-      mode|user.md|user-profile.json|user-proposal.md|override-history.jsonl|active-persona|speech-style|speech-style-proposal|speech-styles|speech-styles/*|persona/origin/user.md|persona/aiko-override.md|persona/override|persona/override/*|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
+      mode|backups|backups/*|user.md|user-profile.json|user-proposal.md|override-history.jsonl|active-persona|speech-style|speech-style-proposal|speech-styles|speech-styles/*|persona/origin/user.md|persona/aiko-override.md|persona/override|persona/override/*|persona/overrides|persona/overrides/*|persona/proposals|persona/proposals/*|capability/rules/rules-base.md)
         # 利用者のものは上書きせず、uninstall の記録にも残さない。
         # 初期値が必要なファイルは、共有ストアに無いときだけ置く。
         # プロジェクト側の rules-base はコピーしない。
         if { [ "$rel" = "capability/rules/rules-base.md" ] || [ "$rel" = "persona/origin/user.md" ]; } && [ ! -e "$AIKO_HOME/$rel" ] && [ ! -L "$AIKO_HOME/$rel" ]; then
+          assert_parents_are_not_symlinks "$AIKO_HOME/$rel" "$AIKO_HOME"
           mkdir -p "$(dirname "$AIKO_HOME/$rel")"
           cp -P "$TEMPLATE_DIR/aiko/$rel" "$AIKO_HOME/$rel"
         fi
@@ -445,6 +484,7 @@ copy_aiko_template_tree() {
       prepare_destination_for_template "$src" "$dst"
       mkdir -p "$dst"
     elif [ -f "$src" ]; then
+      assert_parents_are_not_symlinks "$dst" "$AIKO_HOME"
       mkdir -p "$(dirname "$dst")"
       prepare_destination_for_template "$src" "$dst"
       cp -P "$src" "$dst"
@@ -478,7 +518,12 @@ if ! path_exists "$ORIGIN_USER"; then
 fi
 # 一覧は原子的に置き換える。途中で失敗した一覧を残すと、消してよいものを
 # 消し損ねるより悪い（消してはいけないものが一覧に無い状態になる）。
-sort -u "$MANIFEST_TMP" > "$AIKO_HOME/.install-manifest"
+MANIFEST_NEW="$(mktemp "$AIKO_HOME/.install-manifest.XXXXXX")"
+if ! sort -u "$MANIFEST_TMP" > "$MANIFEST_NEW"; then
+  rm -f "$MANIFEST_NEW" "$MANIFEST_TMP"
+  exit 1
+fi
+mv -f "$MANIFEST_NEW" "$AIKO_HOME/.install-manifest"
 rm -f "$MANIFEST_TMP"
 
 copy_project_children "skills"
@@ -515,11 +560,15 @@ chmod 444 "$ORIGIN" "$LEGACY_ORIGIN" "$AIKO_HOME/persona/INVARIANTS.md" 2>/dev/n
 # 他のユーザーから読めてよいものではない。
 chmod 700 "$AIKO_HOME" 2>/dev/null || true
 for f in "$AIKO_HOME/user.md" "$AIKO_HOME/user-profile.json"; do
-  [ -f "$f" ] && chmod 600 "$f" 2>/dev/null || true
+  if [ -f "$f" ] && [ ! -L "$f" ]; then
+    # 利用者ファイルが別のファイルへのハードリンクなら、その権限も変わる。
+    if (assert_not_hardlinked "$f" >/dev/null 2>&1); then
+      chmod 600 "$f" 2>/dev/null || true
+    else
+      printf "  %s· リンク数を確認できないユーザーファイルの権限は変更しません。%s\n" "$DIM" "$RESET"
+    fi
+  fi
 done
-find "$AIKO_HOME/hooks" -type f -name '*.sh' -exec chmod +x {} +
-[ -d "$PROJECT_CLAUDE_DIR/scripts" ] && find "$PROJECT_CLAUDE_DIR/scripts" -type f -name '*.sh' -exec chmod +x {} +
-
 mkdir -p "$AIKO_HOME/persona/overrides"
 
 # `.claude/aiko` を `~/.aiko` への symlink にする。
@@ -552,6 +601,8 @@ REPO_ROOT="$(cd "$TEMPLATE_DIR/../../.." 2>/dev/null && pwd)"
 VOICE_SRC="$REPO_ROOT/voice"
 VOICE_DST="$AIKO_HOME/voice"
 if [ -d "$VOICE_SRC/hooks" ] && [ -d "$VOICE_SRC/engines" ]; then
+  assert_parents_are_not_symlinks "$VOICE_DST/hooks/stop.sh" "$AIKO_HOME"
+  assert_parents_are_not_symlinks "$VOICE_DST/engines/say.sh" "$AIKO_HOME"
   mkdir -p "$VOICE_DST/hooks" "$VOICE_DST/engines"
   prepare_destination_for_template "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
   cp -P "$VOICE_SRC/hooks/stop.sh" "$VOICE_DST/hooks/stop.sh"
@@ -566,6 +617,20 @@ if [ -d "$VOICE_SRC/hooks" ] && [ -d "$VOICE_SRC/engines" ]; then
 fi
 
 cleanup_temp_dir
+
+# 更新時に導入済みの版を判定する。手元のソースからの導入は版を断定しない。
+VERSION_VALUE=unknown
+if [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+  VERSION_VALUE="$RELEASE_TAG"
+fi
+VERSION_FILE="$AIKO_HOME/version"
+if [ -L "$VERSION_FILE" ] || { [ -e "$VERSION_FILE" ] && { [ ! -f "$VERSION_FILE" ] || ! (assert_not_hardlinked "$VERSION_FILE" >/dev/null 2>&1); }; }; then
+  printf "  · 版ファイルが通常のファイルではないため変更しません。\n"
+else
+  VERSION_TEMP=$(mktemp "$AIKO_HOME/.version.XXXXXX")
+  printf '%s\n' "$VERSION_VALUE" > "$VERSION_TEMP"
+  mv -f "$VERSION_TEMP" "$VERSION_FILE"
+fi
 
 # ─────────────────────────────────────
 # 完了メッセージ

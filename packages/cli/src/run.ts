@@ -5,7 +5,7 @@ import { runChecks, worstLevel, type CheckResult } from "./checks.js";
 import { resolveEnvironment } from "./environment.js";
 import { renderChecks, renderStatus } from "./render.js";
 import { collectStatus } from "./status.js";
-import { checkForUpdate, renderCheck, type Channel, type FetchReleases } from "./update.js";
+import { checkForUpdate, readInstalledVersion, renderCheck, type Channel, type FetchReleases } from "./update.js";
 import { configure, renderConfigured, type Ask } from "./configure.js";
 import {
   acceptPersonaProposals,
@@ -21,7 +21,7 @@ import {
   renderUninstall,
   uninstall,
 } from "./uninstall.js";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 
@@ -29,6 +29,8 @@ export interface RunIO {
   out: (text: string) => void;
   err: (text: string) => void;
   env?: NodeJS.ProcessEnv;
+  /** 表示するコマンド名。既存の aiko と配布用の名前を区別する。 */
+  commandName?: "aiko" | "aiko-maintenance";
   /** テストから Release 一覧の取得を差し替えるための口。 */
   fetchReleases?: FetchReleases;
   /** 対話の問い合わせ。未指定なら configure は使えない（非対話環境）。 */
@@ -71,14 +73,23 @@ const USAGE = `使い方: aiko <コマンド>
 
 export async function run(argv: readonly string[], version: string, io: RunIO): Promise<number> {
   const [command = "help", ...rest] = argv;
+  const commandName = io.commandName ?? "aiko";
+  const usage = commandName === "aiko-maintenance"
+    ? `使い方: aiko-maintenance <コマンド>\n\n  update --check  更新を確認する\n  update          配布物を更新する\n  rollback        配布物を直前の状態に戻す\n  uninstall       導入時の配布物を削除する\n  help            この使い方を表示する\n`
+    : USAGE;
 
   if (command === "help" || command === "--help" || command === "-h") {
-    io.out(USAGE);
+    io.out(usage);
     return 0;
   }
   if (command === "--version" || command === "-v" || command === "version") {
     io.out(`${version}\n`);
     return 0;
+  }
+
+  if (commandName === "aiko-maintenance" && !["update", "rollback", "uninstall"].includes(command)) {
+    io.err(`この保守コマンドでは ${command} は使えません。\n${usage}`);
+    return 2;
   }
 
   const env = resolveEnvironment(io.env);
@@ -112,7 +123,7 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
 
   if (command === "accept") {
     if (rest.length > 0) {
-      io.err(`accept に引数はありません\n\n${USAGE}`);
+      io.err(`accept に引数はありません\n\n${usage}`);
       return 2;
     }
     try {
@@ -186,7 +197,7 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
       backupRoot: joinPath(env.aikoHome, "backups"),
     });
     if (result === undefined) {
-      io.err("戻せる版がありません（まだ aiko update をしていません）\n");
+      io.err(`戻せる版がありません（まだ ${commandName} update をしていません）\n`);
       return 1;
     }
     io.out(`${result.restoredFrom} から ${result.restored.length} 件を戻しました\n`);
@@ -195,20 +206,35 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
   }
 
   if (command === "update") {
+    const i = rest.indexOf("--channel");
+    const requested = i >= 0 ? rest[i + 1] : "stable";
+    if (requested !== "stable" && requested !== "beta") {
+      io.err(`--channel は stable か beta です: ${String(requested)}\n`);
+      return 2;
+    }
+    let installedVersion: string | undefined;
+    try {
+      installedVersion = await readInstalledVersion(env.aikoHome);
+    } catch (err) {
+      io.err(`導入済みの版を確認できません: ${err instanceof Error ? err.message : String(err)}\n`);
+      return 1;
+    }
+    if (!installedVersion) {
+      io.err("導入済みの版を確認できません。公開版インストーラで再導入してから更新してください。\n");
+      return 1;
+    }
     if (!rest.includes("--check")) {
-      const i = rest.indexOf("--channel");
-      const requested = i >= 0 ? rest[i + 1] : "stable";
-      if (requested !== "stable" && requested !== "beta") {
-        io.err(`--channel は stable か beta です: ${String(requested)}\n`);
-        return 2;
-      }
-      const found = await checkForUpdate(version, requested, io.fetchReleases);
+      const found = await checkForUpdate(installedVersion, requested, io.fetchReleases);
       if (!found.latest) {
         io.err(`${requested} に配布物がありません${found.error ? `: ${found.error}` : ""}\n`);
         return 1;
       }
-      if (found.updateAvailable !== true) {
-        io.out(`すでに最新です（${version}）\n`);
+      if (found.updateAvailable === undefined) {
+        io.err(`版を比較できません: ${found.error ?? "不明なエラー"}\n`);
+        return 1;
+      }
+      if (!found.updateAvailable) {
+        io.out(`すでに最新です（${installedVersion}）\n`);
         return 0;
       }
       const work = await mkdtemp(joinPath(tmpdir(), "aiko-update-"));
@@ -223,12 +249,13 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
           aikoHome: env.aikoHome,
           templateAikoDir: joinPath(extracted, "claude-code", "template", ".claude", "aiko"),
           version: found.latest.tag,
+          previousVersion: installedVersion,
           backupRoot: joinPath(env.aikoHome, "backups"),
           now: new Date(),
         });
         io.out(`${found.latest.tag} を入れました（${result.updated.length} 件）\n`);
         io.out(`利用者の設定 ${result.preserved.length} 件はそのままです\n`);
-        io.out(`戻すときは aiko rollback（退避: ${result.backupDir}）\n`);
+        io.out(`戻すときは ${commandName} rollback（退避: ${result.backupDir}）\n`);
         return 0;
       } catch (err) {
         // 照合に失敗したことと、取得に失敗したことを混ぜない。
@@ -237,27 +264,23 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
           return 1;
         }
         throw err;
+      } finally {
+        await rm(work, { recursive: true, force: true });
       }
     }
-    const i = rest.indexOf("--channel");
-    const requested = i >= 0 ? rest[i + 1] : "stable";
-    if (requested !== "stable" && requested !== "beta") {
-      io.err(`--channel は stable か beta です: ${String(requested)}\n`);
-      return 2;
-    }
     const channel: Channel = requested;
-    const result = await checkForUpdate(version, channel, io.fetchReleases);
-    io.out(renderCheck(result, channel));
+    const result = await checkForUpdate(installedVersion, channel, io.fetchReleases);
+    io.out(renderCheck(result, channel, commandName));
     if (result.error && result.updateAvailable === undefined) return 1;
     return result.updateAvailable ? 10 : 0;
   }
 
   const deferred = DEFERRED[command];
   if (deferred) {
-    io.err(`aiko ${command} はまだありません。${deferred}\n`);
+    io.err(`${commandName} ${command} はまだありません。${deferred}\n`);
     return 2;
   }
 
-  io.err(`知らないコマンドです: ${command}\n\n${USAGE}`);
+  io.err(`知らないコマンドです: ${command}\n\n${usage}`);
   return 2;
 }
