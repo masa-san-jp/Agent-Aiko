@@ -1,4 +1,4 @@
-// Execute the documented PowerShell workflow against the locally built package.
+// Exercise the documented PowerShell workflow with the locally built candidate.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -12,8 +12,8 @@ assert.ok(block, "PowerShell instructions missing");
 const script = /```powershell\n([\s\S]*?)\n```/.exec(block)?.[1];
 assert.ok(script, "PowerShell block missing");
 const replacement = `'${packageFile.replaceAll("'", "''")}'`;
-assert.ok(script.includes("aiko-mcp@0.3.7"));
-const localScript = script.replace("aiko-mcp@0.3.7", replacement);
+assert.ok(script.includes("aiko-mcp@0.3.6"));
+const localScript = script.replace("aiko-mcp@0.3.6", replacement);
 const root = await mkdtemp(join(tmpdir(), "aiko-windows-doc-"));
 const home = join(root, ".aiko");
 const backup = join(home, "backups", "old", "persona", "origin");
