@@ -4,25 +4,11 @@
 
 設計書が唯一の正本。
 
-## 使える
+## 使える操作
 
-```bash
-aiko configure     # 呼び名などを設定して User Profile を作る
-aiko accept       # 会話で提案された人格・切り替え・呼び名を反映する
-aiko status        # いま何が読めていて、何が起動できるか
-aiko doctor        # 構成を点検する
-aiko doctor --fix  # 見つかったもののうち、直し方が分かっているものを直す
-aiko update --check                # 新しい版が出ていないか見る（何も書き換えない）
-aiko update --check --channel beta # 試用版も対象に含める
-```
+`status`、`doctor`、`configure`、`accept`、`update`、`rollback`、`uninstall` を使えます。`uninstall` は削除前に確認します。利用者が明示して `--yes` を付けた場合に限り確認を省きます。`install` は専用インストーラが担当します。
 
-## まだ無い
-
-`install` / `uninstall` / `rollback`、および `update` の**適用**（`--check` なし）。
-
-`update --check` は**見るだけ**で、実際の更新はできない。インストーラを Release 取得＋checksum 照合に切り替えるのが先で、そこは導入手順を1コマンドに保つかどうかの判断が要る。できないことは黙らず、`--check` なしで叩かれたら理由を返して終了コード 2 を返す。
-
-**黙って何もしないのではなく、理由を返して終了コード 2 を返す。** 「打ったのに何も起きない」を作らないため。
+公開版では `aiko-maintenance` として提供します。既存の `aiko` コマンド（Codex 版など）を置き換えません。具体的な導入手順は [README](../../README.md) を参照してください。
 
 ## 終了コード
 

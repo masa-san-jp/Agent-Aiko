@@ -161,6 +161,27 @@ jobs:
       - name: Test HTTPS login and PKCE flow
         run: npm run test:oauth-login --workspace aiko-mcp
 
+  maintenance-windows:
+    name: maintenance / Windows / Node 22
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Build package
+        run: npm run build --workspace=aiko-mcp
+      - name: Test packaged maintenance behavior
+        run: node --import tsx --test packages/mcp-server/test/maintenance.test.ts
+      - name: Pack candidate
+        run: npm pack --ignore-scripts --workspace=aiko-mcp --pack-destination "$env:RUNNER_TEMP"
+      - name: Test documented PowerShell workflow
+        run: node .github/scripts/test-maintenance-windows.mjs
+
   schemas:
     name: schemas / Node ${{ matrix.node }}
     runs-on: ubuntu-latest

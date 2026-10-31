@@ -2,3 +2,6 @@
 # Never ship this seed in a Git release archive: those updaters would overwrite
 # an existing persona-specific user file with the blank template.
 /claude-code/template/.claude/aiko/persona/origin/user.md export-ignore
+
+# Backups are created and owned by the local user; never ship them as templates.
+/claude-code/template/.claude/aiko/backups export-ignore

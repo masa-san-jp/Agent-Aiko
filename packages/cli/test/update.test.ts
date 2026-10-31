@@ -3,8 +3,11 @@
 // 実際の GitHub を叩くと、リリースを増やすたびにテストの結果が変わる。ここで
 // 確かめたいのは「取れた一覧をどう解釈するか」なので、入力は固定する。
 
-import { test } from "node:test";
+import { after, test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { run } from "../src/run.js";
 import { compareVersions, checkForUpdate, type ReleaseInfo } from "../src/update.js";
 
@@ -14,14 +17,20 @@ const releases: ReleaseInfo[] = [
   { tag: "v0.1.0", prerelease: false, url: "https://example.invalid/v0.1.0" },
 ];
 
-function capture(fetchReleases?: () => Promise<ReleaseInfo[]>) {
+const homes: string[] = [];
+after(() => { for (const home of homes) rmSync(home, { recursive: true, force: true }); });
+
+function capture(fetchReleases?: () => Promise<ReleaseInfo[]>, installed = "v0.1.0") {
+  const home = mkdtempSync(join(tmpdir(), "aiko-version-test-"));
+  homes.push(home);
+  if (installed) writeFileSync(join(home, "version"), installed);
   const out: string[] = [];
   const err: string[] = [];
   return {
     io: {
       out: (t: string) => out.push(t),
       err: (t: string) => err.push(t),
-      env: { PATH: "" },
+      env: { PATH: "", AIKO_HOME: home },
       ...(fetchReleases ? { fetchReleases } : {}),
     },
     out: () => out.join(""),
@@ -68,16 +77,16 @@ test("取得に失敗したとき「最新です」に丸めない", async () =>
   assert.match(r.error ?? "", /network down/);
 });
 
-test("新しい版があるときは 10 を返し、適用できないことを伝える", async () => {
+test("新しい版があるときは 10 を返し、更新方法を伝える", async () => {
   const c = capture(async () => releases);
   const code = await run(["update", "--check"], "0.1.0", c.io);
   assert.equal(code, 10);
   assert.match(c.out(), /v0\.2\.0/);
-  assert.match(c.out(), /いまは自動更新できません/);
+  assert.match(c.out(), /aiko update/);
 });
 
 test("最新なら 0 を返す", async () => {
-  const c = capture(async () => releases);
+  const c = capture(async () => releases, "v0.2.0");
   const code = await run(["update", "--check"], "0.2.0", c.io);
   assert.equal(code, 0);
   assert.match(c.out(), /最新です/);
@@ -94,10 +103,21 @@ test("確認できなかったときは 1 を返す", async () => {
 
 test("最新なら update は何もせずに 0 を返す", async () => {
   // 取得も展開もせずに終わる。更新の要らないときに何かを書き換えない。
-  const c = capture(async () => releases);
+  const c = capture(async () => releases, "v0.2.0");
   const code = await run(["update"], "0.2.0", c.io);
   assert.equal(code, 0);
   assert.match(c.out(), /すでに最新です/);
+});
+
+test("版が不明な場合はネットワークへ出ず、最新と表示しない", async () => {
+  for (const marker of ["", "unknown", "bad-version"]) {
+    let called = false;
+    const c = capture(async () => { called = true; return releases; }, marker);
+    assert.equal(await run(["update"], "0.2.0", c.io), 1);
+    assert.equal(called, false);
+    assert.match(c.err(), /導入済みの版を確認できません/);
+    assert.doesNotMatch(c.out(), /最新です/);
+  }
 });
 
 test("知らない channel は 2 を返す", async () => {

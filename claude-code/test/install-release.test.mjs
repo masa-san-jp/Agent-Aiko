@@ -9,7 +9,7 @@
 import { strict as assert } from "node:assert";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -100,6 +100,7 @@ describe("installer: 配布物の取得と照合", () => {
 
     assert.match(out, /checksum 照合済み/);
     assert.equal(existsSync(join(project, ".claude", "skills")), true);
+    assert.equal((await readFile(join(root, ".aiko", "version"), "utf8")).trim(), TAG);
   });
 
   it("checksum が合わない配布物は入れない", async () => {
@@ -256,5 +257,87 @@ describe("installer: 導入時の記録", () => {
       ),
       []
     );
+  });
+});
+
+
+describe("installer: 利用者ファイルへのリンク", () => {
+  let root;
+  let project;
+  let aikoHome;
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), "aiko-installer-links-"));
+    project = join(root, "project");
+    aikoHome = join(root, ".aiko");
+    await mkdir(project, { recursive: true });
+    await mkdir(join(aikoHome, "persona", "origin"), { recursive: true });
+  });
+  afterEach(async () => { await rm(root, { recursive: true, force: true }); });
+
+  it("導入記録がユーザーファイルへのリンクなら上書きせずに止まる", async () => {
+    const user = join(aikoHome, "user.md");
+    await writeFile(user, "USER SETTINGS\n");
+    await symlink(user, join(aikoHome, ".install-manifest"));
+    assert.throws(() => runInstaller({ cwd: project, home: root, env: { AIKO_HOME: aikoHome } }));
+    assert.equal(await readFile(user, "utf8"), "USER SETTINGS\n");
+  });
+
+  it("配布物への配置先がユーザーファイルのハードリンクなら止まる", async () => {
+    const user = join(aikoHome, "user.md");
+    await writeFile(user, "USER SETTINGS\n");
+    await chmod(user, 0o600);
+    await link(user, join(aikoHome, "persona", "origin", "persona.md"));
+    assert.throws(() => runInstaller({ cwd: project, home: root, env: { AIKO_HOME: aikoHome } }));
+    assert.equal(await readFile(user, "utf8"), "USER SETTINGS\n");
+    assert.equal((await stat(user)).mode & 0o777, 0o600);
+  });
+
+  it("人格別ユーザー設定の読み取り専用モードを変更しない", async () => {
+    const user = join(aikoHome, "persona", "origin", "user.md");
+    await writeFile(user, "USER SETTINGS\n");
+    await chmod(user, 0o400);
+    runInstaller({ cwd: project, home: root, env: { AIKO_HOME: aikoHome } });
+    assert.equal(await readFile(user, "utf8"), "USER SETTINGS\n");
+    assert.equal((await stat(user)).mode & 0o777, 0o400);
+  });
+
+  it("壊れたリンクを未設定として作り直さない", async () => {
+    const modeTarget = join(root, "missing-mode");
+    const overrideTarget = join(root, "missing-override");
+    const settingsTarget = join(root, "missing-settings");
+    await symlink(modeTarget, join(aikoHome, "mode"));
+    await symlink(overrideTarget, join(aikoHome, "persona", "aiko-override.md"));
+    await mkdir(join(project, ".claude"), { recursive: true });
+    await symlink(settingsTarget, join(project, ".claude", "settings.json"));
+    runInstaller({ cwd: project, home: root, env: { AIKO_HOME: aikoHome } });
+    assert.equal(existsSync(modeTarget), false);
+    assert.equal(existsSync(overrideTarget), false);
+    assert.equal(existsSync(settingsTarget), false);
+  });
+
+  it("ユーザーファイルのリンク先の権限を変更しない", async () => {
+    for (const kind of ["symbolic", "hard"]) {
+      const localHome = join(root, `home-${kind}`);
+      const external = join(root, `outside-${kind}`);
+      await mkdir(localHome, { recursive: true });
+      await writeFile(external, "USER SETTINGS\n");
+      await chmod(external, 0o640);
+      const target = join(localHome, "user.md");
+      if (kind === "symbolic") await symlink(external, target);
+      else await link(external, target);
+      runInstaller({ cwd: project, home: root, env: { AIKO_HOME: localHome } });
+      assert.equal(await readFile(external, "utf8"), "USER SETTINGS\n");
+      assert.equal((await stat(external)).mode & 0o777, 0o640);
+    }
+  });
+
+  it("プロジェクト内の既存スキルにリンクがあるときは外部へ書かない", async () => {
+    const user = join(root, "user-settings.md");
+    const skill = join(project, ".claude", "skills", "aiko");
+    await writeFile(user, "USER SETTINGS\n");
+    await mkdir(skill, { recursive: true });
+    await symlink(user, join(skill, "SKILL.md"));
+    assert.throws(() => runInstaller({ cwd: project, home: root, env: { AIKO_HOME: aikoHome } }));
+    assert.equal(await readFile(user, "utf8"), "USER SETTINGS\n");
   });
 });

@@ -9,12 +9,13 @@
 // 参照はできない。**代わりに、ずれたら落ちるテストを置いてある。**
 
 import { createHash } from "node:crypto";
-import { cp, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
+import { cp, lstat, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, join, relative, sep } from "node:path";
 
 /** 利用者のもの。更新でも巻き戻しでも書き換えない。 */
 export const USER_OWNED_PATHS: readonly string[] = [
   "mode",
+  "backups",
   "user.md",
   "user-profile.json",
   "user-proposal.md",
@@ -41,16 +42,45 @@ async function listFiles(root: string, base = root): Promise<string[]> {
   let entries: string[];
   try {
     entries = await readdir(root);
-  } catch {
-    return out;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return out;
+    throw err;
   }
   for (const entry of entries) {
     const full = join(root, entry);
-    const info = await stat(full);
+    const info = await lstat(full);
     if (info.isDirectory()) out.push(...(await listFiles(full, base)));
     else out.push(relative(base, full));
   }
   return out;
+}
+
+/** 利用者が選んだルートの内側でリンクを辿ると、別の利用者ファイルを書き換えうる。 */
+async function assertNoSymlinks(base: string, rel: string): Promise<void> {
+  let path = base;
+  for (const part of rel.split(sep).filter(Boolean)) {
+    if (part === "." || part === "..") throw new Error("不正なパスです");
+    path = join(path, part);
+    try {
+      const info = await lstat(path);
+      if (info.isSymbolicLink()) throw new Error(`シンボリックリンクがあるため中止します: ${path}`);
+      if (!info.isFile() && !info.isDirectory()) throw new Error(`通常のファイルやディレクトリではないため中止します: ${path}`);
+      if (info.isFile() && info.nlink > 1) throw new Error(`ハードリンクがあるため中止します: ${path}`);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw err;
+    }
+  }
+}
+
+/** 保守対象と退避先は、書き込み前に全件検査する。 */
+async function assertBackupRoot(aikoHome: string, backupRoot: string): Promise<void> {
+  const rel = relative(aikoHome, backupRoot);
+  if (rel && rel !== ".." && !rel.startsWith(`..${sep}`)) {
+    await assertNoSymlinks(aikoHome, rel);
+  } else {
+    await assertNoSymlinks(dirname(backupRoot), basename(backupRoot));
+  }
 }
 
 export interface ApplyUpdateInput {
@@ -58,6 +88,7 @@ export interface ApplyUpdateInput {
   /** 展開済み配布物の中の、~/.aiko に対応するディレクトリ。 */
   templateAikoDir: string;
   version: string;
+  previousVersion?: string;
   backupRoot: string;
   now: Date;
 }
@@ -73,13 +104,24 @@ export async function applyUpdate(input: ApplyUpdateInput): Promise<ApplyUpdateR
   const stamp = input.now.toISOString().replace(/[:.]/g, "-");
   const backupDir = join(input.backupRoot, `${stamp}-${input.version}`);
   const candidates = (await listFiles(input.templateAikoDir)).filter((rel) => !isUserOwned(rel));
+  await assertBackupRoot(input.aikoHome, input.backupRoot);
+  await assertNoSymlinks(input.aikoHome, "version");
+  for (const rel of candidates) {
+    await assertNoSymlinks(input.templateAikoDir, rel);
+    await assertNoSymlinks(input.aikoHome, rel);
+    await assertNoSymlinks(input.backupRoot, join(`${stamp}-${input.version}`, rel));
+  }
+  await assertNoSymlinks(input.backupRoot, join(`${stamp}-${input.version}`, "backup.json"));
 
   const updated: string[] = [];
   for (const rel of candidates) {
     const dst = join(input.aikoHome, rel);
     // 既にあるものだけ退避する。新規追加は巻き戻し時に消せないが、
     // 消すほうが危ない（利用者が後から置いたものと見分けが付かない）。
-    const existing = await readFile(dst).catch(() => undefined);
+    const existing = await readFile(dst).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined;
+      throw err;
+    });
     if (existing !== undefined) {
       await mkdir(dirname(join(backupDir, rel)), { recursive: true });
       await writeFile(join(backupDir, rel), existing);
@@ -94,7 +136,7 @@ export async function applyUpdate(input: ApplyUpdateInput): Promise<ApplyUpdateR
   await mkdir(backupDir, { recursive: true });
   await writeFile(
     join(backupDir, "backup.json"),
-    `${JSON.stringify({ version: input.version, createdAt: input.now.toISOString(), files: updated }, null, 2)}\n`,
+    `${JSON.stringify({ format: 2, version: input.previousVersion ?? "unknown", updatedTo: input.version, createdAt: input.now.toISOString(), files: updated }, null, 2)}\n`,
   );
   await writeFile(join(input.aikoHome, "version"), `${input.version}\n`);
 
@@ -111,12 +153,13 @@ export async function listBackups(backupRoot: string): Promise<Backup[]> {
   const dirs = await readdir(backupRoot).catch(() => [] as string[]);
   const backups: Backup[] = [];
   for (const dir of dirs) {
+    await assertNoSymlinks(backupRoot, join(dir, "backup.json"));
     const meta = await readFile(join(backupRoot, dir, "backup.json"), "utf8").catch(() => undefined);
     if (meta === undefined) continue;
-    const parsed = JSON.parse(meta) as { version?: string; createdAt?: string };
+    const parsed = JSON.parse(meta) as { format?: number; version?: string; createdAt?: string };
     backups.push({
       dir: join(backupRoot, dir),
-      version: parsed.version ?? "unknown",
+      version: parsed.format === 2 ? (parsed.version ?? "unknown") : "unknown",
       createdAt: parsed.createdAt ?? "",
     });
   }
@@ -133,13 +176,18 @@ export async function rollback(input: {
   aikoHome: string;
   backupRoot: string;
 }): Promise<RollbackResult | undefined> {
+  await assertBackupRoot(input.aikoHome, input.backupRoot);
   const [latest] = await listBackups(input.backupRoot);
   if (latest === undefined) return undefined;
 
-  const files = (await listFiles(latest.dir)).filter((rel) => rel !== "backup.json");
+  const files = (await listFiles(latest.dir)).filter((rel) => rel !== "backup.json" && !isUserOwned(rel));
+  await assertNoSymlinks(input.aikoHome, "version");
+  for (const rel of files) {
+    await assertNoSymlinks(latest.dir, rel);
+    await assertNoSymlinks(input.aikoHome, rel);
+  }
   const restored: string[] = [];
   for (const rel of files) {
-    if (isUserOwned(rel)) continue; // 退避には入らないはずだが、念のため二重に守る
     const dst = join(input.aikoHome, rel);
     await mkdir(dirname(dst), { recursive: true });
     await cp(join(latest.dir, rel), dst);

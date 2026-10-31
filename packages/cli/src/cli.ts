@@ -3,11 +3,13 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { run } from "./run.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const entryPath = fileURLToPath(import.meta.url);
+const here = dirname(entryPath);
+const commandName = basename(entryPath) === "maintenance.js" ? "aiko-maintenance" : "aiko";
 const pkg = JSON.parse(readFileSync(join(here, "..", "package.json"), "utf8")) as { version: string };
 
 // 対話できるときだけ ask を渡す。パイプ越しに configure を叩かれても、
@@ -20,6 +22,7 @@ const rl = interactive
 run(process.argv.slice(2), pkg.version, {
   out: (text) => process.stdout.write(text),
   err: (text) => process.stderr.write(text),
+  commandName,
   ...(rl
     ? {
         ask: async (question: string, options?: { default?: string }) => {
@@ -34,6 +37,6 @@ run(process.argv.slice(2), pkg.version, {
   })
   .finally(() => rl?.close())
   .catch((err: unknown) => {
-    process.stderr.write(`aiko: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.stderr.write(`${commandName}: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exitCode = 1;
   });
