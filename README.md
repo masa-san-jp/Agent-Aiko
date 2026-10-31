@@ -152,7 +152,7 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
   trap 'rm -rf "$work"' EXIT
   cd "$work"
   npm install --prefix "$work" --cache "$work/npm-cache" \
-    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
   node "$work/node_modules/aiko-mcp/dist/maintenance.js" rollback
 )
 ```
@@ -173,7 +173,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
   try {
     $env:AIKO_HOME = $targetAikoHome
     npm install --prefix $work --cache (Join-Path $work "npm-cache") `
-      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
     if ($LASTEXITCODE -ne 0) { throw "保守コマンドを取得できませんでした" }
     node (Join-Path $work "node_modules/aiko-mcp/dist/maintenance.js") rollback
     if ($LASTEXITCODE -ne 0) { throw "保守操作は完了しませんでした" }
@@ -188,14 +188,14 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
 この操作は利用者側の `~/.aiko`（`AIKO_HOME` を指定している場合はその保存先）を対象にします。保存先を別の利用者と共有していなければ、他の利用者の設定には影響しません。配布元のファイルも変更しません。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.6/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.7/scripts/install.sh | bash
 ```
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
 installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。https の Release は `gh attestation verify` も要ります（`file://` の試験用は対象外）。**照合に失敗した場合は中止し、リポジトリの clone には回りません。** 照合済みで入ったかどうかは出力に出ます。
 
-上の URL はリリース `v0.3.6` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
+上の URL はリリース `v0.3.7` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
 
 | 環境変数 | 既定 | 用途 |
 |---|---|---|

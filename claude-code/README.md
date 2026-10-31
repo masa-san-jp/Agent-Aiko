@@ -32,7 +32,7 @@ Claude Code 環境で動く Aiko の配布物です。既存プロジェクト�
   trap 'rm -rf "$work"' EXIT
   cd "$work"
   npm install --prefix "$work" --cache "$work/npm-cache" \
-    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
   node "$work/node_modules/aiko-mcp/dist/maintenance.js" rollback
 )
 ```
@@ -53,7 +53,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
   try {
     $env:AIKO_HOME = $targetAikoHome
     npm install --prefix $work --cache (Join-Path $work "npm-cache") `
-      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
     if ($LASTEXITCODE -ne 0) { throw "保守コマンドを取得できませんでした" }
     node (Join-Path $work "node_modules/aiko-mcp/dist/maintenance.js") rollback
     if ($LASTEXITCODE -ne 0) { throw "保守操作は完了しませんでした" }
@@ -72,7 +72,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
 インストールしたいプロジェクトのディレクトリで次のコマンドを実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.6/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.7/scripts/install.sh | bash
 ```
 
 `scripts/install.sh` は互換ラッパーで、内部的に `claude-code/scripts/install.sh` を実行します。確認プロンプトで `Y` を入力すると、Aiko 共有ストア `~/.aiko/` が初期化され、対象プロジェクトには `.claude/skills/aiko*/` と `.claude/scripts/aiko-*.sh` が配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。
