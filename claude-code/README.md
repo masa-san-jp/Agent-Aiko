@@ -18,6 +18,8 @@ Claude Code 環境で動く Aiko の配布物です。既存プロジェクト�
 
 ## インストール
 
+**公開準備中:** 以下の v0.3.7 は公開処理が完了するまで取得できません。既に公開されている v0.3.6 を使用する場合は、更新する前に更新先を確認してください。
+
 **既存の利用者へ:** 古い保守コマンドやインストーラには、利用者設定を上書き・削除する問題があります。更新・巻き戻し・削除には、以下の更新済み保守コマンドを使ってください。既存の `aiko` コマンドやエージェントの設定は自動で置き換えません。
 
 保守コマンドを一時ディレクトリに用意し、利用者設定を保護して巻き戻す例です。削除する場合は最後の `rollback` を `uninstall` に変更すると、削除前に確認します。Node.js 20 以上が必要です。
@@ -32,7 +34,7 @@ Claude Code 環境で動く Aiko の配布物です。既存プロジェクト�
   trap 'rm -rf "$work"' EXIT
   cd "$work"
   npm install --prefix "$work" --cache "$work/npm-cache" \
-    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
   node "$work/node_modules/aiko-mcp/dist/maintenance.js" rollback
 )
 ```
@@ -53,7 +55,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
   try {
     $env:AIKO_HOME = $targetAikoHome
     npm install --prefix $work --cache (Join-Path $work "npm-cache") `
-      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.7
     if ($LASTEXITCODE -ne 0) { throw "保守コマンドを取得できませんでした" }
     node (Join-Path $work "node_modules/aiko-mcp/dist/maintenance.js") rollback
     if ($LASTEXITCODE -ne 0) { throw "保守操作は完了しませんでした" }
@@ -72,7 +74,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
 インストールしたいプロジェクトのディレクトリで次のコマンドを実行します。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.6/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.7/scripts/install.sh | bash
 ```
 
 `scripts/install.sh` は互換ラッパーで、内部的に `claude-code/scripts/install.sh` を実行します。確認プロンプトで `Y` を入力すると、Aiko 共有ストア `~/.aiko/` が初期化され、対象プロジェクトには `.claude/skills/aiko*/` と `.claude/scripts/aiko-*.sh` が配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。
