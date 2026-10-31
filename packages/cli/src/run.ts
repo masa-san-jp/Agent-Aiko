@@ -21,7 +21,7 @@ import {
   renderUninstall,
   uninstall,
 } from "./uninstall.js";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 
@@ -264,6 +264,8 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
           return 1;
         }
         throw err;
+      } finally {
+        await rm(work, { recursive: true, force: true });
       }
     }
     const channel: Channel = requested;
