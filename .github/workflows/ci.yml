@@ -142,19 +142,32 @@ jobs:
       - name: Test
         run: npm test
 
+  maintenance-source:
+    name: maintenance / prepare Windows sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive only the sources required for maintenance
+        run: git archive --format=tar -o maintenance-source.tar HEAD -- package.json package-lock.json tsconfig.json tsconfig.base.json README.md packages claude-code/template .github/scripts/test-maintenance-windows.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maintenance-windows-source
+          path: maintenance-source.tar
+          retention-days: 1
+
   maintenance-windows:
     name: maintenance / Windows / Node 22
     runs-on: windows-latest
+    needs: maintenance-source
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Some unrelated repository filenames cannot be checked out on Windows.
+      - name: Download source subset
+        uses: actions/download-artifact@v4
         with:
-          # docs includes filenames that Windows cannot check out. Only the
-          # package sources and templates are needed by this job.
-          sparse-checkout: |
-            packages
-            claude-code/template
-            .github/scripts
+          name: maintenance-windows-source
+          path: ${{ runner.temp }}/maintenance-source
+      - name: Extract sources
+        run: tar -xf "$env:RUNNER_TEMP/maintenance-source/maintenance-source.tar"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
