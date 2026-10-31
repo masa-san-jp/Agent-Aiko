@@ -5,7 +5,7 @@
 
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { run } from "../src/run.js";
@@ -117,6 +117,38 @@ test("版が不明な場合はネットワークへ出ず、最新と表示し�
     assert.equal(called, false);
     assert.match(c.err(), /導入済みの版を確認できません/);
     assert.doesNotMatch(c.out(), /最新です/);
+  }
+});
+
+test("minor / major 更新は更新先を示し、未承認なら配布物を取得しない", async () => {
+  for (const target of ["v0.2.0", "v1.0.0"]) {
+    for (const answer of [undefined, "no"]) {
+      let downloads = 0;
+      const c = capture(async () => [{ tag: target, prerelease: false, url: "" }]);
+      const code = await run(["update"], "9.9.9", {
+        ...c.io,
+        fetchBytes: async () => { downloads++; return new Uint8Array(); },
+        ...(answer === undefined ? {} : { ask: async () => answer }),
+      });
+      assert.equal(code, answer === undefined ? 2 : 0);
+      assert.equal(downloads, 0);
+      assert.match(c.out(), new RegExp(target.replaceAll(".", "\\.")));
+      assert.equal(readFileSync(join(c.io.env.AIKO_HOME, "version"), "utf8"), "v0.1.0");
+    }
+  }
+});
+
+test("patch 更新と明示承認した更新は配布物を取得する", async () => {
+  for (const [target, args, answer] of [["v0.1.1", ["update"], undefined], ["v0.2.0", ["update", "--yes"], undefined], ["v1.0.0", ["update"], "yes"]] as const) {
+    let downloads = 0;
+    const c = capture(async () => [{ tag: target, prerelease: false, url: "" }]);
+    const code = await run(args, "9.9.9", {
+      ...c.io,
+      fetchBytes: async () => { downloads++; return new Uint8Array(); },
+      ...(answer === undefined ? {} : { ask: async () => answer }),
+    });
+    assert.equal(code, 1); // 空のテスト配布物は checksum を通らない。
+    assert.ok(downloads > 0);
   }
 });
 
