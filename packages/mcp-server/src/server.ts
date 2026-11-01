@@ -10,7 +10,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { FileSystemPersonaRepository } from "@agent-aiko/core";
+import { assertStoragePath, FileSystemPersonaRepository } from "@agent-aiko/core";
 import {
   readUserMarkdown,
   resolveUserProfilePath,
@@ -33,6 +33,8 @@ const userProfilePath = resolveUserProfilePath(
 
 async function main(): Promise<void> {
   const provider = new UserContextProvider();
+  const home = aikoHome ?? join(homedir(), ".aiko");
+  if (!process.env["AIKO_USER_PROFILE"] && userProfilePath) await assertStoragePath(home, userProfilePath);
   // User Profile を解決できないのは §6.5 の fail-closed 条件。既定値で埋めて
   // 起動すると、誰のものか分からない関係情報で人格が立ち上がる。
   const base = userProfilePath
@@ -41,7 +43,7 @@ async function main(): Promise<void> {
 
   // user.md があれば重ねる。無ければ何も足さない——**呼び名を知らないまま起動する**
   // のが既定で、名前は利用者が教えたときだけ持つ。
-  const home = aikoHome ?? join(homedir(), ".aiko");
+  await assertStoragePath(home, join(home, "user.md"));
   const md = await readUserMarkdown(userMarkdownCandidates(home));
   const user = md ? provider.withMarkdown(base, md.user) : base;
 
@@ -60,14 +62,14 @@ async function main(): Promise<void> {
   await server.connect(new StdioServerTransport());
 }
 
-const USAGE = `使い方: npx aiko-mcp [コマンド]
+const USAGE = `使い方: node <インストール先>/dist/server.js [コマンド]
 
   （引数なし）   MCP サーバーとして起動する（クライアントが呼ぶのはこれ）
   install        入っている AI クライアントに aiko の MCP 設定を書き込む
   --help         この使い方を表示する
   --version      版を表示する
 
-install の細かい指定は npx aiko-mcp install --help
+install の細かい指定は install --help
 `;
 
 /** PATH から実体を探す。which に頼らず自分で見る（Windows は拡張子まで含めて返す）。 */

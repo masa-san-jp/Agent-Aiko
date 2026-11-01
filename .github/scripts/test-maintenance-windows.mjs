@@ -5,15 +5,15 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const packageFile = resolve(process.env.RUNNER_TEMP, "aiko-mcp-0.3.6.tgz");
+const packageFile = resolve(process.env.RUNNER_TEMP, "aiko-mcp-0.3.7.tgz");
 const readme = await readFile("README.md", "utf8");
 const block = readme.split("Windows の PowerShell では次を実行します。", 2)[1];
 assert.ok(block, "PowerShell instructions missing");
 const script = /```powershell\n([\s\S]*?)\n```/.exec(block)?.[1];
 assert.ok(script, "PowerShell block missing");
 const replacement = `'${packageFile.replaceAll("'", "''")}'`;
-assert.ok(script.includes("aiko-mcp@0.3.6"));
-const localScript = script.replace("aiko-mcp@0.3.6", replacement);
+assert.ok(script.includes("aiko-mcp@0.3.7"));
+const localScript = script.replace("aiko-mcp@0.3.7", replacement);
 const root = await mkdtemp(join(tmpdir(), "aiko-windows-doc-"));
 const home = join(root, ".aiko");
 const backup = join(home, "backups", "old", "persona", "origin");

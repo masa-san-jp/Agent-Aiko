@@ -80,7 +80,7 @@ interface FileTarget {
 
 type Target = CliTarget | FileTarget;
 
-const USAGE = `使い方: npx aiko-mcp install [オプション]
+const USAGE = `使い方: node <インストール先>/dist/server.js install [オプション]
 
 入っている AI クライアントを探して、aiko の MCP 設定を書き込みます。
 入っていないクライアントには何もしません。

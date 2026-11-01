@@ -5,14 +5,24 @@
 
 作成 2026-07-31。設計書が上位の正本であり、本文書が設計書と矛盾する場合は設計書を優先する。
 
-> 以下の脅威の説明と対策には、作成時点の調査・要求が含まれます。「未実装」「現状」とある箇所を現在の実装状況として扱わないでください。以下は 2026-10-31 にコードから確認した範囲です。未記載の対策は完了と判断していません。
->
-> - T1: Release アーカイブは checksum と GitHub attestation を照合します。ただし `curl | bash` 経路の最初のスクリプトと、そのスクリプトが raw URL から取得する本体は、この照合の前に実行されます。README の別手順ではインストーラを含むアーカイブを実行前に照合します。
-> - T3: CLI の更新適用は実装され、HTTPS の配布アーカイブの checksum と attestation を検証します。利用者設定の保護修正は main にありますが、2026-10-31 時点の公開済み v0.3.2 には含まれません。
-> - T4: rollback は端末内のバックアップから復元します。バックアップの署名・checksum や撤回済みバージョンの確認は実装されていません。利用者設定の保護修正は未公開です。
-> - T7: CI で `npm audit` を実行し、Release workflow は SBOM を生成します。これらは依存関係の安全性全体を保証しません。
->
-> 確認箇所: `scripts/install.sh`、`claude-code/scripts/install.sh`、`packages/cli/src/download.ts`、`packages/cli/src/apply-update.ts`、`.github/workflows/ci.yml`、`.github/workflows/release.yml`。
+> 本文の 2026-07-31 の調査と対策案は履歴です。現在の状況は以下を参照してください。試験の存在は、すべての環境や操作に対する安全性の保証を意味しません。
+
+## 現在の対応状況（2026-10-31 確認）
+
+GitHub Release / npm パッケージ v0.3.7 の内容。この表はローカル stdio と保守経路を対象とし、コード上の対応と公開版を区別します。
+
+| 脅威 | 確認できた対策と残る範囲 |
+|---|---|
+| T1 導入時のすり替え | HTTPS の Release アーカイブは checksum と GitHub attestation を確認する。`curl \| bash` の最初のスクリプトと raw URL から取得する本体は照合前に実行される。README にはアーカイブ内のインストーラ自体を実行前に検証する手順がある。 |
+| T2 人格のすり替え | Binder は合成した人格の hash を provenance に記録し、変化を試験する。記録した hash 自体は、取得後の人格ファイルが信頼できる正本と一致することの検証ではない。 |
+| T3 更新 | HTTPS の Release は checksum と attestation を検証してから適用し、失敗時は中止する。v0.3.7 は minor / major 更新前に更新先を表示して確認する。v0.3.6 はこの確認を行わない。 |
+| T4 巻き戻し | v0.3.6 は利用者の設定やバックアップを保護する。バックアップの署名・checksum と、撤回された版の確認は実装されていない。旧コマンドは利用者端末で自動的には置き換わらない。 |
+| T5 ローカル情報 | インストーラは保存先の権限を設定し、リンク先や利用者ファイルの権限を変更しない経路を試験する。仕様の `~/.config/aiko/` と実装の `~/.aiko/` の差は残る。 |
+| T6 認証情報 | Capability Manifest の値の混入拒否と、Runtime SDK の秘匿処理をテストする。すべてのログ経路で漏洩しないことを示すものではない。 |
+| T7 依存関係 | CI の `npm audit` と Release の SBOM 生成を確認した。依存関係全体の安全性を保証するものではない。 |
+| T8 stdio 入力 | MCP の引数検証と人格名・パスの拒否を試験する。個別の試験が未検証の入力すべてを網羅するわけではない。 |
+
+主な根拠: `scripts/install.sh`、`claude-code/scripts/install.sh`、`packages/cli/src/{download,run,apply-update}.ts`、`packages/binder/src/binder.ts`、`packages/runtime-sdk/test/security.test.ts`、`packages/mcp-server/test/`、`.github/workflows/{ci,release}.yml`。
 
 ---
 
@@ -22,7 +32,7 @@ Aiko-MCP は**人格を実行環境へ注入する**。注入される指示文�
 
 材料は3つ。**コード**（installer / MCP サーバー / Adapter）、**人格**（Persona Package）、**利用者情報**（User Profile・Permission Manifest）。本文書はこの3つが偽装・改竄・漏洩する経路を並べる。
 
-## 2. 現状の配布経路（実測 2026-07-31）
+## 2. 当時の配布経路（実測 2026-07-31）
 
 `README.md` が案内する導入は次の形になっている（`INSTALL.md` は `git clone` 経由を案内しており、経路が2本ある）。
 
@@ -82,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/main/scripts
 
 ---
 
-## 4. 脅威
+## 4. 脅威（2026-07-31 の調査と対策案）
 
 深刻度は「利用者にとって取り返しがつくか」で付ける。**High = 気付かずに侵害が成立し、後から検知もできない。**
 

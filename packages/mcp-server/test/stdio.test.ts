@@ -5,8 +5,9 @@
 // 文字列が混ざるだけでフレームが壊れるが、それは InMemory では絶対に出ない。
 
 import { test } from "node:test";
-import { acceptSpeechStyleProposal, acceptUserProposal } from "@agent-aiko/runtime-sdk";
+import { acceptSpeechStyleProposal } from "@agent-aiko/runtime-sdk";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { mkdtemp, mkdir, writeFile, rm, access } from "node:fs/promises";
@@ -14,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const serverEntry = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "server.js");
+const serverEntry = process.env["AIKO_TEST_ENTRY"] ?? join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "server.js");
 
 test("実バイナリを stdio で起動して人格を読める", async () => {
   const home = await mkdtemp(join(tmpdir(), "aiko-mcp-stdio-"));
@@ -95,7 +96,7 @@ test("実バイナリ: 話し方を切り替えると、同梱の定義が人格
       assert.equal(switched.isError, undefined);
       const proposal = JSON.parse(String((switched as { content: Array<{ text: string }> }).content[0]?.text));
       assert.equal(proposal.applied, false);
-      assert.equal(proposal.next, "aiko accept");
+      assert.equal(proposal.next, "aiko-maintenance accept");
       const before = await activate();
       assert.equal(before.includes(`# 話し方（${style}）`), false);
       assert.equal(await acceptSpeechStyleProposal(home), style);
@@ -141,7 +142,10 @@ test("初回の呼び名は提案を承認し、MCP を再起動すると反映�
     const proposal = await client.callTool({ name: "aiko.remember_user", arguments: { address: "TEST_NICKNAME" } });
     assert.equal(JSON.parse(String((proposal.content as Array<{ text: string }>)[0]?.text)).applied, false);
     await assert.rejects(access(join(home, "user.md")));
-    assert.equal(await acceptUserProposal(home), true);
+    const accepted = spawnSync(process.execPath, [join(dirname(serverEntry), "maintenance.js"), "accept"], {
+      encoding: "utf8", env: { ...process.env, HOME: home, AIKO_HOME: home, AIKO_USER_PROFILE: "" },
+    });
+    assert.equal(accepted.status, 0, accepted.stderr);
     await client.close();
     await connect(restarted);
     const afterRestart = await restarted.getPrompt({ name: "aiko.activate" });

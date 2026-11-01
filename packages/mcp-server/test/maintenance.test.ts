@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const entry = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "maintenance.js");
 
@@ -59,6 +59,26 @@ test("保守コマンドの案内は MCP や別の aiko コマンドと区別で
   assert.match(result.stdout, /使い方: aiko-maintenance <コマンド>/);
   const unrelated = spawnSync(process.execPath, [entry, "configure"], { encoding: "utf8" });
   assert.equal(unrelated.status, 2);
+});
+
+test("配布保守コマンドは非対話の大きな版の更新を承認なしで適用しない", async () => {
+  const root = await mkdtemp(join(tmpdir(), "aiko-maintenance-update-"));
+  const home = join(root, ".aiko");
+  const preload = join(root, "mock-fetch.mjs");
+  try {
+    await write(join(home, "version"), "v0.1.0\n");
+    await write(join(home, "user.md"), "CURRENT USER\n");
+    await write(preload, `globalThis.fetch = async url => {\n  if (!String(url).includes('/releases?')) throw new Error('unexpected download');\n  return new Response(JSON.stringify([{tag_name: 'v0.2.0', prerelease: false, html_url: ''}]));\n};\n`);
+    const result = spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, entry, "update"], {
+      encoding: "utf8", cwd: root,
+      env: { ...process.env, HOME: root, USERPROFILE: root, AIKO_HOME: home, AIKO_USER_PROFILE: "" },
+    });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stdout, /v0\.1\.0.*v0\.2\.0/);
+    assert.match(result.stderr, /確認が必要/);
+    assert.equal(await readFile(join(home, "version"), "utf8"), "v0.1.0\n");
+    assert.equal(await readFile(join(home, "user.md"), "utf8"), "CURRENT USER\n");
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 

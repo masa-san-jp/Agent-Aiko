@@ -1,15 +1,27 @@
 # aiko-mcp
 
-**A persona you can carry between MCP clients.** Aiko is the same agent in Claude Code, Codex CLI, Cursor and VS Code — one definition, loaded over MCP, instead of the same paragraphs pasted into four different config files.
+**A persona you can carry between MCP clients.** Aiko supplies a consistent persona and optional local context to your agent in Claude Code, Codex CLI, Cursor and VS Code, without copying the same definition into each client.
 
-Everything runs on your machine. The persona, the profile, whatever you tell it to remember — none of it leaves the device, and there is no server to run.
+The MCP server runs locally and does not itself send persona or profile data over the network. Your MCP client may send conversation or tool results to its model provider; check the client’s settings and privacy policy.
 
 The package also contains `aiko-maintenance` for explicit local update, rollback, and uninstall operations. It does not replace an existing `aiko` command. For a temporary installation and safe migration instructions, see the project README.
 
 ## Install
 
+macOS / Linux:
+
 ```bash
-npx aiko-mcp install
+AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
+```
+
+Windows PowerShell:
+
+```powershell
+$AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
 It finds the clients you actually have and writes the config for them. Clients you don't have are left alone. Use `--dry-run` first if you want to see what it would write.
@@ -38,7 +50,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.3.6"
+    "version": "0.3.8"
   },
   "persona": {
     "id": "aiko",
@@ -64,7 +76,19 @@ You talk to it. There are no files to write by hand.
 "talk to me like a friend"     → switches to the friend speech style
 ```
 
-Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko accept`. Restart the MCP server to load accepted user names and memory. Speech style is also a proposal and requires `aiko accept`.
+Run the installed maintenance script directly to accept proposals. On macOS / Linux:
+
+```bash
+node "$HOME/.local/share/aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js" accept
+```
+
+On Windows PowerShell:
+
+```powershell
+node (Join-Path $env:LOCALAPPDATA "aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js") accept
+```
+
+Name, memory location, and persona save or switch are proposals only. They stay out of the system prompt until you run `aiko-maintenance accept`. Restart the MCP server to load accepted user names and memory. Speech style is also a proposal and requires `aiko-maintenance accept`.
 
 What it learns is written to `~/.aiko` — that machine, that user, nobody else.
 
@@ -84,7 +108,7 @@ How Aiko talks is chosen separately from who Aiko is. Switching the style change
 | `friend` | Casual, close — the way a friend working next to you talks |
 | `servant` | Polite and eager to serve, first person 「アイコ」 |
 
-After `aiko accept`, the choice is kept in `~/.aiko/speech-style` and takes effect the next time the persona is loaded (`aiko.activate`). To change how a style sounds, put your own `~/.aiko/speech-styles/<style>.md`; it takes precedence over the shipped one.
+After `aiko-maintenance accept`, the choice is kept in `~/.aiko/speech-style` and takes effect the next time the persona is loaded (`aiko.activate`). To change how a style sounds, put your own `~/.aiko/speech-styles/<style>.md`; it takes precedence over the shipped one.
 
 
 ## Configuration
@@ -105,10 +129,10 @@ After `aiko accept`, the choice is kept in `~/.aiko/speech-style` and takes effe
 
 Existing entries are kept, a backup (`.aiko-bak-*`) is written before any change, and a config the installer cannot parse is left untouched.
 
-If you would rather do it yourself, point the client at the installed `server.js` with an absolute path. Do not use `npx -y aiko-mcp`. npx runs `node_modules/.bin/aiko-mcp` from the project you have open, so a repository can ship a fake binary that starts as soon as the MCP server does.
+If you would rather do it yourself, point the client at the installed `server.js` with an absolute path. Do not use `npx` for installation or for starting the server: it can run `node_modules/.bin/aiko-mcp` from the project you have open.
 
 ```bash
-# the path printed by `npx aiko-mcp install`, or the real file from your install
+# the real file from your install
 claude mcp add aiko -s user -- "$(command -v node)" /absolute/path/to/aiko-mcp/dist/server.js
 ```
 
@@ -150,12 +174,24 @@ The design documents live in [docs/](https://github.com/masa-san-jp/Agent-Aiko/t
 
 アイコの人格を、どの MCP クライアントからでも同じ形で取り出せるサーバー。Claude Code でも Codex でも Cursor でも VS Code でも、同じ1つの定義を読む。設定ファイル4つに同じ文章を貼って回らなくてよくなる。
 
-すべて手元で動く。人格も、覚えたことも、端末の外へ出ない。立てるサーバーも無い。
+MCP サーバーは端末内で動作し、それ自身は人格や利用者設定をネットワークへ送信しません。MCP クライアントが会話やツールの結果をモデル提供元へ送る場合は、クライアント側の設定やプライバシーポリシーが適用されます。
 
 ### 入れる
 
+macOS / Linux:
+
 ```bash
-npx aiko-mcp install
+AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
+```
+
+Windows PowerShell:
+
+```powershell
+$AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
 入っているクライアントだけを探して設定を書く。入っていないものには触らない。書く前に見たいときは `--dry-run`。
@@ -191,5 +227,5 @@ npx aiko-mcp install
 | `friend` | 隣で作業を見ている友だちの距離のくだけた口調 |
 | `servant` | 一人称「アイコ」で、控えめに一生懸命仕える丁寧な口調 |
 
-会話からの変更は提案だけです。`aiko accept` で受け入れると `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
+会話からの変更は提案だけです。`aiko-maintenance accept` で受け入れると `~/.aiko/speech-style` に残り、次に人格を読み込んだとき（`aiko.activate`）から効く。口調を自分好みにしたいときは `~/.aiko/speech-styles/<話し方>.md` を置けば、同梱のものより優先される。
 
