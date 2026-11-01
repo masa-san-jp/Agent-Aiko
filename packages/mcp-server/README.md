@@ -12,7 +12,7 @@ macOS / Linux:
 
 ```bash
 AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
-npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
 node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
 ```
 
@@ -20,7 +20,7 @@ Windows PowerShell:
 
 ```powershell
 $AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
-npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
 node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
@@ -50,7 +50,7 @@ PROMPTS: aiko.activate, aiko.activate_for_task, aiko.review_as_aiko, aiko.handof
 {
   "server": {
     "name": "aiko-mcp",
-    "version": "0.3.6"
+    "version": "0.3.8"
   },
   "persona": {
     "id": "aiko",
@@ -182,7 +182,7 @@ macOS / Linux:
 
 ```bash
 AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
-npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
 node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
 ```
 
@@ -190,7 +190,7 @@ Windows PowerShell:
 
 ```powershell
 $AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
-npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
 node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
