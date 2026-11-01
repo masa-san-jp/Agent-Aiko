@@ -9,9 +9,10 @@
 
 import { readFile, realpath } from "node:fs/promises";
 import { homedir } from "node:os";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { assertWithinLimit } from "./limits.js";
+import { assertStoragePath } from "./storage-path.js";
 import {
   PersonaResolutionError,
   type PersonaRef,
@@ -142,6 +143,7 @@ export class FileSystemPersonaRepository implements PersonaRepository {
 
   /** 選ばれている話し方。original・未設定・不正値は「上書きしない」（空文字）。 */
   async #readSpeechStyle(): Promise<string> {
+    await assertStoragePath(this.#aikoHome, join(this.#aikoHome, "speech-style"));
     const raw = (await readOptional(join(this.#aikoHome, "speech-style")))?.trim() ?? "";
     // active-persona と同じく、値がそのままパスの一部になる。置き場の外を読ませない。
     if (raw === ORIGINAL_SPEECH_STYLE || !isSpeechStyleId(raw)) return "";
@@ -192,12 +194,14 @@ export class FileSystemPersonaRepository implements PersonaRepository {
   }
 
   async #readMode(): Promise<Mode> {
+    await assertStoragePath(this.#aikoHome, join(this.#aikoHome, "mode"));
     const content = await readOptional(join(this.#aikoHome, "mode"));
     // 不正値は origin として扱う（既存の起動シーケンスと同じ扱い）。
     return content?.trim() === "override" ? "override" : "origin";
   }
 
   async #readActivePersona(): Promise<string> {
+    await assertStoragePath(this.#aikoHome, join(this.#aikoHome, "active-persona"));
     const raw = (await readOptional(join(this.#aikoHome, "active-persona")))?.trim() ?? "";
     // active-persona はそのままパスの一部になる。`../../../x` と書けば ~/.aiko の外の
     // ファイルが人格として読み込まれた（SDK 設計書 §20.6 の path traversal で実測）。
@@ -220,6 +224,10 @@ export class FileSystemPersonaRepository implements PersonaRepository {
 
   async #readOptionalFirst(paths: string[]): Promise<{ path: string; content: string } | undefined> {
     for (const path of paths) {
+      const rel = relative(resolve(this.#aikoHome), resolve(path));
+      if (rel && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)) {
+        await assertStoragePath(this.#aikoHome, path);
+      }
       const content = await readOptional(path);
       if (content !== undefined) {
         // §21 の最大入力。読めてしまってから合成の途中で詰まるより、

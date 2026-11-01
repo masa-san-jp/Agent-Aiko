@@ -39,19 +39,31 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 
 [![npm](https://img.shields.io/npm/v/aiko-mcp)](https://www.npmjs.com/package/aiko-mcp)
 
-MCP に対応したクライアントなら、**コマンドを 1 回打つだけ**でアイコと話せます。インストーラの実行も、設定ファイルの編集も要りません。
+MCP に対応したクライアントでアイコと話せます。導入コマンドがクライアントの設定を書きます。
 
 ### 入れる
 
-お使いのクライアントを自動で探して、設定を書きます。
+お使いのクライアントを自動で探して、設定を書きます。配布物は専用ディレクトリに置き、その実体を起動します。
+
+macOS / Linux:
 
 ```bash
-npx aiko-mcp install
+AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp
+node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
+```
+
+Windows PowerShell:
+
+```powershell
+$AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp
+node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
 対応しているのは **Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop** です。入っていないクライアントには何もしません。
 
-書き込む前に内容だけ見たい場合は `npx aiko-mcp install --dry-run` を使ってください。既にある設定はそのまま残しますし、書き換える前に控え（`.aiko-bak-*`）を取ります。
+書き込む前に内容だけ見たい場合は、上の `install` に `--dry-run` を付けてください。既にある設定はそのまま残しますし、書き換える前に控え（`.aiko-bak-*`）を取ります。
 
 | オプション | 意味 |
 |---|---|
@@ -59,11 +71,23 @@ npx aiko-mcp install
 | `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
 | `--force` | 同じ名前で違う設定が入っていても置き換える |
 
-会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、人格・話し方は次に人格を読み込んだときに反映されます。呼び名は MCP サーバーを再起動すると反映されます。
+会話からの人格・話し方・呼び名の変更は提案として保存されます。次のコマンドを実行した後、人格・話し方は次に人格を読み込んだときに反映されます。呼び名は MCP サーバーを再起動すると反映されます。
+
+macOS / Linux:
+
+```bash
+node "$HOME/.local/share/aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js" accept
+```
+
+Windows PowerShell:
+
+```powershell
+node (Join-Path $env:LOCALAPPDATA "aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js") accept
+```
 
 ### 1 つずつ入れる
 
-`npx -y aiko-mcp` をクライアントの起動コマンドに書くと、開いているプロジェクトの `node_modules/.bin/aiko-mcp` が先に動きます。偽の実行ファイルを置いたリポジトリを開くだけで、そのコードが起動します。起動コマンドは、インストール済みの `server.js` を node の絶対パスで指してください。`npx aiko-mcp install` はそう書きます。
+`npx` は、開いているプロジェクトの `node_modules/.bin/aiko-mcp` を実行する場合があります。導入時もクライアントの起動時も、上記の専用ディレクトリに入れた `server.js` を使ってください。
 
 手で入れるときは、先に実体のパスを決めてから渡します。
 

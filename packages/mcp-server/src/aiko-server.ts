@@ -386,7 +386,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
       {
         title: "呼び名や記憶の場所を提案する",
         description:
-          "ユーザーが「〇〇と呼んで」「記憶は〇〇にある」と言ったときに使う。すぐには反映しない。~/.aiko/user-proposal.md に提案として残し、利用者が aiko accept したときだけ user.md に入る。記憶は場所を控えるだけで、中身は読まない",
+          "ユーザーが「〇〇と呼んで」「記憶は〇〇にある」と言ったときに使う。すぐには反映しない。~/.aiko/user-proposal.md に提案として残し、利用者が aiko-maintenance accept したときだけ user.md に入る。記憶は場所を控えるだけで、中身は読まない",
         inputSchema: {
           name: z.string().min(1).optional(),
           address: z.string().min(1).optional(),
@@ -407,7 +407,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
             proposed: true,
             applied: false,
             path,
-            next: "aiko accept",
+            next: "aiko-maintenance accept",
           });
         } catch (err) {
           return json({ proposed: false, applied: false, reason: reasonOf(err) }, true);
@@ -437,7 +437,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
         {
           title: "人格の切り替えを提案する",
           description:
-            "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。すぐには切り替わらない。提案として残り、利用者が aiko accept したときに反映される",
+            "ユーザーが「〇〇に切り替えて」「オリジナルに戻して」と言ったときに使う。すぐには切り替わらない。提案として残り、利用者が aiko-maintenance accept したときに反映される",
           inputSchema: { name: z.string().min(1) },
         },
         async ({ name }) => {
@@ -448,7 +448,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
               applied: false,
               name,
               path,
-              next: "aiko accept",
+              next: "aiko-maintenance accept",
               personas: await listPersonas(aikoHome),
             });
           } catch (err) {
@@ -480,7 +480,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
         {
           title: "話し方の切り替えを提案する",
           description:
-            "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。提案として残り、利用者が aiko accept した後、次に人格を読み込んだときに反映される",
+            "ユーザーが「friend モードにして」「servant で話して」「オリジナルの話し方に戻して」と言ったときに使う。提案として残り、利用者が aiko-maintenance accept した後、次に人格を読み込んだときに反映される",
           inputSchema: { name: z.enum(SPEECH_STYLES) },
         },
         async ({ name }) => {
@@ -491,7 +491,7 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
               applied: false,
               switched: false,
               path,
-              next: "aiko accept",
+              next: "aiko-maintenance accept",
               name,
               speechStyles: await listSpeechStyles(aikoHome),
             });
@@ -512,13 +512,13 @@ export function createAikoServer(deps: AikoServerDeps): McpServer {
         {
           title: "独自の人格を提案する",
           description:
-            "ユーザーが人格を作りたい・書き換えたいときに使う。すぐには有効にならない。提案として残り、利用者が aiko accept したときに保存される。origin は提案できない",
+            "ユーザーが人格を作りたい・書き換えたいときに使う。すぐには有効にならない。提案として残り、利用者が aiko-maintenance accept したときに保存される。origin は提案できない",
           inputSchema: { name: z.string().min(1), content: z.string().min(1) },
         },
         async ({ name, content }) => {
           try {
             const path = await proposePersona(aikoHome, name, content);
-            return json({ proposed: true, applied: false, saved: false, name, path, next: "aiko accept" });
+            return json({ proposed: true, applied: false, saved: false, name, path, next: "aiko-maintenance accept" });
           } catch (err) {
             return json({ saved: false, reason: reasonOf(err) }, true);
           }
