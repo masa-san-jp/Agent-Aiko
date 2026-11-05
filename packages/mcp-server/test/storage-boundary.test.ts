@@ -13,7 +13,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 const entry = process.env["AIKO_TEST_ENTRY"] ?? join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "server.js");
 const symlinkOptions = { skip: process.platform === "win32" };
 
-test("MCP の人格削除は保存先の外へ続く親リンクをたどらない", symlinkOptions, async () => {
+test("MCP の人格削除は保存先の外へ続く親リンクをたどらない", async () => {
   const root = await mkdtemp(join(tmpdir(), "aiko-mcp-boundary-"));
   const home = join(root, "home");
   const outside = join(root, "another-user");
@@ -24,7 +24,7 @@ test("MCP の人格削除は保存先の外へ続く親リンクをたどらな�
     await mkdir(victim, { recursive: true });
     await writeFile(join(victim, "persona.md"), "OUTSIDE PERSONA\n");
     await writeFile(join(victim, "keep.txt"), "OUTSIDE USER DATA\n");
-    await symlink(outside, join(home, "persona", "overrides"), "dir");
+    await symlink(outside, join(home, "persona", "overrides"), process.platform === "win32" ? "junction" : "dir");
     await client.connect(new StdioClientTransport({ command: process.execPath, args: [entry], env: { HOME: root, AIKO_HOME: home, PATH: process.env["PATH"] ?? "" } }));
     const result = await client.callTool({ name: "aiko.delete_persona", arguments: { name: "victim" } });
     assert.equal(result.isError, true);
@@ -33,7 +33,7 @@ test("MCP の人格削除は保存先の外へ続く親リンクをたどらな�
   } finally { await client.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test("MCP の人格提案は保存先の外へ続く親リンクを書き込まない", symlinkOptions, async () => {
+test("MCP の人格提案は保存先の外へ続く親リンクを書き込まない", async () => {
   const root = await mkdtemp(join(tmpdir(), "aiko-mcp-boundary-"));
   const home = join(root, "home");
   const outside = join(root, "outside");
@@ -41,7 +41,7 @@ test("MCP の人格提案は保存先の外へ続く親リンクを書き込ま�
   try {
     await mkdir(join(home, "persona"), { recursive: true });
     await mkdir(outside, { recursive: true });
-    await symlink(outside, join(home, "persona", "proposals"), "dir");
+    await symlink(outside, join(home, "persona", "proposals"), process.platform === "win32" ? "junction" : "dir");
     await client.connect(new StdioClientTransport({ command: process.execPath, args: [entry], env: { HOME: root, AIKO_HOME: home, PATH: process.env["PATH"] ?? "" } }));
     const result = await client.callTool({ name: "aiko.save_persona", arguments: { name: "victim", content: "FIXTURE" } });
     assert.equal(result.isError, true);

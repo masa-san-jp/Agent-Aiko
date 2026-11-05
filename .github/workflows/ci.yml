@@ -196,7 +196,7 @@ jobs:
       - name: Build package
         run: npm run build --workspace=aiko-mcp
       - name: Test packaged maintenance behavior
-        run: node --import tsx --test packages/mcp-server/test/maintenance.test.ts
+        run: node --import tsx --test packages/mcp-server/test/maintenance.test.ts packages/mcp-server/test/storage-boundary.test.ts
       - name: Pack candidate
         run: npm pack --ignore-scripts --workspace=aiko-mcp --pack-destination "$env:RUNNER_TEMP"
       - name: Test documented PowerShell workflow
