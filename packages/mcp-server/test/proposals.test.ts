@@ -1,5 +1,5 @@
 // MCP の人格保存・切り替え・呼び名は提案だけ。
-// 反映は aiko accept（CLI）まで起きない。会話が system 級の指示を書き換えないため。
+// 反映は aiko-maintenance accept（CLI）まで起きない。会話が system 級の指示を書き換えないため。
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -52,7 +52,7 @@ test("save / switch / remember は本番の人格と user.md を書かない", a
       }),
     );
     assert.equal(saved["applied"], false);
-    assert.equal(saved["next"], "aiko accept");
+    assert.equal(saved["next"], "aiko-maintenance accept");
 
     const switched = parse(
       await client.callTool({
@@ -85,7 +85,7 @@ test("save / switch / remember は本番の人格と user.md を書かない", a
     assert.equal(style["proposed"], true);
     assert.equal(style["applied"], false);
     assert.equal(style["switched"], false);
-    assert.equal(style["next"], "aiko accept");
+    assert.equal(style["next"], "aiko-maintenance accept");
     assert.equal(await readSpeechStyle(home), "original");
     assert.equal(await acceptSpeechStyleProposal(home), "friend");
     assert.equal(await readSpeechStyle(home), "friend");

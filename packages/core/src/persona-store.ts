@@ -8,7 +8,7 @@
 // 同じ場所を見るので、書いている途中を読む経路が実在する。
 
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import {
   isSafePersonaName,
@@ -20,6 +20,7 @@ import {
 
 
 import { assertWithinLimit } from "./limits.js";
+import { assertStoragePath } from "./storage-path.js";
 
 export class PersonaStoreError extends Error {
   override readonly name = "PersonaStoreError";
@@ -33,8 +34,15 @@ export interface PersonaEntry {
   builtin: boolean;
 }
 
-async function readOptional(path: string): Promise<string | undefined> {
-  return readFile(path, "utf8").catch(() => undefined);
+async function checkStorage(home: string, path: string): Promise<void> {
+  try { await assertStoragePath(home, path); }
+  catch (err) { throw new PersonaStoreError(err instanceof Error ? err.message : String(err)); }
+}
+
+async function readOptional(home: string, path: string): Promise<string | undefined> {
+  await checkStorage(home, path);
+  try { return await readFile(path, "utf8"); }
+  catch (err) { if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined; throw err; }
 }
 
 /** 置き換え方式で書く。途中の状態を他方に読ませない。
@@ -46,7 +54,8 @@ async function readOptional(path: string): Promise<string | undefined> {
  *
  *  basename を使うのは Windows のため。`split("/")` だと区切りが `\` の環境で
  *  パス全体が名前になり、`:` を含む不正なファイル名になる。 */
-async function writeAtomic(path: string, text: string): Promise<void> {
+async function writeAtomic(home: string, path: string, text: string): Promise<void> {
+  await checkStorage(home, path);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temp = join(dirname(path), `.tmp-${randomUUID()}-${basename(path)}`);
   try {
@@ -60,12 +69,12 @@ async function writeAtomic(path: string, text: string): Promise<void> {
 }
 
 export async function readMode(aikoHome: string): Promise<"origin" | "override"> {
-  const raw = (await readOptional(join(aikoHome, "mode")))?.trim();
+  const raw = (await readOptional(aikoHome, join(aikoHome, "mode")))?.trim();
   return raw === "override" ? "override" : "origin";
 }
 
 export async function readActivePersona(aikoHome: string): Promise<string> {
-  const raw = (await readOptional(join(aikoHome, "active-persona")))?.trim() ?? "";
+  const raw = (await readOptional(aikoHome, join(aikoHome, "active-persona")))?.trim() ?? "";
   return isSafePersonaName(raw) ? raw : "";
 }
 
@@ -79,11 +88,20 @@ export async function listPersonas(aikoHome: string): Promise<PersonaEntry[]> {
   ];
 
   const dir = join(aikoHome, "persona", "overrides");
-  const names = await readdir(dir).catch(() => [] as string[]);
+  await checkStorage(aikoHome, dir);
+  const names = await readdir(dir).catch((err: NodeJS.ErrnoException) => { if (err.code === "ENOENT") return [] as string[]; throw err; });
   for (const name of names.sort()) {
     if (!isSafePersonaName(name)) continue;
+    await checkStorage(aikoHome, join(dir, name));
     const info = await stat(join(dir, name)).catch(() => undefined);
     if (info?.isDirectory() !== true) continue;
+    const personaPath = join(dir, name, "persona.md");
+    await checkStorage(aikoHome, personaPath);
+    const personaInfo = await lstat(personaPath).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined;
+      throw err;
+    });
+    if (!personaInfo?.isFile()) continue;
     entries.push({
       name,
       active: mode === "override" && active === name,
@@ -96,18 +114,18 @@ export async function listPersonas(aikoHome: string): Promise<PersonaEntry[]> {
 /** 使う人格を変える。origin を指定すると mode を origin へ戻す。 */
 export async function switchPersona(aikoHome: string, name: string): Promise<void> {
   if (name === "origin") {
-    await writeAtomic(join(aikoHome, "mode"), "origin\n");
+    await writeAtomic(aikoHome, join(aikoHome, "mode"), "origin\n");
     return;
   }
   if (!isSafePersonaName(name)) {
     throw new PersonaStoreError(`人格名として使えません: ${name}`);
   }
   const path = join(aikoHome, "persona", "overrides", name, "persona.md");
-  if ((await readOptional(path)) === undefined) {
+  if ((await readOptional(aikoHome, path)) === undefined) {
     throw new PersonaStoreError(`人格 ${name} がありません`);
   }
-  await writeAtomic(join(aikoHome, "mode"), "override\n");
-  await writeAtomic(join(aikoHome, "active-persona"), `${name}\n`);
+  await writeAtomic(aikoHome, join(aikoHome, "mode"), "override\n");
+  await writeAtomic(aikoHome, join(aikoHome, "active-persona"), `${name}\n`);
 }
 
 /** 独自人格を保存する。**オリジナルと不変条項は対象外。** */
@@ -129,14 +147,14 @@ export async function savePersona(
   assertWithinLimit("personaPackage", content);
 
   const dir = join(aikoHome, "persona", "overrides", name);
-  // 置き場が symlink だと、書き込みがその先へ抜ける。~/.aiko の外へ書けてしまうので、
-  // リンクなら断る（消す側は rm がリンク自体を外すので問題ない。実測済み）。
+  await checkStorage(aikoHome, dir);
+  // 保存先の途中にリンクがある場合は拒否する。
   const info = await lstat(dir).catch(() => undefined);
   if (info?.isSymbolicLink() === true) {
     throw new PersonaStoreError(`${name} はリンクです。実体のある場所に作り直してください`);
   }
   const path = join(dir, "persona.md");
-  await writeAtomic(path, content.endsWith("\n") ? content : `${content}\n`);
+  await writeAtomic(aikoHome, path, content.endsWith("\n") ? content : `${content}\n`);
   return path;
 }
 
@@ -146,20 +164,24 @@ export async function deletePersona(aikoHome: string, name: string): Promise<voi
     throw new PersonaStoreError(`消せません: ${name}`);
   }
   const dir = join(aikoHome, "persona", "overrides", name);
+  await checkStorage(aikoHome, dir);
   if ((await stat(dir).catch(() => undefined)) === undefined) {
     throw new PersonaStoreError(`人格 ${name} がありません`);
   }
   // 人格であることを確かめてから消す。名前が通るだけで中身を見ないと、
   // overrides の下に置かれた別のディレクトリを丸ごと消せてしまう。
-  if ((await readOptional(join(dir, "persona.md"))) === undefined) {
+  if ((await readOptional(aikoHome, join(dir, "persona.md"))) === undefined) {
     throw new PersonaStoreError(`${name} は人格ではありません（persona.md がありません）`);
   }
   if ((await readActivePersona(aikoHome)) === name) {
-    await writeAtomic(join(aikoHome, "mode"), "origin\n");
+    await writeAtomic(aikoHome, join(aikoHome, "mode"), "origin\n");
     // 指定も消す。残すと、次に override へ切り替えたとき無い人格を指す。
-    await writeAtomic(join(aikoHome, "active-persona"), "\n");
+    await writeAtomic(aikoHome, join(aikoHome, "active-persona"), "\n");
   }
-  await rm(dir, { recursive: true, force: true });
+  // 人格本文だけを消す。隣にあるユーザーのファイルやディレクトリは残す。
+  await rm(join(dir, "persona.md"), { force: true });
+  try { await rmdir(dir); }
+  catch (err) { if (!["ENOTEMPTY", "EEXIST"].includes((err as NodeJS.ErrnoException).code ?? "")) throw err; }
 }
 
 const PROPOSALS = join("persona", "proposals");
@@ -181,13 +203,14 @@ export async function proposePersona(
   }
   assertWithinLimit("personaPackage", content);
   const dir = join(aikoHome, PROPOSALS, name);
+  await checkStorage(aikoHome, dir);
   const info = await lstat(dir).catch(() => undefined);
   if (info?.isSymbolicLink() === true) {
     throw new PersonaStoreError(`${name} はリンクです。実体のある場所に作り直してください`);
   }
   const path = join(dir, "persona.md");
-  await writeAtomic(path, content.endsWith("\n") ? content : `${content}\n`);
-  await writeAtomic(join(dir, "source"), "mcp\nunapproved\n");
+  await writeAtomic(aikoHome, path, content.endsWith("\n") ? content : `${content}\n`);
+  await writeAtomic(aikoHome, join(dir, "source"), "mcp\nunapproved\n");
   return path;
 }
 
@@ -197,7 +220,7 @@ export async function proposePersonaSwitch(aikoHome: string, name: string): Prom
     throw new PersonaStoreError(`人格名として使えません: ${name}`);
   }
   const path = join(aikoHome, PROPOSALS, ".pending-switch");
-  await writeAtomic(path, `${name}\n`);
+  await writeAtomic(aikoHome, path, `${name}\n`);
   return path;
 }
 
@@ -206,17 +229,23 @@ export async function acceptPersonaProposals(
   aikoHome: string,
 ): Promise<{ saved: string[]; switched?: string }> {
   const root = join(aikoHome, PROPOSALS);
-  const names = await readdir(root).catch(() => [] as string[]);
+  await checkStorage(aikoHome, root);
+  const names = await readdir(root).catch((err: NodeJS.ErrnoException) => { if (err.code === "ENOENT") return [] as string[]; throw err; });
   const saved: string[] = [];
   for (const name of names.sort()) {
     if (!isSafePersonaName(name)) continue;
-    const content = await readOptional(join(root, name, "persona.md"));
+    const proposalDir = join(root, name);
+    const content = await readOptional(aikoHome, join(proposalDir, "persona.md"));
     if (content === undefined) continue;
+    await checkStorage(aikoHome, join(proposalDir, "source"));
     await savePersona(aikoHome, name, content);
     saved.push(name);
-    await rm(join(root, name), { recursive: true, force: true });
+    await rm(join(proposalDir, "persona.md"), { force: true });
+    await rm(join(proposalDir, "source"), { force: true });
+    try { await rmdir(proposalDir); }
+    catch (err) { if (!["ENOTEMPTY", "EEXIST"].includes((err as NodeJS.ErrnoException).code ?? "")) throw err; }
   }
-  const requested = (await readOptional(join(root, ".pending-switch")))?.trim();
+  const requested = (await readOptional(aikoHome, join(root, ".pending-switch")))?.trim();
   if (!requested) return { saved };
   await switchPersona(aikoHome, requested);
   await rm(join(root, ".pending-switch"), { force: true });
@@ -236,7 +265,7 @@ export interface SpeechStyleEntry {
 
 /** いま選ばれている話し方。未設定・知らない値は original として扱う。 */
 export async function readSpeechStyle(aikoHome: string): Promise<SpeechStyleId> {
-  const raw = (await readOptional(join(aikoHome, "speech-style")))?.trim() ?? "";
+  const raw = (await readOptional(aikoHome, join(aikoHome, "speech-style")))?.trim() ?? "";
   return isSpeechStyleId(raw) ? raw : ORIGINAL_SPEECH_STYLE;
 }
 
@@ -252,7 +281,7 @@ export async function switchSpeechStyle(aikoHome: string, name: string): Promise
       `話し方 ${name} はありません。${SPEECH_STYLES.join(" / ")} から選んでください`,
     );
   }
-  await writeAtomic(join(aikoHome, "speech-style"), `${name}\n`);
+  await writeAtomic(aikoHome, join(aikoHome, "speech-style"), `${name}\n`);
 }
 
 /** 話し方も system 級の指示に入るため、MCP は提案だけを残す。 */
@@ -261,14 +290,14 @@ export async function proposeSpeechStyle(aikoHome: string, name: string): Promis
     throw new PersonaStoreError(`話し方 ${name} はありません`);
   }
   const path = join(aikoHome, "speech-style-proposal");
-  await writeAtomic(path, `${name}\n`);
+  await writeAtomic(aikoHome, path, `${name}\n`);
   return path;
 }
 
 /** CLI の明示操作でのみ、提案された話し方を反映する。 */
 export async function acceptSpeechStyleProposal(aikoHome: string): Promise<SpeechStyleId | undefined> {
   const path = join(aikoHome, "speech-style-proposal");
-  const requested = await readOptional(path);
+  const requested = await readOptional(aikoHome, path);
   if (requested === undefined) return undefined;
   const name = requested.trim();
   if (!isSpeechStyleId(name)) {

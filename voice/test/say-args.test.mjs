@@ -54,7 +54,7 @@ describe("stop hook", () => {
       await writeFile(join(config, "engine"), "missing-engine\n");
       await writeFile(
         transcript,
-        `${JSON.stringify({ role: "assistant", content: "-o /tmp/pwned こんにちは" })}\n`,
+        `${JSON.stringify({ role: "assistant", content: "-o /tmp/pwned こんにちは `inline_code` ```block_code```" })}\n`,
       );
       const result = spawnSync("bash", [STOP], {
         input: JSON.stringify({ transcript_path: transcript }),
@@ -81,6 +81,9 @@ describe("stop hook", () => {
       const end = args.indexOf("--");
       assert.equal(end >= 0, true, args.join(" "));
       assert.equal(args.slice(end + 1).some((part) => part.startsWith("-o")), false);
+      assert.equal(args.join(" ").includes("inline_code"), false);
+      assert.equal(args.join(" ").includes("block_code"), false);
+      assert.equal(args.join(" ").includes("コードを書きました。"), true);
     });
   });
 });

@@ -298,6 +298,34 @@ test("人格でないディレクトリは消せない", async () => {
   }
 });
 
+test("人格の削除は同じディレクトリのユーザーファイルを残す", async () => {
+  const s = await sandbox();
+  try {
+    await savePersona(s.aikoHome, "custom", "人格本文");
+    const dir = join(s.aikoHome, "persona", "overrides", "custom");
+    await write(join(dir, "user.md"), "利用者のメモ\n");
+    await write(join(dir, "notes", "important.txt"), "残す\n");
+    await deletePersona(s.aikoHome, "custom");
+    assert.equal(existsSync(join(dir, "persona.md")), false);
+    assert.equal(await readFile(join(dir, "user.md"), "utf8"), "利用者のメモ\n");
+    assert.equal(await readFile(join(dir, "notes", "important.txt"), "utf8"), "残す\n");
+    assert.equal((await listPersonas(s.aikoHome)).some((item) => item.name === "custom"), false);
+  } finally { await s.cleanup(); }
+});
+
+test("人格提案の反映は提案ディレクトリにある他のファイルを残す", async () => {
+  const s = await sandbox();
+  try {
+    await proposePersona(s.aikoHome, "custom", "人格本文");
+    const dir = join(s.aikoHome, "persona", "proposals", "custom");
+    await write(join(dir, "notes.txt"), "利用者のメモ\n");
+    await acceptPersonaProposals(s.aikoHome);
+    assert.equal(await readFile(join(dir, "notes.txt"), "utf8"), "利用者のメモ\n");
+    assert.equal(existsSync(join(dir, "persona.md")), false);
+    assert.equal(existsSync(join(s.aikoHome, "persona", "overrides", "custom", "persona.md")), true);
+  } finally { await s.cleanup(); }
+});
+
 test("リンクの上には保存しない（外へ書き抜けない）", async () => {
   const s = await sandbox();
   try {

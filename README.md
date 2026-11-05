@@ -39,19 +39,31 @@ Aiko は 3 つの実行環境で動きます。**ご自身が使っているエ�
 
 [![npm](https://img.shields.io/npm/v/aiko-mcp)](https://www.npmjs.com/package/aiko-mcp)
 
-MCP に対応したクライアントなら、**コマンドを 1 回打つだけ**でアイコと話せます。インストーラの実行も、設定ファイルの編集も要りません。
+MCP に対応したクライアントでアイコと話せます。導入コマンドがクライアントの設定を書きます。
 
 ### 入れる
 
-お使いのクライアントを自動で探して、設定を書きます。
+お使いのクライアントを自動で探して、設定を書きます。配布物は専用ディレクトリに置き、その実体を起動します。
+
+macOS / Linux:
 
 ```bash
-npx aiko-mcp install
+AIKO_PACKAGE_DIR="$HOME/.local/share/aiko-mcp"
+npm install --prefix "$AIKO_PACKAGE_DIR" --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node "$AIKO_PACKAGE_DIR/node_modules/aiko-mcp/dist/server.js" install
+```
+
+Windows PowerShell:
+
+```powershell
+$AikoPackageDir = Join-Path $env:LOCALAPPDATA "aiko-mcp"
+npm install --prefix $AikoPackageDir --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
+node (Join-Path $AikoPackageDir "node_modules/aiko-mcp/dist/server.js") install
 ```
 
 対応しているのは **Claude Code / Codex CLI / VS Code / Cursor / Claude Desktop** です。入っていないクライアントには何もしません。
 
-書き込む前に内容だけ見たい場合は `npx aiko-mcp install --dry-run` を使ってください。既にある設定はそのまま残しますし、書き換える前に控え（`.aiko-bak-*`）を取ります。
+書き込む前に内容だけ見たい場合は、上の `install` に `--dry-run` を付けてください。既にある設定はそのまま残しますし、書き換える前に控え（`.aiko-bak-*`）を取ります。
 
 | オプション | 意味 |
 |---|---|
@@ -59,11 +71,23 @@ npx aiko-mcp install
 | `--client <id>` | 対象を絞る（`claude` / `codex` / `vscode` / `cursor` / `claude-desktop`） |
 | `--force` | 同じ名前で違う設定が入っていても置き換える |
 
-会話からの人格・話し方・呼び名の変更は提案として保存されます。`aiko accept` を実行した後、人格・話し方は次に人格を読み込んだときに反映されます。呼び名は MCP サーバーを再起動すると反映されます。
+会話からの人格・話し方・呼び名の変更は提案として保存されます。次のコマンドを実行した後、人格・話し方は次に人格を読み込んだときに反映されます。呼び名は MCP サーバーを再起動すると反映されます。
+
+macOS / Linux:
+
+```bash
+node "$HOME/.local/share/aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js" accept
+```
+
+Windows PowerShell:
+
+```powershell
+node (Join-Path $env:LOCALAPPDATA "aiko-mcp/node_modules/aiko-mcp/dist/maintenance.js") accept
+```
 
 ### 1 つずつ入れる
 
-`npx -y aiko-mcp` をクライアントの起動コマンドに書くと、開いているプロジェクトの `node_modules/.bin/aiko-mcp` が先に動きます。偽の実行ファイルを置いたリポジトリを開くだけで、そのコードが起動します。起動コマンドは、インストール済みの `server.js` を node の絶対パスで指してください。`npx aiko-mcp install` はそう書きます。
+`npx` は、開いているプロジェクトの `node_modules/.bin/aiko-mcp` を実行する場合があります。導入時もクライアントの起動時も、上記の専用ディレクトリに入れた `server.js` を使ってください。
 
 手で入れるときは、先に実体のパスを決めてから渡します。
 
@@ -138,7 +162,7 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
 
 ### Claude Code 版
 
-**公開版は v0.3.6 です。** v0.3.7 の公開処理は停止しています。v0.3.6 の更新コマンドは更新先を確認せずに適用するため、更新前に `update --check` で確認してください。
+v0.3.7 は GitHub Release と npm には公開されていません。v0.3.6 の更新コマンドは更新先を確認せずに適用するため、更新前に `update --check` で確認してください。
 
 **既存の利用者へ:** 古い保守コマンドやインストーラには、利用者設定を上書き・削除する問題があります。更新・巻き戻し・削除には、以下の更新済み保守コマンドを使ってください。既存の `aiko` コマンドやエージェントの設定は自動で置き換えません。
 
@@ -154,7 +178,7 @@ Node.js 20 以上だけです（`npx` は Node.js に同梱されています）
   trap 'rm -rf "$work"' EXIT
   cd "$work"
   npm install --prefix "$work" --cache "$work/npm-cache" \
-    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+    --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
   node "$work/node_modules/aiko-mcp/dist/maintenance.js" rollback
 )
 ```
@@ -175,7 +199,7 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
   try {
     $env:AIKO_HOME = $targetAikoHome
     npm install --prefix $work --cache (Join-Path $work "npm-cache") `
-      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.6
+      --ignore-scripts --no-audit --no-fund aiko-mcp@0.3.8
     if ($LASTEXITCODE -ne 0) { throw "保守コマンドを取得できませんでした" }
     node (Join-Path $work "node_modules/aiko-mcp/dist/maintenance.js") rollback
     if ($LASTEXITCODE -ne 0) { throw "保守操作は完了しませんでした" }
@@ -190,14 +214,14 @@ Windows の PowerShell では次を実行します。`uninstall` を使う場合
 この操作は利用者側の `~/.aiko`（`AIKO_HOME` を指定している場合はその保存先）を対象にします。保存先を別の利用者と共有していなければ、他の利用者の設定には影響しません。配布元のファイルも変更しません。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.6/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/masa-san-jp/Agent-Aiko/v0.3.8/scripts/install.sh | bash
 ```
 
 このコマンドをインストールしたいプロジェクトのディレクトリで実行すると、`~/.aiko/` が初期化され、Claude Code 用の Aiko slash command が `.claude/skills/` に配置されます。既存の `.claude/CLAUDE.md` と `.claude/settings.json` は上書きされません。詳細は [`claude-code/README.md`](claude-code/README.md) を参照。
 
 installer は GitHub Releases の配布物を取得し、SHA256 を照合してから展開します。https の Release は `gh attestation verify` も要ります（`file://` の試験用は対象外）。**照合に失敗した場合は中止し、リポジトリの clone には回りません。** 照合済みで入ったかどうかは出力に出ます。
 
-上の URL はリリース `v0.3.6` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
+上の URL はリリース `v0.3.8` に固定してあります。インストーラを変えるときは、`scripts/install.sh` の `PINNED_REF` とこの URL を新しいタグへ合わせてから出してください。
 
 | 環境変数 | 既定 | 用途 |
 |---|---|---|

@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { assertStoragePath } from "@agent-aiko/core";
 
 /** user.md が持てる項目。増やすときは書き出し側も一緒に直す。 */
 export interface UserMarkdown {
@@ -130,6 +131,7 @@ export function userProposalPath(aikoHome: string): string {
 
 export async function proposeUserMarkdown(aikoHome: string, patch: UserMarkdown): Promise<string> {
   const path = userProposalPath(aikoHome);
+  await assertStoragePath(aikoHome, path);
   const current = (await readUserMarkdown([path]))?.user ?? {};
   const next: UserMarkdown = {
     ...current,
@@ -144,6 +146,8 @@ export async function proposeUserMarkdown(aikoHome: string, patch: UserMarkdown)
 /** 提案を user.md へ重ねる。呼ぶのは CLI の明示操作だけ。 */
 export async function acceptUserProposal(aikoHome: string): Promise<boolean> {
   const proposal = userProposalPath(aikoHome);
+  await assertStoragePath(aikoHome, proposal);
+  await assertStoragePath(aikoHome, join(aikoHome, "user.md"));
   const found = await readUserMarkdown([proposal]);
   if (found === undefined) return false;
   const live = join(aikoHome, "user.md");

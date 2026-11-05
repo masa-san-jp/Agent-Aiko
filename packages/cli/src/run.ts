@@ -76,7 +76,7 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
   const [command = "help", ...rest] = argv;
   const commandName = io.commandName ?? "aiko";
   const usage = commandName === "aiko-maintenance"
-    ? `使い方: aiko-maintenance <コマンド>\n\n  update --check  更新を確認する\n  update          配布物を更新する\n  update --yes    確認が必要な版の更新を承認する\n  rollback        配布物を直前の状態に戻す\n  uninstall       導入時の配布物を削除する\n  help            この使い方を表示する\n`
+    ? `使い方: aiko-maintenance <コマンド>\n\n  accept          会話での変更提案を反映する\n  update --check  更新を確認する\n  update          配布物を更新する\n  update --yes    確認が必要な版の更新を承認する\n  rollback        配布物を直前の状態に戻す\n  uninstall       導入時の配布物を削除する\n  help            この使い方を表示する\n`
     : USAGE;
 
   if (command === "help" || command === "--help" || command === "-h") {
@@ -88,7 +88,7 @@ export async function run(argv: readonly string[], version: string, io: RunIO): 
     return 0;
   }
 
-  if (commandName === "aiko-maintenance" && !["update", "rollback", "uninstall"].includes(command)) {
+  if (commandName === "aiko-maintenance" && !["accept", "update", "rollback", "uninstall"].includes(command)) {
     io.err(`この保守コマンドでは ${command} は使えません。\n${usage}`);
     return 2;
   }

@@ -21,6 +21,7 @@ export {
 export { compile, type CompileInput, type CompiledInstructions, type UserContext } from "./compiler.js";
 
 export { sha256, hashObject, HashInputError, MAX_HASH_DEPTH } from "./hash.js";
+export { assertStoragePath } from "./storage-path.js";
 
 export {
   assertWithinLimit,

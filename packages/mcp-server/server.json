@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.masa-san-jp/aiko",
-  "description": "A portable persona for MCP clients — the same agent in Claude Code, Codex, Cursor and VS Code",
+  "description": "Local persona and user context for agents using MCP.",
   "repository": {
     "url": "https://github.com/masa-san-jp/Agent-Aiko",
     "source": "github"
   },
-  "version": "0.3.7",
+  "version": "0.3.8",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "aiko-mcp",
-      "version": "0.3.7",
+      "version": "0.3.8",
       "transport": {
         "type": "stdio"
       },
